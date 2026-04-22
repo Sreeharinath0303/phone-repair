@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Book your device repair with RepairVafe. Select your device brand, model, and repair type." />
+  <title>Book a Repair – RepairVafe</title>
+  <link rel="stylesheet" href="../css/global.css" />
+  <link rel="stylesheet" href="../css/booking.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar scrolled" id="navbar">
+    <div class="nav-container">
+      <a href="../../index.html" class="nav-logo">
+        <div class="logo-icon">⚡</div>
+        <span>Repair<strong>Vafe</strong></span>
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="../../index.html">Home</a></li>
+        <li><a href="booking.html" class="active">Book Repair</a></li>
+        <li><a href="tracking.html">Track Repair</a></li>
+        <li><a href="admin.html">Admin</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="booking.html" class="btn btn-primary">Book Now</a>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="container">
+      <div class="page-breadcrumb">
+        <a href="../../index.html">Home</a>
+        <span class="sep">›</span>
+        <span>Book a Repair</span>
+      </div>
+      <h1 class="page-title gradient-text">Book Your Repair</h1>
+      <p class="page-subtitle">Select your device and tell us what's wrong — we'll handle the rest.</p>
+    </div>
+  </div>
+
+  <!-- Booking Wizard -->
+  <section class="booking-section">
+    <div class="container">
+      <!-- Progress Steps -->
+      <div class="wizard-progress">
+        <div class="wizard-step active" data-step="1" id="wizStep1">
+          <div class="ws-circle">1</div>
+          <span>Select Device</span>
+        </div>
+        <div class="wizard-line" id="wLine1"></div>
+        <div class="wizard-step" data-step="2" id="wizStep2">
+          <div class="ws-circle">2</div>
+          <span>Repair Type</span>
+        </div>
+        <div class="wizard-line" id="wLine2"></div>
+        <div class="wizard-step" data-step="3" id="wizStep3">
+          <div class="ws-circle">3</div>
+          <span>Your Details</span>
+        </div>
+        <div class="wizard-line" id="wLine3"></div>
+        <div class="wizard-step" data-step="4" id="wizStep4">
+          <div class="ws-circle">4</div>
+          <span>Confirm</span>
+        </div>
+      </div>
+
+      <!-- Step 1: Device Selection -->
+      <div class="wizard-panel active" id="panel1">
+        <div class="panel-header">
+          <h2>What device do you need repaired?</h2>
+          <p>Select the category that matches your device.</p>
+        </div>
+
+        <div class="device-categories">
+          <div class="device-cat-card" data-cat="smartphone" id="catSmartphone">
+            <div class="dcc-icon">📱</div>
+            <div class="dcc-label">Smartphone</div>
+          </div>
+          <div class="device-cat-card" data-cat="laptop" id="catLaptop">
+            <div class="dcc-icon">💻</div>
+            <div class="dcc-label">Laptop</div>
+          </div>
+          <div class="device-cat-card" data-cat="tablet" id="catTablet">
+            <div class="dcc-icon">📟</div>
+            <div class="dcc-label">Tablet</div>
+          </div>
+          <div class="device-cat-card" data-cat="smartwatch" id="catSmartwatch">
+            <div class="dcc-icon">⌚</div>
+            <div class="dcc-label">Smartwatch</div>
+          </div>
+        </div>
+
+        <!-- Brand Selection -->
+        <div class="brand-section" id="brandSection" style="display:none">
+          <h3>Select Brand</h3>
+          <div class="brand-grid" id="brandGrid"></div>
+        </div>
+
+        <!-- Model Selection -->
+        <div class="model-section" id="modelSection" style="display:none">
+          <h3>Select Model</h3>
+          <div class="form-group">
+            <label class="form-label" for="modelSelect">Choose your model</label>
+            <select class="form-select" id="modelSelect">
+              <option value="">-- Select Model --</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="panel-footer">
+          <div></div>
+          <button class="btn btn-primary" id="step1Next" disabled onclick="goToStep(2)">
+            Next: Choose Repair →
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Repair Type -->
+      <div class="wizard-panel" id="panel2">
+        <div class="panel-header">
+          <h2>What needs to be fixed?</h2>
+          <p>Select all repair types that apply to your device.</p>
+        </div>
+
+        <div class="repair-types-grid" id="repairTypesGrid"></div>
+
+        <div class="issue-description">
+          <div class="form-group">
+            <label class="form-label" for="issueDesc">Describe the issue in detail (optional)</label>
+            <textarea class="form-textarea" id="issueDesc" placeholder="E.g. The screen has a crack on the bottom right and the touch is not working in that area..."></textarea>
+          </div>
+        </div>
+
+        <div class="panel-footer">
+          <button class="btn btn-outline" onclick="goToStep(1)">← Back</button>
+          <button class="btn btn-primary" id="step2Next" disabled onclick="goToStep(3)">
+            Next: Your Details →
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 3: Customer Details -->
+      <div class="wizard-panel" id="panel3">
+        <div class="panel-header">
+          <h2>Your Contact Details</h2>
+          <p>So we can reach you about your repair.</p>
+        </div>
+
+        <div class="details-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="custName">Full Name *</label>
+              <input type="text" class="form-input" id="custName" placeholder="Enter your full name" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="custPhone">Phone Number *</label>
+              <input type="tel" class="form-input" id="custPhone" placeholder="+91 98765 43210" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="custEmail">Email Address *</label>
+              <input type="email" class="form-input" id="custEmail" placeholder="your@email.com" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="serviceType">Service Type *</label>
+              <select class="form-select" id="serviceType">
+                <option value="">-- Select --</option>
+                <option value="dropoff">Drop Off at Center</option>
+                <option value="pickup">Pickup from Home</option>
+                <option value="walkin">Walk-In</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="custAddress">Address <span style="color:var(--clr-text-faint)">(for pickup service)</span></label>
+            <textarea class="form-textarea" id="custAddress" placeholder="Enter your pickup address" style="min-height:80px"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="preferDate">Preferred Date *</label>
+              <input type="date" class="form-input" id="preferDate" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="preferTime">Preferred Time Slot *</label>
+              <select class="form-select" id="preferTime">
+                <option value="">-- Select Slot --</option>
+                <option value="9-11am">9:00 AM – 11:00 AM</option>
+                <option value="11-1pm">11:00 AM – 1:00 PM</option>
+                <option value="2-4pm">2:00 PM – 4:00 PM</option>
+                <option value="4-6pm">4:00 PM – 6:00 PM</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-footer">
+          <button class="btn btn-outline" onclick="goToStep(2)">← Back</button>
+          <button class="btn btn-primary" onclick="goToStep(4)" id="step3Next">
+            Review & Confirm →
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 4: Confirmation Summary -->
+      <div class="wizard-panel" id="panel4">
+        <div class="panel-header">
+          <h2>Review Your Booking</h2>
+          <p>Please verify the details before submitting.</p>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-card">
+            <h4>📱 Device Information</h4>
+            <div class="summary-row"><span>Category</span><span id="sumCat">–</span></div>
+            <div class="summary-row"><span>Brand</span><span id="sumBrand">–</span></div>
+            <div class="summary-row"><span>Model</span><span id="sumModel">–</span></div>
+            <div class="summary-row"><span>Repair Type(s)</span><span id="sumRepairs">–</span></div>
+          </div>
+          <div class="summary-card">
+            <h4>👤 Contact Details</h4>
+            <div class="summary-row"><span>Name</span><span id="sumName">–</span></div>
+            <div class="summary-row"><span>Phone</span><span id="sumPhone">–</span></div>
+            <div class="summary-row"><span>Email</span><span id="sumEmail">–</span></div>
+            <div class="summary-row"><span>Service</span><span id="sumService">–</span></div>
+          </div>
+          <div class="summary-card">
+            <h4>📅 Schedule</h4>
+            <div class="summary-row"><span>Date</span><span id="sumDate">–</span></div>
+            <div class="summary-row"><span>Time Slot</span><span id="sumTime">–</span></div>
+            <div class="summary-row"><span>Address</span><span id="sumAddr">–</span></div>
+          </div>
+        </div>
+
+        <div class="confirm-notice">
+          <span>📋</span>
+          <p>After submission, our team will assess your device and send you a <strong>detailed quotation</strong> within 2-4 hours. You can approve or reject the quote before any work begins.</p>
+        </div>
+
+        <div class="panel-footer">
+          <button class="btn btn-outline" onclick="goToStep(3)">← Back</button>
+          <button class="btn btn-success" onclick="submitBooking()" id="submitBtn">
+            ✅ Submit Booking Request
+          </button>
+        </div>
+      </div>
+
+      <!-- Success Panel -->
+      <div class="wizard-panel" id="panelSuccess">
+        <div class="success-state">
+          <div class="success-icon">🎉</div>
+          <h2>Booking Submitted!</h2>
+          <p>Your repair request has been received. You'll get a quotation via email/SMS shortly.</p>
+          <div class="booking-ref">
+            <span>Booking Reference:</span>
+            <strong id="bookingRef">RV-2026-00000</strong>
+          </div>
+          <div class="success-actions">
+            <a href="tracking.html" class="btn btn-primary">Track My Repair</a>
+            <a href="../../index.html" class="btn btn-outline">Back to Home</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="../utils/booking.js"></script>
+  <script src="../utils/main.js"></script>
+</body>
+</html>

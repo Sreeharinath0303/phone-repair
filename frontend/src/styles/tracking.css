@@ -1,0 +1,196 @@
+/* ============================================
+   RepairVafe – Tracking Page Styles
+   ============================================ */
+.tracking-section {
+  padding: 40px 0 80px;
+  min-height: 70vh;
+}
+
+/* --- Search Card --- */
+.track-search-card {
+  max-width: 600px;
+  margin: 0 auto 40px;
+  background: var(--gradient-card);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-xl);
+  padding: 36px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.track-search-icon { font-size: 2.5rem; }
+.track-search-card h3 { font-size: 1.3rem; font-weight: 800; }
+
+.track-search-form {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.search-input-wrap { flex: 1; }
+
+.quick-track {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: var(--clr-text-muted);
+}
+.quick-btn {
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.2);
+  color: var(--clr-primary-light);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.quick-btn:hover {
+  background: rgba(59,130,246,0.2);
+  transform: translateY(-1px);
+}
+
+/* --- Track Result --- */
+.track-result { animation: slide-up 0.4s ease; }
+
+/* --- Summary Card --- */
+.track-summary-card {
+  background: var(--gradient-card);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.track-summary-left { display: flex; align-items: center; gap: 20px; }
+.track-device-icon { font-size: 3rem; }
+.track-ref { font-size: 0.8rem; color: var(--clr-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.track-device { font-size: 1.2rem; font-weight: 800; margin: 4px 0; }
+.track-customer { font-size: 0.85rem; color: var(--clr-text-muted); }
+.track-summary-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.track-est { font-size: 0.8rem; color: var(--clr-text-muted); }
+
+/* --- Timeline Card --- */
+.track-timeline-card {
+  background: var(--gradient-card);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  margin-bottom: 24px;
+}
+.track-timeline-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 28px; }
+
+.timeline { display: flex; flex-direction: column; gap: 0; }
+.timeline-item {
+  display: flex;
+  gap: 20px;
+  position: relative;
+}
+.timeline-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 19px;
+  top: 40px;
+  bottom: -20px;
+  width: 2px;
+  background: var(--clr-border);
+  z-index: 0;
+}
+.timeline-item.completed::after { background: var(--clr-green); }
+.timeline-item.active::after { background: linear-gradient(#3b82f6, var(--clr-border)); }
+
+.tl-dot-wrap {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+.tl-dot {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  border: 2px solid var(--clr-border);
+  background: var(--clr-surface);
+  transition: all 0.3s;
+}
+.timeline-item.completed .tl-dot {
+  background: var(--clr-green);
+  border-color: var(--clr-green);
+  box-shadow: 0 0 12px rgba(16,185,129,0.4);
+}
+.timeline-item.active .tl-dot {
+  background: var(--gradient-primary);
+  border-color: transparent;
+  box-shadow: 0 0 15px rgba(59,130,246,0.4);
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+.timeline-item.pending .tl-dot { opacity: 0.4; }
+
+.tl-content {
+  flex: 1;
+  padding-bottom: 28px;
+}
+.tl-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+.tl-desc { font-size: 0.85rem; color: var(--clr-text-muted); }
+.tl-time { font-size: 0.75rem; color: var(--clr-text-faint); margin-top: 4px; }
+
+/* --- Details Grid --- */
+.track-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.track-detail-card {
+  background: var(--gradient-card);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+.track-detail-card h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--clr-border);
+}
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.info-row:last-child { border-bottom: none; }
+.info-row span:first-child { color: var(--clr-text-muted); }
+.info-row span:last-child { font-weight: 600; text-align: right; }
+
+/* --- Track Actions --- */
+.track-actions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  .track-details-grid { grid-template-columns: 1fr; }
+  .track-search-form { flex-direction: column; }
+  .track-summary-card { flex-direction: column; align-items: flex-start; }
+  .track-summary-right { align-items: flex-start; }
+}

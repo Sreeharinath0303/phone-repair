@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="View and approve your repair quotation from RepairVafe." />
+  <title>Quotation – RepairVafe</title>
+  <link rel="stylesheet" href="../css/global.css" />
+  <link rel="stylesheet" href="../css/quotation.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <nav class="navbar scrolled" id="navbar">
+    <div class="nav-container">
+      <a href="../../index.html" class="nav-logo">
+        <div class="logo-icon">⚡</div>
+        <span>Repair<strong>Vafe</strong></span>
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="../../index.html">Home</a></li>
+        <li><a href="booking.html">Book Repair</a></li>
+        <li><a href="tracking.html">Track Repair</a></li>
+        <li><a href="admin.html">Admin</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="booking.html" class="btn btn-primary">Book Now</a>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <div class="container">
+      <div class="page-breadcrumb">
+        <a href="../../index.html">Home</a><span class="sep">›</span>
+        <a href="tracking.html">Track Repair</a><span class="sep">›</span>
+        <span>Quotation</span>
+      </div>
+      <h1 class="page-title gradient-text">Repair Quotation</h1>
+      <p class="page-subtitle">Review the cost breakdown and approve or decline to proceed.</p>
+    </div>
+  </div>
+
+  <section class="quotation-section">
+    <div class="container">
+      <!-- Lookup Form -->
+      <div class="lookup-card" id="lookupCard">
+        <div class="lookup-icon">🔍</div>
+        <h3>Find Your Quotation</h3>
+        <p>Enter your booking reference number to view your quotation.</p>
+        <div class="lookup-form">
+          <input type="text" class="form-input" id="refInput" placeholder="e.g. RV-2026-00042" />
+          <button class="btn btn-primary" onclick="loadQuotation()" id="lookupBtn">View Quote</button>
+        </div>
+        <p class="lookup-hint">💡 Try: <strong>RV-2026-00042</strong> to see a demo quote</p>
+      </div>
+
+      <!-- Quotation Details -->
+      <div class="quotation-content" id="quotationContent" style="display:none">
+        <!-- Header -->
+        <div class="quot-header">
+          <div class="quot-header-left">
+            <div class="quot-logo">
+              <div class="logo-icon">⚡</div>
+              <span>RepairVafe</span>
+            </div>
+            <div class="quot-ref-info">
+              <div class="quot-ref">Quotation #<strong id="qRef">RV-2026-00042</strong></div>
+              <div class="quot-date" id="qDate">Issued: April 22, 2026</div>
+            </div>
+          </div>
+          <div class="quot-status-wrap">
+            <div class="badge badge-pending" id="qStatus"><span>⏳</span> Awaiting Approval</div>
+          </div>
+        </div>
+
+        <div class="quot-grid">
+          <!-- Customer & Device Info -->
+          <div class="quot-info-section">
+            <div class="quot-info-card">
+              <h4>👤 Customer Details</h4>
+              <div class="info-row"><span>Name</span><span id="qCustName">Arjun Kumar</span></div>
+              <div class="info-row"><span>Phone</span><span id="qCustPhone">+91 98765 43210</span></div>
+              <div class="info-row"><span>Email</span><span id="qCustEmail">arjun@email.com</span></div>
+              <div class="info-row"><span>Service</span><span id="qServiceType">Drop Off</span></div>
+            </div>
+            <div class="quot-info-card">
+              <h4>📱 Device Details</h4>
+              <div class="info-row"><span>Device</span><span id="qDevice">iPhone 14 Pro</span></div>
+              <div class="info-row"><span>Brand</span><span id="qBrand">Apple</span></div>
+              <div class="info-row"><span>Issue(s)</span><span id="qIssues">Screen Crack, Touch Not Working</span></div>
+              <div class="info-row"><span>Booked On</span><span id="qBookedDate">Apr 21, 2026</span></div>
+            </div>
+          </div>
+
+          <!-- Cost Breakdown -->
+          <div class="quot-cost-section">
+            <h4>💰 Cost Breakdown</h4>
+            <div class="cost-table">
+              <div class="cost-header">
+                <span>Item</span><span>Description</span><span>Cost</span>
+              </div>
+              <div class="cost-rows" id="costRows">
+                <div class="cost-row">
+                  <span>Screen Replacement</span>
+                  <span>OEM iPhone 14 Pro Display</span>
+                  <span>₹2,200</span>
+                </div>
+                <div class="cost-row">
+                  <span>Labor Charges</span>
+                  <span>Repair & Installation</span>
+                  <span>₹300</span>
+                </div>
+                <div class="cost-row">
+                  <span>Diagnostic Fee</span>
+                  <span>Device Assessment</span>
+                  <span>₹0</span>
+                </div>
+              </div>
+              <div class="cost-footer">
+                <div class="cost-subtotal">
+                  <span>Subtotal</span><span id="qSubtotal">₹2,500</span>
+                </div>
+                <div class="cost-discount">
+                  <span>Discount</span><span id="qDiscount" style="color:var(--clr-green)">−₹100</span>
+                </div>
+                <div class="cost-total">
+                  <span>Total Amount</span><span id="qTotal">₹2,400</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Warranty Info -->
+            <div class="warranty-banner">
+              <span>🛡️</span>
+              <div>
+                <strong>3-Month Warranty Included</strong>
+                <p>Parts and labour covered for 90 days after repair completion.</p>
+              </div>
+            </div>
+
+            <!-- Estimated Time -->
+            <div class="est-time">
+              <div class="est-icon">⏱️</div>
+              <div>
+                <div class="est-label">Estimated Completion</div>
+                <div class="est-value" id="qEstTime">Same Day (4–6 hours)</div>
+              </div>
+            </div>
+
+            <!-- Technician Note -->
+            <div class="tech-note">
+              <h5>🔧 Technician's Notes</h5>
+              <p id="qTechNote">Device screen has significant damage. We recommend a full display assembly replacement using OEM parts for best results and longevity. The digitizer will also be inspected during the process at no extra charge.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="quot-actions" id="quotActions">
+          <button class="btn btn-danger" onclick="rejectQuote()" id="rejectBtn">
+            ✕ Decline Quote
+          </button>
+          <div class="action-note">
+            <span>By approving, you authorize RepairVafe to proceed with the repair at the quoted price.</span>
+          </div>
+          <button class="btn btn-success btn-lg" onclick="approveQuote()" id="approveBtn">
+            ✓ Approve & Proceed
+          </button>
+        </div>
+
+        <!-- Post-action state -->
+        <div class="quot-post-action" id="quotPostAction" style="display:none"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="../utils/quotation.js"></script>
+  <script src="../utils/main.js"></script>
+</body>
+</html>

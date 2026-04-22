@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Share your repair experience with RepairVafe. Your feedback helps us improve." />
+  <title>Feedback – RepairVafe</title>
+  <link rel="stylesheet" href="../css/global.css" />
+  <link rel="stylesheet" href="../css/feedback.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <nav class="navbar scrolled" id="navbar">
+    <div class="nav-container">
+      <a href="../../index.html" class="nav-logo">
+        <div class="logo-icon">⚡</div>
+        <span>Repair<strong>Vafe</strong></span>
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="../../index.html">Home</a></li>
+        <li><a href="booking.html">Book Repair</a></li>
+        <li><a href="tracking.html">Track Repair</a></li>
+        <li><a href="admin.html">Admin</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="booking.html" class="btn btn-primary">Book Now</a>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <div class="container">
+      <div class="page-breadcrumb">
+        <a href="../../index.html">Home</a><span class="sep">›</span><span>Feedback</span>
+      </div>
+      <h1 class="page-title gradient-text">Share Your Experience</h1>
+      <p class="page-subtitle">Your feedback helps us deliver even better repairs. It only takes a minute!</p>
+    </div>
+  </div>
+
+  <section class="feedback-section">
+    <div class="container">
+      <div class="feedback-layout">
+        <!-- Feedback Form -->
+        <div class="feedback-form-card" id="feedbackFormCard">
+          <div class="feedback-header">
+            <div class="fb-icon">⭐</div>
+            <h2>Rate Your Repair Experience</h2>
+            <p>Booking Reference: <strong id="fbRef">RV-2026-00042</strong></p>
+          </div>
+
+          <!-- Overall Rating -->
+          <div class="overall-rating">
+            <label class="form-label">Overall Experience *</label>
+            <div class="star-rating" id="starRating">
+              <span class="star" data-val="1" role="button" aria-label="1 star">★</span>
+              <span class="star" data-val="2" role="button" aria-label="2 stars">★</span>
+              <span class="star" data-val="3" role="button" aria-label="3 stars">★</span>
+              <span class="star" data-val="4" role="button" aria-label="4 stars">★</span>
+              <span class="star" data-val="5" role="button" aria-label="5 stars">★</span>
+            </div>
+            <div class="rating-label" id="ratingLabel">Click to rate</div>
+          </div>
+
+          <!-- Category Ratings -->
+          <div class="category-ratings">
+            <div class="cat-rating-row">
+              <span>Service Quality</span>
+              <div class="mini-stars" data-cat="quality">
+                <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+              </div>
+            </div>
+            <div class="cat-rating-row">
+              <span>Turnaround Time</span>
+              <div class="mini-stars" data-cat="time">
+                <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+              </div>
+            </div>
+            <div class="cat-rating-row">
+              <span>Value for Money</span>
+              <div class="mini-stars" data-cat="value">
+                <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+              </div>
+            </div>
+            <div class="cat-rating-row">
+              <span>Staff Behaviour</span>
+              <div class="mini-stars" data-cat="staff">
+                <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Written Feedback -->
+          <div class="form-group">
+            <label class="form-label" for="fbText">Tell us about your experience</label>
+            <textarea class="form-textarea" id="fbText" placeholder="What did you love? What can we improve? Any specific comments about the technician or service..." style="min-height:130px;"></textarea>
+          </div>
+
+          <!-- Would recommend -->
+          <div class="recommend-section">
+            <label class="form-label">Would you recommend RepairVafe to others?</label>
+            <div class="recommend-options">
+              <label class="recommend-btn" id="recYes">
+                <input type="radio" name="recommend" value="yes" />
+                <span>👍 Yes, definitely!</span>
+              </label>
+              <label class="recommend-btn" id="recMaybe">
+                <input type="radio" name="recommend" value="maybe" />
+                <span>🤔 Maybe</span>
+              </label>
+              <label class="recommend-btn" id="recNo">
+                <input type="radio" name="recommend" value="no" />
+                <span>👎 No</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Contact Consent -->
+          <div class="consent-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="contactConsent" />
+              <span class="checkmark"></span>
+              <span>RepairVafe may contact me about this feedback for service improvement</span>
+            </label>
+          </div>
+
+          <button class="btn btn-primary btn-lg full-width" onclick="submitFeedback()" id="submitFbBtn">
+            Submit Feedback
+          </button>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="feedback-sidebar">
+          <div class="repair-summary-card">
+            <h4>Your Repair Summary</h4>
+            <div class="rs-device">
+              <div class="rs-icon">📱</div>
+              <div>
+                <div class="rs-device-name">iPhone 14 Pro</div>
+                <div class="rs-repair">Screen Replacement</div>
+              </div>
+            </div>
+            <div class="rs-rows">
+              <div class="info-row"><span>Reference</span><span>RV-2026-00042</span></div>
+              <div class="info-row"><span>Completed</span><span>Apr 22, 2026</span></div>
+              <div class="info-row"><span>Amount Paid</span><span>₹2,400</span></div>
+              <div class="info-row"><span>Technician</span><span>Rajesh V.</span></div>
+            </div>
+          </div>
+
+          <div class="reviews-preview">
+            <h4>What others say</h4>
+            <div class="review-item">
+              <div class="ri-stars">★★★★★</div>
+              <p>"Quick and professional. Got my phone back same day!"</p>
+              <div class="ri-author">— Priya R.</div>
+            </div>
+            <div class="review-item">
+              <div class="ri-stars">★★★★★</div>
+              <p>"Transparent pricing, no surprises. Highly recommended."</p>
+              <div class="ri-author">— Karthik M.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Success State -->
+      <div class="feedback-success" id="feedbackSuccess" style="display:none">
+        <div class="fs-icon">🎊</div>
+        <h2>Thank You for Your Feedback!</h2>
+        <p>Your review helps us serve everyone better. We truly appreciate you taking the time.</p>
+        <div class="fs-score">
+          <div class="stars" id="fsStars"></div>
+          <div class="fs-label" id="fsLabel"></div>
+        </div>
+        <div class="fs-actions">
+          <a href="booking.html" class="btn btn-primary">Book Another Repair</a>
+          <a href="../../index.html" class="btn btn-outline">Back to Home</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="../utils/feedback.js"></script>
+  <script src="../utils/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Track your device repair status in real-time with RepairVafe." />
+  <title>Track Repair – RepairVafe</title>
+  <link rel="stylesheet" href="../css/global.css" />
+  <link rel="stylesheet" href="../css/tracking.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <nav class="navbar scrolled" id="navbar">
+    <div class="nav-container">
+      <a href="../../index.html" class="nav-logo">
+        <div class="logo-icon">⚡</div>
+        <span>Repair<strong>Vafe</strong></span>
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="../../index.html">Home</a></li>
+        <li><a href="booking.html">Book Repair</a></li>
+        <li><a href="tracking.html" class="active">Track Repair</a></li>
+        <li><a href="admin.html">Admin</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="booking.html" class="btn btn-primary">Book Now</a>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <div class="container">
+      <div class="page-breadcrumb">
+        <a href="../../index.html">Home</a><span class="sep">›</span><span>Track Repair</span>
+      </div>
+      <h1 class="page-title gradient-text">Track Your Repair</h1>
+      <p class="page-subtitle">Enter your booking reference to see real-time repair status updates.</p>
+    </div>
+  </div>
+
+  <section class="tracking-section">
+    <div class="container">
+      <!-- Search -->
+      <div class="track-search-card">
+        <div class="track-search-icon">🔍</div>
+        <h3>Find Your Repair</h3>
+        <div class="track-search-form">
+          <div class="search-input-wrap">
+            <input type="text" class="form-input" id="trackRefInput" placeholder="Enter booking reference (e.g. RV-2026-00042)" />
+          </div>
+          <button class="btn btn-primary" onclick="trackRepair()" id="trackBtn">Track Now</button>
+        </div>
+        <div class="quick-track">
+          <span>Quick demos:</span>
+          <button class="quick-btn" onclick="quickTrack('RV-2026-00042')">RV-2026-00042</button>
+          <button class="quick-btn" onclick="quickTrack('RV-2026-00087')">RV-2026-00087</button>
+          <button class="quick-btn" onclick="quickTrack('RV-2026-00013')">RV-2026-00013</button>
+        </div>
+      </div>
+
+      <!-- Tracking Result -->
+      <div class="track-result" id="trackResult" style="display:none">
+        <!-- Repair Header -->
+        <div class="track-summary-card">
+          <div class="track-summary-left">
+            <div class="track-device-icon" id="tDeviceIcon">📱</div>
+            <div class="track-device-info">
+              <div class="track-ref" id="tRef">RV-2026-00042</div>
+              <div class="track-device" id="tDevice">iPhone 14 Pro – Screen Replacement</div>
+              <div class="track-customer" id="tCustomer">Arjun Kumar · +91 98765 43210</div>
+            </div>
+          </div>
+          <div class="track-summary-right">
+            <div class="badge" id="tStatusBadge">In Progress</div>
+            <div class="track-est" id="tEst">Est. Today, 6:00 PM</div>
+          </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="track-timeline-card">
+          <h3>Repair Timeline</h3>
+          <div class="timeline" id="trackTimeline">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Details -->
+        <div class="track-details-grid">
+          <div class="track-detail-card">
+            <h4>Device & Repair</h4>
+            <div class="info-row"><span>Device</span><span id="tdDevice">–</span></div>
+            <div class="info-row"><span>Brand</span><span id="tdBrand">–</span></div>
+            <div class="info-row"><span>Repair(s)</span><span id="tdRepairs">–</span></div>
+            <div class="info-row"><span>Technician</span><span id="tdTech">–</span></div>
+          </div>
+          <div class="track-detail-card">
+            <h4>Quotation</h4>
+            <div class="info-row"><span>Amount</span><span id="tdAmount">–</span></div>
+            <div class="info-row"><span>Status</span><span id="tdQuoteStatus">–</span></div>
+            <div class="info-row"><span>Warranty</span><span id="tdWarranty">3 Months</span></div>
+            <div class="info-row view-quot"><a href="quotation.html" class="btn btn-outline" style="padding:6px 14px;font-size:0.8rem">View Full Quote</a></div>
+          </div>
+          <div class="track-detail-card">
+            <h4>Schedule</h4>
+            <div class="info-row"><span>Dropped On</span><span id="tdDropped">–</span></div>
+            <div class="info-row"><span>Est. Ready</span><span id="tdReady">–</span></div>
+            <div class="info-row"><span>Service</span><span id="tdService">–</span></div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="track-actions" id="trackActions">
+          <a href="quotation.html" class="btn btn-primary" id="viewQuotBtn">View/Approve Quotation</a>
+          <a href="feedback.html" class="btn btn-outline" id="feedbackBtn" style="display:none">Leave Feedback</a>
+          <button class="btn btn-outline" onclick="trackRepair()">🔄 Refresh Status</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="../utils/tracking.js"></script>
+  <script src="../utils/main.js"></script>
+</body>
+</html>

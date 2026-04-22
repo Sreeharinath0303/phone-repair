@@ -1,0 +1,240 @@
+/* ============================================
+   RepairVafe – Quotation Page Styles
+   ============================================ */
+.quotation-section {
+  padding: 40px 0 80px;
+  min-height: 70vh;
+}
+
+/* --- Lookup Card --- */
+.lookup-card {
+  max-width: 520px;
+  margin: 20px auto 0;
+  background: var(--gradient-card);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-xl);
+  padding: 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.lookup-icon { font-size: 3rem; }
+.lookup-card h3 { font-size: 1.4rem; font-weight: 800; }
+.lookup-card p { color: var(--clr-text-muted); font-size: 0.9rem; }
+.lookup-form {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+}
+.lookup-form .form-input { flex: 1; }
+.lookup-hint { font-size: 0.8rem; color: var(--clr-text-faint); }
+
+/* --- Quotation Content --- */
+.quotation-content {
+  animation: slide-up 0.4s ease;
+}
+
+/* --- Quote Header --- */
+.quot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--gradient-card);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  margin-bottom: 24px;
+}
+.quot-header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.quot-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.quot-ref { font-size: 0.9rem; }
+.quot-ref strong { color: var(--clr-primary-light); }
+.quot-date { font-size: 0.8rem; color: var(--clr-text-muted); }
+
+/* --- Grid --- */
+.quot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.quot-info-section { display: flex; flex-direction: column; gap: 16px; }
+.quot-info-card {
+  background: var(--gradient-card);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+.quot-info-card h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--clr-border);
+}
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.info-row:last-child { border-bottom: none; }
+.info-row span:first-child { color: var(--clr-text-muted); }
+.info-row span:last-child { font-weight: 600; text-align: right; }
+
+/* --- Cost Section --- */
+.quot-cost-section {
+  background: var(--gradient-card);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.quot-cost-section h4 {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+/* --- Cost Table --- */
+.cost-table { display: flex; flex-direction: column; }
+.cost-header {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 0.6fr;
+  gap: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--clr-text-faint);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--clr-border);
+}
+.cost-row {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 0.6fr;
+  gap: 10px;
+  font-size: 0.875rem;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.cost-row span:last-child { text-align: right; font-weight: 600; }
+
+.cost-footer {
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cost-subtotal, .cost-discount {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: var(--clr-text-muted);
+}
+.cost-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--clr-text);
+  padding-top: 12px;
+  border-top: 2px solid var(--clr-border);
+}
+.cost-total span:last-child { color: var(--clr-cyan); }
+
+/* --- Warranty Banner --- */
+.warranty-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+.warranty-banner span { font-size: 1.5rem; flex-shrink: 0; }
+.warranty-banner strong { font-size: 0.9rem; display: block; margin-bottom: 4px; }
+.warranty-banner p { font-size: 0.8rem; color: var(--clr-text-muted); }
+
+/* --- Est Time --- */
+.est-time {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(59,130,246,0.06);
+  border: 1px solid rgba(59,130,246,0.15);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+.est-icon { font-size: 1.5rem; }
+.est-label { font-size: 0.75rem; color: var(--clr-text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.est-value { font-size: 0.95rem; font-weight: 700; }
+
+/* --- Tech Note --- */
+.tech-note {
+  background: rgba(139,92,246,0.06);
+  border: 1px solid rgba(139,92,246,0.15);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+.tech-note h5 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.tech-note p { font-size: 0.875rem; color: var(--clr-text-muted); line-height: 1.6; }
+
+/* --- Actions --- */
+.quot-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 28px;
+  background: var(--gradient-card);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  flex-wrap: wrap;
+}
+.action-note {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--clr-text-faint);
+  max-width: 320px;
+}
+
+.quot-post-action {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.1rem;
+  background: var(--gradient-card);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+}
+
+@media (max-width: 768px) {
+  .quot-grid { grid-template-columns: 1fr; }
+  .cost-header, .cost-row { grid-template-columns: 1fr 1fr; }
+  .cost-header span:nth-child(2), .cost-row span:nth-child(2) { display: none; }
+  .quot-header { flex-direction: column; gap: 12px; }
+  .quot-actions { flex-direction: column; }
+  .lookup-form { flex-direction: column; }
+}
