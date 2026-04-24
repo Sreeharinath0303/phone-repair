@@ -1,70 +1,40 @@
-/* ============================================
-   RepairVafe – Quotation Page JS
-   ============================================ */
+/* ============================================================
+   RepairVafe – Quotation Page JS (API-driven)
+   Fetches real quote from GET /api/quotations/:ref
+   Approve/Reject via PUT /api/bookings/:ref/quote-action
+   ============================================================ */
 
-const sampleQuotes = {
-  'RV-2026-00042': {
-    ref: 'RV-2026-00042', date: 'April 22, 2026', status: 'pending',
-    customer: { name: 'Arjun Kumar', phone: '+91 98765 43210', email: 'arjun@email.com', service: 'Drop Off' },
-    device: { name: 'iPhone 14 Pro', brand: 'Apple', issues: 'Screen Crack, Touch Not Working', bookedDate: 'Apr 21, 2026' },
-    items: [
-      { name: 'Screen Replacement', desc: 'OEM iPhone 14 Pro Display', cost: 2200 },
-      { name: 'Labor Charges', desc: 'Repair & Installation', cost: 300 },
-      { name: 'Diagnostic Fee', desc: 'Device Assessment', cost: 0 }
-    ],
-    discount: 100,
-    estTime: 'Same Day (4–6 hours)',
-    warranty: '3 Months',
-    techNote: 'Device screen has significant damage. We recommend a full display assembly replacement using OEM parts for best results and longevity. The digitizer will also be inspected during the process at no extra charge.'
-  },
-  'RV-2026-00087': {
-    ref: 'RV-2026-00087', date: 'April 21, 2026', status: 'approved',
-    customer: { name: 'Priya Rajan', phone: '+91 87654 32109', email: 'priya@email.com', service: 'Pickup' },
-    device: { name: 'Samsung Galaxy S23', brand: 'Samsung', issues: 'Battery Drain, Slow Charging', bookedDate: 'Apr 20, 2026' },
-    items: [
-      { name: 'Battery Replacement', desc: 'Original Samsung Battery', cost: 1800 },
-      { name: 'Labor Charges', desc: 'Repair & Testing', cost: 200 }
-    ],
-    discount: 0,
-    estTime: '2–3 Hours',
-    warranty: '3 Months',
-    techNote: 'Battery health at 62%. Replacement recommended immediately. Charging port will also be cleaned during repair at no extra cost.'
-  },
-  'RV-2026-00013': {
-    ref: 'RV-2026-00013', date: 'April 18, 2026', status: 'completed',
-    customer: { name: 'Meera Sharma', phone: '+91 76543 21098', email: 'meera@email.com', service: 'Drop Off' },
-    device: { name: 'Dell XPS 15', brand: 'Dell', issues: 'SSD Upgrade Request', bookedDate: 'Apr 17, 2026' },
-    items: [
-      { name: 'SSD Upgrade (1TB)', desc: 'Samsung 970 EVO Plus NVMe', cost: 6500 },
-      { name: 'Data Migration', desc: 'Transfer existing data to new SSD', cost: 500 },
-      { name: 'Labor Charges', desc: 'Installation & Testing', cost: 300 }
-    ],
-    discount: 300,
-    estTime: '3–4 Hours',
-    warranty: '1 Year (SSD Manufacturer)',
-    techNote: 'Current 512GB SSD is at 88% capacity. Upgrading to 1TB Samsung 970 EVO Plus for significant performance and storage improvement. OS migration will be done with zero data loss.'
-  }
-};
+const API = (['localhost', '127.0.0.1', ''].includes(window.location.hostname))
+  ? 'http://localhost:5000/api' : '/api';
 
-function loadQuotation() {
-  const refInput = document.getElementById('refInput');
-  const ref = refInput?.value?.trim().toUpperCase();
-  if (!ref) { showToast('Please enter a booking reference.', 'error'); return; }
+let currentRef = null;
+
+async function loadQuotation() {
+  const input = document.getElementById('refInput');
+  const ref = input?.value?.trim().toUpperCase();
+  if (!ref) return showToast('Please enter a booking reference.', 'error');
 
   const btn = document.getElementById('lookupBtn');
   btn.textContent = '⏳ Loading...';
   btn.disabled = true;
 
-  setTimeout(() => {
+  try {
+    const res = await fetch(`${API}/quotations/${ref}`);
+    const data = await res.json();
     btn.textContent = 'View Quote';
     btn.disabled = false;
-    const quote = sampleQuotes[ref];
-    if (!quote) {
-      showToast('No quotation found for this reference. Try: RV-2026-00042', 'error');
+
+    if (!res.ok || !data.success) {
+      showToast(data.message || 'No quotation found for this reference.', 'error');
       return;
     }
-    renderQuotation(quote);
-  }, 1000);
+    currentRef = data.data.referenceNumber;
+    renderQuotation(data.data);
+  } catch (err) {
+    btn.textContent = 'View Quote';
+    btn.disabled = false;
+    showToast('Cannot connect to server. Is the backend running?', 'error');
+  }
 }
 
 function renderQuotation(q) {
@@ -72,123 +42,133 @@ function renderQuotation(q) {
   const content = document.getElementById('quotationContent');
   content.style.display = 'block';
 
-  // Header
-  document.getElementById('qRef').textContent = q.ref;
-  document.getElementById('qDate').textContent = 'Issued: ' + q.date;
+  setText('qRef',  q.referenceNumber);
+  setText('qDate', 'Issued: ' + formatDate(q.updatedAt || q.createdAt));
 
-  // Status
-  const statusBadge = document.getElementById('qStatus');
-  const statusConfigs = {
-    pending: { cls: 'badge-pending', text: '⏳ Awaiting Approval' },
-    approved: { cls: 'badge-approved', text: '✅ Approved' },
-    rejected: { cls: 'badge-rejected', text: '✕ Declined' },
-    completed: { cls: 'badge-completed', text: '🎉 Completed' }
-  };
-  const sc = statusConfigs[q.status] || statusConfigs.pending;
-  statusBadge.className = 'badge ' + sc.cls;
-  statusBadge.innerHTML = sc.text;
+  // Status badge
+  const badge = document.getElementById('qStatus');
+  const statusMap = { 'Pending': { cls: 'badge-pending', text: '⏳ Awaiting Your Approval' }, 'Approved': { cls: 'badge-approved', text: '✅ Approved' }, 'Rejected': { cls: 'badge-rejected', text: '✕ Declined' }, 'Not Issued': { cls: 'badge-received', text: '📋 Not Issued Yet' } };
+  const sc = statusMap[q.quotationStatus] || statusMap['Not Issued'];
+  badge.className = 'badge ' + sc.cls;
+  badge.innerHTML = sc.text;
 
   // Customer
-  setText('qCustName', q.customer.name);
-  setText('qCustPhone', q.customer.phone);
-  setText('qCustEmail', q.customer.email);
-  setText('qServiceType', q.customer.service);
+  setText('qCustName',    q.customerName);
+  setText('qCustPhone',   q.customerPhone);
+  setText('qCustEmail',   q.customerEmail);
+  setText('qServiceType', q.serviceType ? q.serviceType.charAt(0).toUpperCase() + q.serviceType.slice(1) : '—');
 
   // Device
-  setText('qDevice', q.device.name);
-  setText('qBrand', q.device.brand);
-  setText('qIssues', q.device.issues);
-  setText('qBookedDate', q.device.bookedDate);
+  setText('qDevice',     `${q.deviceBrand} ${q.deviceModel}`);
+  setText('qBrand',      q.deviceBrand);
+  setText('qIssues',     (q.repairTypes || []).join(', '));
+  setText('qBookedDate', formatDate(q.createdAt));
 
-  // Cost rows
+  // Cost breakdown
   const costRows = document.getElementById('costRows');
-  costRows.innerHTML = q.items.map(item =>
-    `<div class="cost-row">
-      <span>${item.name}</span>
-      <span>${item.desc}</span>
-      <span>${item.cost === 0 ? 'Free' : '₹' + item.cost.toLocaleString('en-IN')}</span>
-    </div>`
-  ).join('');
+  if (q.quotationAmount) {
+    const items = (q.repairTypes || []).map((rt, i) => {
+      const isCost = i === 0;
+      return `<div class="cost-row"><span>${rt}</span><span>Repair Service</span><span>${isCost ? '₹' + q.quotationAmount.toLocaleString('en-IN') : 'Incl.'}</span></div>`;
+    });
+    items.push(`<div class="cost-row"><span>Labor Charges</span><span>Repair & Installation</span><span>Included</span></div>`);
+    if (q.discount > 0) items.push(`<div class="cost-row"><span>Discount</span><span>Applied Offer</span><span style="color:#10b981">−₹${q.discount.toLocaleString('en-IN')}</span></div>`);
+    costRows.innerHTML = items.join('');
+  } else {
+    costRows.innerHTML = '<div class="cost-row" style="color:var(--clr-text-muted)"><span colspan="3">Quotation not yet issued by technician</span></div>';
+  }
 
-  const subtotal = q.items.reduce((sum, i) => sum + i.cost, 0);
-  const total = subtotal - q.discount;
-  setText('qSubtotal', '₹' + subtotal.toLocaleString('en-IN'));
-  setText('qDiscount', q.discount > 0 ? '−₹' + q.discount.toLocaleString('en-IN') : '–');
-  setText('qTotal', '₹' + total.toLocaleString('en-IN'));
+  const subtotal = q.quotationAmount || 0;
+  const total    = subtotal - (q.discount || 0);
+  setText('qSubtotal', subtotal ? '₹' + subtotal.toLocaleString('en-IN') : '—');
+  setText('qDiscount', q.discount > 0 ? '−₹' + q.discount.toLocaleString('en-IN') : '—');
+  setText('qTotal',    total > 0 ? '₹' + total.toLocaleString('en-IN') : '—');
 
   // Misc
-  setText('qEstTime', q.estTime);
-  setText('qTechNote', q.techNote);
+  setText('qEstTime',   q.estimatedTime || 'Will be updated');
+  setText('qTechNote',  q.technicianNote || 'No notes added yet.');
+
+  // Warranty
+  const wEl = document.getElementById('qWarranty');
+  if (wEl) wEl.textContent = q.warrantyPeriod || '3 Months';
 
   // Actions
-  const actions = document.getElementById('quotActions');
+  const actions    = document.getElementById('quotActions');
   const postAction = document.getElementById('quotPostAction');
-  if (q.status === 'pending') {
+  if (q.quotationStatus === 'Pending') {
     actions.style.display = 'flex';
     postAction.style.display = 'none';
   } else {
     actions.style.display = 'none';
     postAction.style.display = 'block';
     const messages = {
-      approved: '<span style="font-size:2rem">✅</span><br><strong>Quote Approved</strong><br><p style="color:var(--clr-text-muted);margin-top:8px">Your repair is now in progress. We\'ll notify you when it\'s ready.</p><br><a href="tracking.html" class="btn btn-primary" style="margin-top:12px">Track My Repair</a>',
-      completed: '<span style="font-size:2rem">🎉</span><br><strong>Repair Completed!</strong><br><p style="color:var(--clr-text-muted);margin-top:8px">Your device has been repaired and is ready for pickup.</p><br><a href="feedback.html" class="btn btn-primary" style="margin-top:12px">Leave Feedback</a>',
-      rejected: '<span style="font-size:2rem">❌</span><br><strong>Quote Declined</strong><br><p style="color:var(--clr-text-muted);margin-top:8px">You declined this quote. Contact us if you change your mind.</p>'
+      Approved:   `<span style="font-size:2rem">✅</span><br><strong>Quote Approved!</strong><br><p style="color:var(--clr-text-muted);margin-top:8px">Your repair is now in progress. We'll notify you when it's ready.</p><br><a href="tracking.html" class="btn btn-primary" style="margin-top:12px">Track My Repair</a>`,
+      Completed:  `<span style="font-size:2rem">🎉</span><br><strong>Repair Completed!</strong><br><p style="color:var(--clr-text-muted);margin-top:8px">Your device is ready for pickup.</p><br><a href="feedback.html" class="btn btn-primary" style="margin-top:12px">Leave Feedback</a>`,
+      Rejected:   `<span style="font-size:2rem">❌</span><br><strong>Quote Declined</strong><br><p style="color:var(--clr-text-muted);margin-top:8px">Contact us if you change your mind.</p>`,
+      'Not Issued': `<span style="font-size:2rem">⏳</span><br><strong>Quote Not Issued Yet</strong><br><p style="color:var(--clr-text-muted);margin-top:8px">Our technician will send a quote after diagnosing your device. Check back soon.</p>`
     };
-    postAction.innerHTML = messages[q.status] || '';
+    postAction.innerHTML = messages[q.quotationStatus] || messages['Not Issued'];
   }
 
   content.scrollIntoView({ behavior: 'smooth' });
 }
 
-function approveQuote() {
+async function approveQuote() {
+  if (!currentRef) return;
   const btn = document.getElementById('approveBtn');
   btn.textContent = '⏳ Processing...';
   btn.disabled = true;
 
-  setTimeout(() => {
+  try {
+    const res  = await fetch(`${API}/bookings/${currentRef}/quote-action`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'approve' })
+    });
+    const data = await res.json();
+    btn.textContent = 'Approve & Confirm'; btn.disabled = false;
+
+    if (data.success) {
+      document.getElementById('quotActions').style.display = 'none';
+      const p = document.getElementById('quotPostAction');
+      p.style.display = 'block';
+      p.innerHTML = `<span style="font-size:2rem">✅</span><br><strong>Approved Successfully!</strong><br><p style="color:var(--clr-text-muted);margin-top:8px">Repair has started. You'll get SMS updates.</p><br><a href="tracking.html" class="btn btn-primary" style="margin-top:12px">Track My Repair</a>`;
+      document.getElementById('qStatus').className = 'badge badge-approved';
+      document.getElementById('qStatus').innerHTML = '✅ Approved';
+      showToast('Quote approved! Repair starts now. 🔧', 'success');
+    } else {
+      showToast(data.message || 'Action failed', 'error');
+    }
+  } catch (e) {
+    btn.textContent = 'Approve & Confirm'; btn.disabled = false;
+    showToast('Cannot connect to server.', 'error');
+  }
+}
+
+async function rejectQuote() {
+  if (!currentRef || !confirm('Are you sure you want to decline this quotation?')) return;
+  const res  = await fetch(`${API}/bookings/${currentRef}/quote-action`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reject' }) });
+  const data = await res.json();
+  if (data.success) {
     document.getElementById('quotActions').style.display = 'none';
-    const postAction = document.getElementById('quotPostAction');
-    postAction.style.display = 'block';
-    postAction.innerHTML = '<span style="font-size:2rem">✅</span><br><strong>Quote Approved Successfully!</strong><br><p style="color:var(--clr-text-muted);margin-top:8px">Great! Our technician will begin the repair immediately. You\'ll receive status updates via SMS.</p><br><a href="tracking.html" class="btn btn-primary" style="margin-top:12px">Track My Repair</a>';
-
-    const statusBadge = document.getElementById('qStatus');
-    statusBadge.className = 'badge badge-approved';
-    statusBadge.innerHTML = '✅ Approved';
-    showToast('Quote approved! Repair starts now. 🔧', 'success');
-  }, 1200);
+    const p = document.getElementById('quotPostAction');
+    p.style.display = 'block';
+    p.innerHTML = `<span style="font-size:2rem">❌</span><br><strong>Quotation Declined</strong><br><p style="color:var(--clr-text-muted);margin-top:8px">Contact us if you need assistance.</p>`;
+    document.getElementById('qStatus').className = 'badge badge-rejected';
+    document.getElementById('qStatus').innerHTML = '✕ Declined';
+    showToast('Quotation declined.', 'info');
+  }
 }
 
-function rejectQuote() {
-  if (!confirm('Are you sure you want to decline this quotation? Your device will not be repaired.')) return;
-
-  document.getElementById('quotActions').style.display = 'none';
-  const postAction = document.getElementById('quotPostAction');
-  postAction.style.display = 'block';
-  postAction.innerHTML = '<span style="font-size:2rem">❌</span><br><strong>Quotation Declined</strong><br><p style="color:var(--clr-text-muted);margin-top:8px">We understand. Contact us if you need further assistance or reconsider.</p><br><a href="../index.html" class="btn btn-outline" style="margin-top:12px">Back to Home</a>';
-
-  const statusBadge = document.getElementById('qStatus');
-  statusBadge.className = 'badge badge-rejected';
-  statusBadge.innerHTML = '✕ Declined';
-  showToast('Quotation declined.', 'info');
-}
-
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val || '–';
-}
-
-// --- Allow enter key on input ---
-document.getElementById('refInput')?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') loadQuotation();
-});
+function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val || '–'; }
+function formatDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }); }
+document.getElementById('refInput')?.addEventListener('keydown', e => { if (e.key === 'Enter') loadQuotation(); });
 
 function showToast(msg, type = 'info') {
-  const container = document.getElementById('toastContainer');
-  if (!container) return;
+  const c = document.getElementById('toastContainer');
+  if (!c) return;
   const icons = { success: '✅', error: '❌', info: 'ℹ️' };
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
+  const el = document.createElement('div'); el.className = `toast ${type}`;
   el.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
-  container.appendChild(el);
+  c.appendChild(el);
   setTimeout(() => el.remove(), 4000);
 }

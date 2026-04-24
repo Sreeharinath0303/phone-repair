@@ -675,3 +675,24 @@
   .stats-grid { grid-template-columns: 1fr; }
   .analytics-grid { grid-template-columns: 1fr; }
 }
+
+/* --- Logout Button --- */
+.logout-btn {
+  width: 100%;
+  margin-top: 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s, border-color 0.2s;
+  letter-spacing: 0.02em;
+}
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+}

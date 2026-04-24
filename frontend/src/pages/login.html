@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="RepairVafe Admin Access - Login or Create an Account" />
+  <title>Login / Sign Up - RepairVafe</title>
+  <link rel="stylesheet" href="../styles/global.css" />
+  <link rel="stylesheet" href="../styles/login.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body class="login-body">
+
+  <div class="login-bg">
+    <div class="lb-orb lb-orb-1"></div>
+    <div class="lb-orb lb-orb-2"></div>
+    <div class="lb-orb lb-orb-3"></div>
+    <div class="lb-grid"></div>
+  </div>
+
+  <div class="login-wrapper">
+    <div class="login-card" id="loginCard">
+      <div class="login-logo">
+        <div class="logo-icon">⚡</div>
+        <span>Repair<strong>Vafe</strong></span>
+      </div>
+
+      <div class="auth-switch" role="tablist" aria-label="Auth mode">
+        <button type="button" class="auth-tab active" id="tabLogin" onclick="switchAuthMode('login')">Login</button>
+        <button type="button" class="auth-tab" id="tabSignup" onclick="switchAuthMode('signup')">Sign Up</button>
+      </div>
+
+      <div class="login-header">
+        <h1 id="authTitle">Admin Portal</h1>
+        <p id="authSubtitle">Sign in to open your dashboard</p>
+      </div>
+
+      <div class="login-alert" id="loginAlert" style="display:none">
+        <span class="alert-icon">⚠️</span>
+        <span id="loginAlertMsg">Something went wrong</span>
+      </div>
+
+      <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label" for="loginEmail">Email Address</label>
+          <div class="input-wrap">
+            <span class="input-icon">✉️</span>
+            <input type="email" class="form-input" id="loginEmail" placeholder="admin@repairvafe.com" required autocomplete="email" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="loginPassword">Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" class="form-input" id="loginPassword" placeholder="Enter your password" required autocomplete="current-password" />
+            <button type="button" class="pw-toggle" id="pwToggleLogin" onclick="togglePassword('loginPassword', 'pwToggleLogin')" title="Show/hide password">👁</button>
+          </div>
+        </div>
+
+        <div class="login-extras">
+          <label class="remember-wrap">
+            <input type="checkbox" id="rememberMe" />
+            <span>Remember me</span>
+          </label>
+          <a href="#" class="forgot-link" onclick="showToast('Please contact system admin to reset password.', 'info'); return false;">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full" id="loginBtn">
+          <span id="loginBtnText">Sign In to Dashboard</span>
+          <span id="loginSpinner" class="spinner" style="display:none"></span>
+        </button>
+      </form>
+
+      <form class="login-form auth-hidden" id="signupForm" onsubmit="handleSignup(event)">
+        <div class="form-group">
+          <label class="form-label" for="signupName">Full Name</label>
+          <div class="input-wrap">
+            <span class="input-icon">👤</span>
+            <input type="text" class="form-input" id="signupName" placeholder="Admin User" required autocomplete="name" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="signupEmail">Email Address</label>
+          <div class="input-wrap">
+            <span class="input-icon">✉️</span>
+            <input type="email" class="form-input" id="signupEmail" placeholder="newadmin@repairvafe.com" required autocomplete="email" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="signupPassword">Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔐</span>
+            <input type="password" class="form-input" id="signupPassword" placeholder="Minimum 8 characters" required autocomplete="new-password" minlength="8" />
+            <button type="button" class="pw-toggle" id="pwToggleSignup" onclick="togglePassword('signupPassword', 'pwToggleSignup')" title="Show/hide password">👁</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full" id="signupBtn">
+          <span id="signupBtnText">Create Account & Open Dashboard</span>
+          <span id="signupSpinner" class="spinner" style="display:none"></span>
+        </button>
+      </form>
+
+      <div class="login-footer">
+        <a href="../../index.html">← Back to RepairVafe</a>
+        <span class="divider">·</span>
+        <span class="login-version">v1.0.0</span>
+      </div>
+    </div>
+
+    <div class="demo-hint" id="demoHint">
+      <span>🔑</span>
+      <div>
+        <strong id="demoHintTitle">Default Login</strong>
+        <span id="demoHintText">admin@repairvafe.com · Admin@1234</span>
+      </div>
+      <button onclick="fillDemo()" class="fill-btn" id="demoFillBtn">Use Demo</button>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    const API = (['localhost', '127.0.0.1', ''].includes(window.location.hostname))
+      ? 'http://localhost:5000/api'
+      : '/api';
+
+    let authMode = 'login';
+
+    function getStoredToken() {
+      return localStorage.getItem('rv_token') || sessionStorage.getItem('rv_token');
+    }
+
+    function getStoredAdmin() {
+      return localStorage.getItem('rv_admin') || sessionStorage.getItem('rv_admin');
+    }
+
+    if (getStoredToken() && getStoredAdmin()) {
+      window.location.replace('admin.html');
+    }
+
+    function getPostLoginRedirect() {
+      const redirect = new URLSearchParams(window.location.search).get('redirect');
+      if (!redirect) return 'admin.html';
+      try {
+        const decoded = decodeURIComponent(redirect);
+        if (decoded.includes('login.html')) return 'admin.html';
+        if (decoded.startsWith('http://') || decoded.startsWith('https://')) return 'admin.html';
+        return decoded;
+      } catch {
+        return 'admin.html';
+      }
+    }
+
+    function switchAuthMode(mode) {
+      authMode = mode;
+      const loginTab = document.getElementById('tabLogin');
+      const signupTab = document.getElementById('tabSignup');
+      const loginForm = document.getElementById('loginForm');
+      const signupForm = document.getElementById('signupForm');
+      const title = document.getElementById('authTitle');
+      const subtitle = document.getElementById('authSubtitle');
+
+      loginTab.classList.toggle('active', mode === 'login');
+      signupTab.classList.toggle('active', mode === 'signup');
+      loginForm.classList.toggle('auth-hidden', mode !== 'login');
+      signupForm.classList.toggle('auth-hidden', mode !== 'signup');
+      hideAlert();
+
+      if (mode === 'login') {
+        title.textContent = 'Admin Portal';
+        subtitle.textContent = 'Sign in to open your dashboard';
+        document.getElementById('demoHintTitle').textContent = 'Default Login';
+        document.getElementById('demoHintText').textContent = 'admin@repairvafe.com · Admin@1234';
+        document.getElementById('demoFillBtn').textContent = 'Use Demo';
+        document.getElementById('loginEmail').focus();
+      } else {
+        title.textContent = 'Create Admin Account';
+        subtitle.textContent = 'Register and continue to dashboard';
+        document.getElementById('demoHintTitle').textContent = 'Sign Up Example';
+        document.getElementById('demoHintText').textContent = 'Admin User · newadmin@repairvafe.com · Strong password';
+        document.getElementById('demoFillBtn').textContent = 'Use Sample';
+        document.getElementById('signupName').focus();
+      }
+    }
+
+    function setLoading(form, on) {
+      const btn = document.getElementById(form === 'login' ? 'loginBtn' : 'signupBtn');
+      const text = document.getElementById(form === 'login' ? 'loginBtnText' : 'signupBtnText');
+      const spinner = document.getElementById(form === 'login' ? 'loginSpinner' : 'signupSpinner');
+      text.style.display = on ? 'none' : 'inline';
+      spinner.style.display = on ? 'inline-block' : 'none';
+      btn.disabled = on;
+    }
+
+    function storeAuth(data, remember) {
+      const storage = remember ? localStorage : sessionStorage;
+      localStorage.removeItem('rv_token');
+      localStorage.removeItem('rv_admin');
+      sessionStorage.removeItem('rv_token');
+      sessionStorage.removeItem('rv_admin');
+      storage.setItem('rv_token', data.token);
+      storage.setItem('rv_admin', JSON.stringify(data.data));
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+      const remember = document.getElementById('rememberMe').checked;
+
+      setLoading('login', true);
+      hideAlert();
+
+      try {
+        const res = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          showAlert(data.message || 'Invalid email or password');
+          setLoading('login', false);
+          return;
+        }
+
+        storeAuth(data, remember);
+        showToast('Login successful. Redirecting to dashboard...', 'success');
+        setTimeout(() => window.location.replace(getPostLoginRedirect()), 500);
+      } catch (err) {
+        showAlert('Cannot connect to server. Make sure backend is running.');
+        setLoading('login', false);
+      }
+    }
+
+    async function handleSignup(e) {
+      e.preventDefault();
+      const name = document.getElementById('signupName').value.trim();
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value.trim();
+
+      if (password.length < 8) {
+        showAlert('Password must be at least 8 characters.');
+        return;
+      }
+
+      setLoading('signup', true);
+      hideAlert();
+
+      try {
+        const res = await fetch(`${API}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password, role: 'admin' })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          showAlert(data.message || 'Sign up failed');
+          setLoading('signup', false);
+          return;
+        }
+
+        storeAuth(data, true);
+        showToast('Account created. Redirecting to dashboard...', 'success');
+        setTimeout(() => window.location.replace(getPostLoginRedirect()), 500);
+      } catch (err) {
+        showAlert('Cannot connect to server. Make sure backend is running.');
+        setLoading('signup', false);
+      }
+    }
+
+    function showAlert(msg) {
+      document.getElementById('loginAlertMsg').textContent = msg;
+      document.getElementById('loginAlert').style.display = 'flex';
+      document.getElementById('loginCard').classList.add('shake');
+      setTimeout(() => document.getElementById('loginCard').classList.remove('shake'), 500);
+    }
+
+    function hideAlert() {
+      document.getElementById('loginAlert').style.display = 'none';
+    }
+
+    function togglePassword(inputId, buttonId) {
+      const input = document.getElementById(inputId);
+      const button = document.getElementById(buttonId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        button.textContent = '🙈';
+      } else {
+        input.type = 'password';
+        button.textContent = '👁';
+      }
+    }
+
+    function fillDemo() {
+      if (authMode === 'signup') {
+        document.getElementById('signupName').value = 'Admin User';
+        document.getElementById('signupEmail').value = 'newadmin@repairvafe.com';
+        document.getElementById('signupPassword').value = 'Admin@1234';
+        return;
+      }
+      switchAuthMode('login');
+      document.getElementById('loginEmail').value = 'admin@repairvafe.com';
+      document.getElementById('loginPassword').value = 'Admin@1234';
+    }
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      switchAuthMode('login');
+    });
+  </script>
+</body>
+</html>

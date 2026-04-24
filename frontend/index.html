@@ -46,14 +46,14 @@
       <div class="hero-text">
         <div class="hero-badge">
           <span class="badge-dot"></span>
-          Trusted by 10,000+ Customers
+          <span id="heroBadgeText">Trusted by 10,000+ Customers</span>
         </div>
-        <h1 class="hero-title">
+        <h1 class="hero-title" id="heroTitle">
           Fast & Reliable<br />
           <span class="gradient-text">Device Repair</span><br />
           At Your Doorstep
         </h1>
-        <p class="hero-subtitle">
+        <p class="hero-subtitle" id="heroSubtitle">
           Book repairs for your smartphone, laptop, or tablet in minutes. 
           Get transparent quotes, real-time tracking, and professional service — guaranteed.
         </p>
@@ -69,26 +69,26 @@
         </div>
         <div class="hero-stats">
           <div class="stat-item">
-            <span class="stat-num">10K+</span>
+            <span class="stat-num" id="heroStatRepairs" data-target="12000">10K+</span>
             <span class="stat-label">Repairs Done</span>
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
-            <span class="stat-num">4.9★</span>
+            <span class="stat-num" id="heroStatRating" data-target="4.9">4.9★</span>
             <span class="stat-label">Avg. Rating</span>
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
-            <span class="stat-num">24hr</span>
+            <span class="stat-num" id="heroStatTurnaround" data-target="24">24hr</span>
             <span class="stat-label">Turnaround</span>
           </div>
         </div>
       </div>
-      <div class="hero-visual">
+      <div class="hero-visual" id="heroVisual">
         <div class="phone-mockup">
           <div class="phone-screen">
             <div class="phone-status-bar">
-              <span>9:41</span>
+              <span id="phoneTime">9:41</span>
               <span>📶 🔋</span>
             </div>
             <div class="phone-app-header">
@@ -98,13 +98,13 @@
               <div class="phone-card">
                 <div class="phone-card-icon">📱</div>
                 <div>
-                  <div class="phone-card-title">iPhone 15 Pro</div>
-                  <div class="phone-card-sub">Screen Replacement</div>
+                  <div class="phone-card-title" id="phoneDevice">iPhone 15 Pro</div>
+                  <div class="phone-card-sub" id="phoneIssue">Screen Replacement</div>
                 </div>
-                <div class="phone-card-badge">In Progress</div>
+                <div class="phone-card-badge" id="phoneStatus">In Progress</div>
               </div>
               <div class="phone-progress-bar">
-                <div class="phone-progress-fill" style="width:65%"></div>
+                <div class="phone-progress-fill" id="phoneProgress" style="width:65%"></div>
               </div>
               <div class="phone-steps">
                 <div class="step-dot active"></div>
@@ -125,18 +125,18 @@
           </div>
           <div class="phone-glow"></div>
         </div>
-        <div class="floating-card card-quote">
+        <div class="floating-card card-quote" id="floatingQuote">
           <div class="fc-icon">💬</div>
           <div>
-            <div class="fc-title">Quote Approved</div>
-            <div class="fc-sub">₹2,499 · Screen Fix</div>
+            <div class="fc-title" id="quoteTitle">Quote Approved</div>
+            <div class="fc-sub" id="quoteSub">₹2,499 · Screen Fix</div>
           </div>
         </div>
-        <div class="floating-card card-done">
+        <div class="floating-card card-done" id="floatingDone">
           <div class="fc-icon">✅</div>
           <div>
-            <div class="fc-title">Repair Complete!</div>
-            <div class="fc-sub">Ready for pickup</div>
+            <div class="fc-title" id="doneTitle">Repair Complete!</div>
+            <div class="fc-sub" id="doneSub">Ready for pickup</div>
           </div>
         </div>
       </div>
@@ -151,46 +151,7 @@
         <h2 class="section-title">How It Works</h2>
         <p class="section-desc">Get your device repaired in 4 easy steps</p>
       </div>
-      <div class="steps-grid">
-        <div class="step-card" data-step="1">
-          <div class="step-number">01</div>
-          <div class="step-icon-wrap">
-            <div class="step-icon">📱</div>
-          </div>
-          <h3>Select Your Device</h3>
-          <p>Choose your device brand, model, and the type of repair you need from our comprehensive list.</p>
-          <a href="./src/pages/booking.html" class="step-link">Start Here →</a>
-        </div>
-        <div class="step-connector"></div>
-        <div class="step-card" data-step="2">
-          <div class="step-number">02</div>
-          <div class="step-icon-wrap">
-            <div class="step-icon">📝</div>
-          </div>
-          <h3>Submit Request</h3>
-          <p>Fill in your details, describe the issue, and schedule a convenient time for pickup or drop-off.</p>
-          <a href="./src/pages/booking.html" class="step-link">Book Now →</a>
-        </div>
-        <div class="step-connector"></div>
-        <div class="step-card" data-step="3">
-          <div class="step-number">03</div>
-          <div class="step-icon-wrap">
-            <div class="step-icon">💰</div>
-          </div>
-          <h3>Approve Quote</h3>
-          <p>Receive a transparent, no-hidden-cost quotation and approve before any work begins.</p>
-          <a href="./src/pages/quotation.html" class="step-link">See Example →</a>
-        </div>
-        <div class="step-connector"></div>
-        <div class="step-card" data-step="4">
-          <div class="step-number">04</div>
-          <div class="step-icon-wrap">
-            <div class="step-icon">🎉</div>
-          </div>
-          <h3>Track & Collect</h3>
-          <p>Follow your repair in real-time. Get notified when done, then rate your experience.</p>
-          <a href="./src/pages/tracking.html" class="step-link">Track Now →</a>
-        </div>
+      <div class="steps-grid" id="stepsGrid">
       </div>
     </div>
   </section>
@@ -203,43 +164,7 @@
         <h2 class="section-title">Our Services</h2>
         <p class="section-desc">Expert repairs for all major devices and brands</p>
       </div>
-      <div class="services-grid">
-        <div class="service-card" id="serviceSmartphone">
-          <div class="service-icon">📱</div>
-          <h3>Smartphones</h3>
-          <p>Screen replacement, battery, charging port, camera, speaker, water damage, and more.</p>
-          <div class="service-brands">
-            <span>Apple</span><span>Samsung</span><span>OnePlus</span><span>Xiaomi</span>
-          </div>
-          <a href="./src/pages/booking.html?type=smartphone" class="btn btn-ghost">Book Repair →</a>
-        </div>
-        <div class="service-card" id="serviceLaptop">
-          <div class="service-icon">💻</div>
-          <h3>Laptops</h3>
-          <p>Screen, keyboard, battery, RAM upgrade, SSD replacement, motherboard repair, OS issues.</p>
-          <div class="service-brands">
-            <span>Dell</span><span>HP</span><span>Lenovo</span><span>Apple</span>
-          </div>
-          <a href="./src/pages/booking.html?type=laptop" class="btn btn-ghost">Book Repair →</a>
-        </div>
-        <div class="service-card" id="serviceTablet">
-          <div class="service-icon">📟</div>
-          <h3>Tablets</h3>
-          <p>Cracked screen, battery replacement, charging issues, speaker, and software problems.</p>
-          <div class="service-brands">
-            <span>iPad</span><span>Samsung</span><span>Lenovo</span><span>Amazon</span>
-          </div>
-          <a href="./src/pages/booking.html?type=tablet" class="btn btn-ghost">Book Repair →</a>
-        </div>
-        <div class="service-card" id="serviceSmartwatch">
-          <div class="service-icon">⌚</div>
-          <h3>Smartwatches</h3>
-          <p>Screen, battery, band replacement, water damage, and software restoration services.</p>
-          <div class="service-brands">
-            <span>Apple Watch</span><span>Samsung</span><span>Fitbit</span>
-          </div>
-          <a href="./src/pages/booking.html?type=smartwatch" class="btn btn-ghost">Book Repair →</a>
-        </div>
+      <div class="services-grid" id="servicesGrid">
       </div>
     </div>
   </section>
@@ -251,40 +176,7 @@
         <span class="section-tag">Customer Love</span>
         <h2 class="section-title">What Our Customers Say</h2>
       </div>
-      <div class="testimonials-grid">
-        <div class="testimonial-card" id="testimonial1">
-          <div class="stars">★★★★★</div>
-          <p>"My iPhone screen was shattered. RepairVafe fixed it in under 4 hours! The quote was clear upfront and the tracking feature is brilliant."</p>
-          <div class="testimonial-author">
-            <div class="author-avatar">AK</div>
-            <div>
-              <div class="author-name">Arjun Kumar</div>
-              <div class="author-device">iPhone 14 Pro – Screen Repair</div>
-            </div>
-          </div>
-        </div>
-        <div class="testimonial-card featured" id="testimonial2">
-          <div class="stars">★★★★★</div>
-          <p>"Absolutely seamless experience! Booked online, got a quote within an hour, approved it, and my Samsung was ready next day. 10/10 service."</p>
-          <div class="testimonial-author">
-            <div class="author-avatar">PR</div>
-            <div>
-              <div class="author-name">Priya Rajan</div>
-              <div class="author-device">Samsung S23 – Battery Replacement</div>
-            </div>
-          </div>
-        </div>
-        <div class="testimonial-card" id="testimonial3">
-          <div class="stars">★★★★★</div>
-          <p>"The real-time repair tracking gave me so much confidence. I knew exactly what was happening to my laptop at every stage. Great team!"</p>
-          <div class="testimonial-author">
-            <div class="author-avatar">MS</div>
-            <div>
-              <div class="author-name">Meera Sharma</div>
-              <div class="author-device">Dell XPS 15 – SSD Upgrade</div>
-            </div>
-          </div>
-        </div>
+      <div class="testimonials-grid" id="testimonialsGrid">
       </div>
     </div>
   </section>

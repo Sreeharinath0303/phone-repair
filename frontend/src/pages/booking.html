@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Book your device repair with RepairVafe. Select your device brand, model, and repair type." />
+  <meta name="description" content="Book your device repair with RepairVafe – guided 4-step booking wizard." />
   <title>Book a Repair – RepairVafe</title>
-  <link rel="stylesheet" href="../css/global.css" />
-  <link rel="stylesheet" href="../css/booking.css" />
+  <link rel="stylesheet" href="../styles/global.css" />
+  <link rel="stylesheet" href="../styles/booking.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 </head>
 <body>
+
   <!-- Navbar -->
   <nav class="navbar scrolled" id="navbar">
     <div class="nav-container">
@@ -21,10 +22,10 @@
         <li><a href="../../index.html">Home</a></li>
         <li><a href="booking.html" class="active">Book Repair</a></li>
         <li><a href="tracking.html">Track Repair</a></li>
-        <li><a href="admin.html">Admin</a></li>
+        <li><a href="quotation.html">Quotation</a></li>
       </ul>
       <div class="nav-actions">
-        <a href="booking.html" class="btn btn-primary">Book Now</a>
+        <a href="booking.html" class="btn btn-primary" id="navBookBtn">Book Now</a>
         <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
       </div>
     </div>
@@ -34,80 +35,72 @@
   <div class="page-header">
     <div class="container">
       <div class="page-breadcrumb">
-        <a href="../../index.html">Home</a>
-        <span class="sep">›</span>
-        <span>Book a Repair</span>
+        <a href="../../index.html">Home</a><span class="sep">›</span><span>Book a Repair</span>
       </div>
       <h1 class="page-title gradient-text">Book Your Repair</h1>
-      <p class="page-subtitle">Select your device and tell us what's wrong — we'll handle the rest.</p>
+      <p class="page-subtitle">Follow the simple steps below — we'll take care of the rest.</p>
     </div>
   </div>
 
   <!-- Booking Wizard -->
   <section class="booking-section">
     <div class="container">
-      <!-- Progress Steps -->
+
+      <!-- Progress Bar -->
       <div class="wizard-progress">
-        <div class="wizard-step active" data-step="1" id="wizStep1">
-          <div class="ws-circle">1</div>
-          <span>Select Device</span>
+        <div class="wizard-step active" id="wizStep1">
+          <div class="ws-circle">1</div><span>Select Device</span>
         </div>
         <div class="wizard-line" id="wLine1"></div>
-        <div class="wizard-step" data-step="2" id="wizStep2">
-          <div class="ws-circle">2</div>
-          <span>Repair Type</span>
+        <div class="wizard-step" id="wizStep2">
+          <div class="ws-circle">2</div><span>Repair Type</span>
         </div>
         <div class="wizard-line" id="wLine2"></div>
-        <div class="wizard-step" data-step="3" id="wizStep3">
-          <div class="ws-circle">3</div>
-          <span>Your Details</span>
+        <div class="wizard-step" id="wizStep3">
+          <div class="ws-circle">3</div><span>Your Details</span>
         </div>
         <div class="wizard-line" id="wLine3"></div>
-        <div class="wizard-step" data-step="4" id="wizStep4">
-          <div class="ws-circle">4</div>
-          <span>Confirm</span>
+        <div class="wizard-step" id="wizStep4">
+          <div class="ws-circle">4</div><span>Confirm</span>
         </div>
       </div>
 
-      <!-- Step 1: Device Selection -->
+      <!-- ══ STEP 1: Device Selection ══ -->
       <div class="wizard-panel active" id="panel1">
         <div class="panel-header">
           <h2>What device do you need repaired?</h2>
-          <p>Select the category that matches your device.</p>
+          <p>Select category → brand → model</p>
         </div>
 
+        <!-- Category -->
+        <div class="section-label">Step 1 of 3 — Choose Category</div>
         <div class="device-categories">
           <div class="device-cat-card" data-cat="smartphone" id="catSmartphone">
-            <div class="dcc-icon">📱</div>
-            <div class="dcc-label">Smartphone</div>
+            <div class="dcc-icon">📱</div><div class="dcc-label">Smartphone</div>
           </div>
           <div class="device-cat-card" data-cat="laptop" id="catLaptop">
-            <div class="dcc-icon">💻</div>
-            <div class="dcc-label">Laptop</div>
+            <div class="dcc-icon">💻</div><div class="dcc-label">Laptop</div>
           </div>
           <div class="device-cat-card" data-cat="tablet" id="catTablet">
-            <div class="dcc-icon">📟</div>
-            <div class="dcc-label">Tablet</div>
+            <div class="dcc-icon">📟</div><div class="dcc-label">Tablet</div>
           </div>
           <div class="device-cat-card" data-cat="smartwatch" id="catSmartwatch">
-            <div class="dcc-icon">⌚</div>
-            <div class="dcc-label">Smartwatch</div>
+            <div class="dcc-icon">⌚</div><div class="dcc-label">Smartwatch</div>
           </div>
         </div>
 
-        <!-- Brand Selection -->
+        <!-- Brand -->
         <div class="brand-section" id="brandSection" style="display:none">
-          <h3>Select Brand</h3>
+          <div class="section-label">Select Brand</div>
           <div class="brand-grid" id="brandGrid"></div>
         </div>
 
-        <!-- Model Selection -->
+        <!-- Model -->
         <div class="model-section" id="modelSection" style="display:none">
-          <h3>Select Model</h3>
+          <div class="section-label">Select Model</div>
           <div class="form-group">
-            <label class="form-label" for="modelSelect">Choose your model</label>
             <select class="form-select" id="modelSelect">
-              <option value="">-- Select Model --</option>
+              <option value="">-- Select your model --</option>
             </select>
           </div>
         </div>
@@ -115,24 +108,27 @@
         <div class="panel-footer">
           <div></div>
           <button class="btn btn-primary" id="step1Next" disabled onclick="goToStep(2)">
-            Next: Choose Repair →
+            Next: Repair Type →
           </button>
         </div>
       </div>
 
-      <!-- Step 2: Repair Type -->
+      <!-- ══ STEP 2: Repair Type ══ -->
       <div class="wizard-panel" id="panel2">
         <div class="panel-header">
           <h2>What needs to be fixed?</h2>
-          <p>Select all repair types that apply to your device.</p>
+          <p>Select all that apply — multiple selections allowed.</p>
         </div>
 
         <div class="repair-types-grid" id="repairTypesGrid"></div>
 
         <div class="issue-description">
           <div class="form-group">
-            <label class="form-label" for="issueDesc">Describe the issue in detail (optional)</label>
-            <textarea class="form-textarea" id="issueDesc" placeholder="E.g. The screen has a crack on the bottom right and the touch is not working in that area..."></textarea>
+            <label class="form-label" for="issueDesc">
+              Describe your issue in detail <span style="color:var(--clr-text-faint)">(optional)</span>
+            </label>
+            <textarea class="form-textarea" id="issueDesc" rows="3"
+              placeholder="E.g. The screen has a crack on the bottom-right corner and touch is unresponsive in that area..."></textarea>
           </div>
         </div>
 
@@ -144,102 +140,168 @@
         </div>
       </div>
 
-      <!-- Step 3: Customer Details -->
+      <!-- ══ STEP 3: Customer Details ══ -->
       <div class="wizard-panel" id="panel3">
         <div class="panel-header">
-          <h2>Your Contact Details</h2>
-          <p>So we can reach you about your repair.</p>
+          <h2>Your Contact &amp; Address Details</h2>
+          <p>Fill all required fields so we can process your repair.</p>
         </div>
 
         <div class="details-form">
+
+          <!-- Personal Info -->
+          <div class="form-section-title">👤 Personal Information</div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label" for="custName">Full Name *</label>
-              <input type="text" class="form-input" id="custName" placeholder="Enter your full name" required />
+              <label class="form-label" for="custName">Full Name <span class="req">*</span></label>
+              <input type="text" class="form-input" id="custName" placeholder="E.g. Arjun Kumar" required />
             </div>
             <div class="form-group">
-              <label class="form-label" for="custPhone">Phone Number *</label>
-              <input type="tel" class="form-input" id="custPhone" placeholder="+91 98765 43210" required />
+              <label class="form-label" for="custPhone">Mobile Number <span class="req">*</span></label>
+              <input type="tel" class="form-input" id="custPhone" placeholder="+91 98765 43210" maxlength="15" required />
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label" for="custEmail">Email Address *</label>
-              <input type="email" class="form-input" id="custEmail" placeholder="your@email.com" required />
+              <label class="form-label" for="custEmail">Email Address <span class="req">*</span></label>
+              <input type="email" class="form-input" id="custEmail" placeholder="you@example.com" required />
+            </div>
+          </div>
+
+          <!-- Address -->
+          <div class="form-section-title">📍 Address Details</div>
+          <div class="form-group">
+            <label class="form-label" for="custAddress">Street Address <span class="req">*</span></label>
+            <textarea class="form-textarea" id="custAddress" rows="2"
+              placeholder="House/Flat No., Street, Landmark..." style="min-height:72px" required></textarea>
+          </div>
+          <div class="form-row three-col">
+            <div class="form-group">
+              <label class="form-label" for="custCity">City <span class="req">*</span></label>
+              <input type="text" class="form-input" id="custCity" placeholder="Chennai" required />
             </div>
             <div class="form-group">
-              <label class="form-label" for="serviceType">Service Type *</label>
-              <select class="form-select" id="serviceType">
-                <option value="">-- Select --</option>
-                <option value="dropoff">Drop Off at Center</option>
-                <option value="pickup">Pickup from Home</option>
-                <option value="walkin">Walk-In</option>
+              <label class="form-label" for="custState">State <span class="req">*</span></label>
+              <select class="form-select" id="custState" required>
+                <option value="">-- Select State --</option>
+                <option>Andhra Pradesh</option><option>Arunachal Pradesh</option>
+                <option>Assam</option><option>Bihar</option><option>Chhattisgarh</option>
+                <option>Goa</option><option>Gujarat</option><option>Haryana</option>
+                <option>Himachal Pradesh</option><option>Jharkhand</option>
+                <option>Karnataka</option><option>Kerala</option>
+                <option>Madhya Pradesh</option><option>Maharashtra</option>
+                <option>Manipur</option><option>Meghalaya</option><option>Mizoram</option>
+                <option>Nagaland</option><option>Odisha</option><option>Punjab</option>
+                <option>Rajasthan</option><option>Sikkim</option>
+                <option>Tamil Nadu</option><option>Telangana</option><option>Tripura</option>
+                <option>Uttar Pradesh</option><option>Uttarakhand</option>
+                <option>West Bengal</option>
+                <option>Delhi (NCT)</option><option>Jammu &amp; Kashmir</option>
+                <option>Ladakh</option><option>Puducherry</option>
               </select>
             </div>
+            <div class="form-group">
+              <label class="form-label" for="custPincode">Pincode <span class="req">*</span></label>
+              <input type="text" class="form-input" id="custPincode" placeholder="600001" maxlength="6" pattern="[0-9]{6}" required />
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="custAddress">Address <span style="color:var(--clr-text-faint)">(for pickup service)</span></label>
-            <textarea class="form-textarea" id="custAddress" placeholder="Enter your pickup address" style="min-height:80px"></textarea>
+
+          <!-- Service Type -->
+          <div class="form-section-title">🚗 Service Type <span class="req">*</span></div>
+          <div class="service-type-cards" id="serviceTypeCards">
+            <div class="service-card" data-val="walkin" onclick="selectService('walkin')">
+              <div class="sc-icon">🏪</div>
+              <div class="sc-info">
+                <div class="sc-title">Walk-In</div>
+                <div class="sc-desc">Visit our service center directly</div>
+              </div>
+            </div>
+            <div class="service-card" data-val="dropoff" onclick="selectService('dropoff')">
+              <div class="sc-icon">📦</div>
+              <div class="sc-info">
+                <div class="sc-title">Drop Off</div>
+                <div class="sc-desc">Drop your device at the center</div>
+              </div>
+            </div>
+            <div class="service-card" data-val="pickup" onclick="selectService('pickup')">
+              <div class="sc-icon">🏠</div>
+              <div class="sc-info">
+                <div class="sc-title">Home Pickup</div>
+                <div class="sc-desc">We collect from your address</div>
+              </div>
+            </div>
           </div>
+
+          <!-- Schedule -->
+          <div class="form-section-title">📅 Preferred Schedule</div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label" for="preferDate">Preferred Date *</label>
+              <label class="form-label" for="preferDate">Preferred Date <span class="req">*</span></label>
               <input type="date" class="form-input" id="preferDate" required />
             </div>
             <div class="form-group">
-              <label class="form-label" for="preferTime">Preferred Time Slot *</label>
-              <select class="form-select" id="preferTime">
-                <option value="">-- Select Slot --</option>
-                <option value="9-11am">9:00 AM – 11:00 AM</option>
-                <option value="11-1pm">11:00 AM – 1:00 PM</option>
-                <option value="2-4pm">2:00 PM – 4:00 PM</option>
-                <option value="4-6pm">4:00 PM – 6:00 PM</option>
+              <label class="form-label" for="preferTime">Preferred Time Slot <span class="req">*</span></label>
+              <select class="form-select" id="preferTime" required>
+                <option value="">-- Select a slot --</option>
+                <option value="9am-11am">9:00 AM – 11:00 AM</option>
+                <option value="11am-1pm">11:00 AM – 1:00 PM</option>
+                <option value="2pm-4pm">2:00 PM – 4:00 PM</option>
+                <option value="4pm-6pm">4:00 PM – 6:00 PM</option>
+                <option value="6pm-8pm">6:00 PM – 8:00 PM</option>
               </select>
             </div>
           </div>
+
         </div>
 
         <div class="panel-footer">
           <button class="btn btn-outline" onclick="goToStep(2)">← Back</button>
           <button class="btn btn-primary" onclick="goToStep(4)" id="step3Next">
-            Review & Confirm →
+            Review &amp; Confirm →
           </button>
         </div>
       </div>
 
-      <!-- Step 4: Confirmation Summary -->
+      <!-- ══ STEP 4: Summary & Submit ══ -->
       <div class="wizard-panel" id="panel4">
         <div class="panel-header">
           <h2>Review Your Booking</h2>
-          <p>Please verify the details before submitting.</p>
+          <p>Please verify all details before submitting.</p>
         </div>
 
         <div class="summary-grid">
           <div class="summary-card">
-            <h4>📱 Device Information</h4>
+            <h4>📱 Device Info</h4>
             <div class="summary-row"><span>Category</span><span id="sumCat">–</span></div>
             <div class="summary-row"><span>Brand</span><span id="sumBrand">–</span></div>
             <div class="summary-row"><span>Model</span><span id="sumModel">–</span></div>
-            <div class="summary-row"><span>Repair Type(s)</span><span id="sumRepairs">–</span></div>
+            <div class="summary-row"><span>Repair(s)</span><span id="sumRepairs">–</span></div>
           </div>
           <div class="summary-card">
-            <h4>👤 Contact Details</h4>
+            <h4>👤 Contact</h4>
             <div class="summary-row"><span>Name</span><span id="sumName">–</span></div>
             <div class="summary-row"><span>Phone</span><span id="sumPhone">–</span></div>
             <div class="summary-row"><span>Email</span><span id="sumEmail">–</span></div>
             <div class="summary-row"><span>Service</span><span id="sumService">–</span></div>
           </div>
           <div class="summary-card">
+            <h4>📍 Address</h4>
+            <div class="summary-row"><span>Street</span><span id="sumAddr">–</span></div>
+            <div class="summary-row"><span>City</span><span id="sumCity">–</span></div>
+            <div class="summary-row"><span>State</span><span id="sumState">–</span></div>
+            <div class="summary-row"><span>Pincode</span><span id="sumPincode">–</span></div>
+          </div>
+          <div class="summary-card">
             <h4>📅 Schedule</h4>
             <div class="summary-row"><span>Date</span><span id="sumDate">–</span></div>
-            <div class="summary-row"><span>Time Slot</span><span id="sumTime">–</span></div>
-            <div class="summary-row"><span>Address</span><span id="sumAddr">–</span></div>
+            <div class="summary-row"><span>Time</span><span id="sumTime">–</span></div>
+            <div class="summary-row"><span>Issue</span><span id="sumIssue" style="text-align:right;max-width:180px">–</span></div>
           </div>
         </div>
 
         <div class="confirm-notice">
           <span>📋</span>
-          <p>After submission, our team will assess your device and send you a <strong>detailed quotation</strong> within 2-4 hours. You can approve or reject the quote before any work begins.</p>
+          <p>After submission, our team will assess your device and send a <strong>quotation within 2–4 hours</strong>. Repair only begins after your approval.</p>
         </div>
 
         <div class="panel-footer">
@@ -250,28 +312,29 @@
         </div>
       </div>
 
-      <!-- Success Panel -->
+      <!-- ══ SUCCESS ══ -->
       <div class="wizard-panel" id="panelSuccess">
         <div class="success-state">
           <div class="success-icon">🎉</div>
-          <h2>Booking Submitted!</h2>
-          <p>Your repair request has been received. You'll get a quotation via email/SMS shortly.</p>
+          <h2>Booking Submitted Successfully!</h2>
+          <p>Your repair request has been received. You'll get a quotation via email/SMS within 2–4 hours.</p>
           <div class="booking-ref">
-            <span>Booking Reference:</span>
-            <strong id="bookingRef">RV-2026-00000</strong>
+            <span>Your Booking Reference:</span>
+            <strong id="bookingRef">–</strong>
           </div>
+          <p class="ref-note">Save this reference number to track your repair status.</p>
           <div class="success-actions">
-            <a href="tracking.html" class="btn btn-primary">Track My Repair</a>
-            <a href="../../index.html" class="btn btn-outline">Back to Home</a>
+            <a href="tracking.html" class="btn btn-primary">📍 Track My Repair</a>
+            <a href="quotation.html" class="btn btn-outline">💰 View Quotation</a>
+            <a href="../../index.html" class="btn btn-ghost">← Home</a>
           </div>
         </div>
       </div>
+
     </div>
   </section>
 
-  <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
-
   <script src="../utils/booking.js"></script>
   <script src="../utils/main.js"></script>
 </body>
