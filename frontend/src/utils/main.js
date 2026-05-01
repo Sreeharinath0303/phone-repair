@@ -82,9 +82,7 @@ function updateHomeDynamicAuthUI() {
     if (heroBookBtn) heroBookBtn.setAttribute('href', './src/pages/login.html?redirect=%2Fsrc%2Fpages%2Fbooking.html');
     if (ctaBookBtn) ctaBookBtn.setAttribute('href', './src/pages/login.html?redirect=%2Fsrc%2Fpages%2Fbooking.html');
   } else if (navBookBtn) {
-    navBookBtn.style.display = '';
-    navBookBtn.textContent = 'Dashboard';
-    navBookBtn.setAttribute('href', './src/pages/admin.html');
+    navBookBtn.style.display = 'none';
   }
 }
 

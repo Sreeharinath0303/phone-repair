@@ -9,10 +9,40 @@ exports.getAllTechnicians = async (req, res) => {
   }
 };
 
+const sendEmail = require('../utils/sendEmail');
+
 exports.createTechnician = async (req, res) => {
   try {
     const tech = await Technician.create(req.body);
-    res.status(201).json({ success: true, data: tech, message: 'Technician added successfully' });
+    
+    // Step 6: Add Partner Assignment Events (New Partner Creation Triggers)
+    if (req.body.password && req.body.email) {
+      const message = `Welcome to the RepairVafe Partner Network, ${tech.name}!\n\nAn administrator has explicitly provisioned your service account.\n\nYour secure login credentials are:\nEmail: ${tech.email}\nPassword: ${req.body.password}\n\nPlease log in immediately at your Partner Portal to begin accepting assignments.`;
+      
+      try {
+        // 1. Partner Onboarding Alert (Email + Mocks)
+        console.log(`[SMS WEBHOOK DISPATCH] -> Texting +91${tech.phone || '999999999'}: "Welcome to RepairVafe! Your Service Partner account is active. Check your email for login keys."`);
+        console.log(`[WHATSAPP API DISPATCH] -> Messaging +91${tech.phone || '999999999'}: "RepairVafe Network Alert: Partner Profile '${tech.name}' initialized. 🔧🚀"`);
+        await sendEmail({
+          email: tech.email,
+          subject: 'RepairVafe - Your Partner Credentials',
+          message: message
+        });
+        
+        // 2. Admin Alert Logic
+        const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
+        await sendEmail({
+          email: adminEmail,
+          subject: `[EVENT] New Partner Onboarded: ${tech.name}`,
+          message: `An event was triggered: NEW PARTNER CREATION.\n\nTechnician: ${tech.name}\nEmail: ${tech.email}\nPhone: ${tech.phone || 'N/A'}\n\nPartner successfully integrated into Master execution array.`
+        });
+        
+      } catch (emailErr) {
+        console.error('Partner onboarded natively, but credential notification skipped/failed: ', emailErr.message);
+      }
+    }
+    
+    res.status(201).json({ success: true, data: tech, message: 'Technician added and credentials dispatched' });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
@@ -32,6 +62,45 @@ exports.deleteTechnician = async (req, res) => {
   try {
     await Technician.findByIdAndUpdate(req.params.id, { isActive: false });
     res.json({ success: true, message: 'Technician removed' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const Booking = require('../models/Booking');
+
+// @desc  Get Partner Dashboard Stats
+// @route GET /api/technicians/dashboard-stats
+// @access Private (Technician)
+exports.getPartnerDashboardStats = async (req, res) => {
+  try {
+    const techId = req.user.id;
+    const tech = await Technician.findById(techId);
+    
+    const assigned = await Booking.countDocuments({ assignedTechnician: techId, status: 'Assigned to Partner' });
+    const pending = await Booking.countDocuments({ assignedTechnician: techId, status: { $in: ['Pending', 'Offer Sent'] } });
+    const active = await Booking.countDocuments({ assignedTechnician: techId, status: { $nin: ['Completed', 'Repair Completed', 'Closed', 'Job Closed', 'Cancelled', 'Assigned to Partner', 'Pending', 'Offer Sent'] } });
+    const completed = await Booking.countDocuments({ assignedTechnician: techId, status: { $in: ['Completed', 'Repair Completed', 'Closed', 'Job Closed'] } });
+    
+    const payouts = tech?.payoutBalance || 0;
+
+    // Calculate pending actionable notifications (Newly Assigned + Recently Approved waiting for progress)
+    const notifications = assigned + await Booking.countDocuments({ assignedTechnician: techId, status: 'Offer Sent', quotationStatus: 'Approved by Customer' });
+
+    res.json({ success: true, data: { assigned, active, completed, pending, payouts, notifications } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc  Get all orders assigned to the logged-in partner
+// @route GET /api/technicians/my-orders
+// @access Private (Technician)
+exports.getAssignedOrders = async (req, res) => {
+  try {
+    const techId = req.user.id;
+    const orders = await Booking.find({ assignedTechnician: techId }).sort({ createdAt: -1 });
+    res.json({ success: true, data: orders });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

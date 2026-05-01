@@ -63,13 +63,64 @@
             <input type="checkbox" id="rememberMe" />
             <span>Remember me</span>
           </label>
-          <a href="#" class="forgot-link" onclick="showToast('Please contact system admin to reset password.', 'info'); return false;">Forgot password?</a>
+          <a href="#" class="forgot-link" onclick="switchAuthMode('forgot')">Forgot password?</a>
         </div>
 
         <button type="submit" class="btn btn-primary btn-full" id="loginBtn">
           <span id="loginBtnText">Sign In to Dashboard</span>
           <span id="loginSpinner" class="spinner" style="display:none"></span>
         </button>
+      </form>
+
+      <!-- Forgot Password Form -->
+      <form class="login-form auth-hidden" id="forgotForm" onsubmit="handleForgotPassword(event)">
+        <div class="login-header">
+          <h2 style="font-size:1.2rem; margin-bottom:0.5rem">Forgot Password</h2>
+          <p>Enter your email to receive an OTP</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="forgotEmail">Email Address</label>
+          <div class="input-wrap">
+            <span class="input-icon">✉️</span>
+            <input type="email" class="form-input" id="forgotEmail" placeholder="admin@repairvafe.com" required />
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="forgotBtn">
+          <span id="forgotBtnText">Send Reset OTP</span>
+          <span id="forgotSpinner" class="spinner" style="display:none"></span>
+        </button>
+        <div style="text-align:center; margin-top:10px">
+          <a href="#" onclick="switchAuthMode('login')" style="color:var(--clr-primary); text-decoration:none; font-size:0.85rem">← Back to Login</a>
+        </div>
+      </form>
+
+      <!-- Reset Password (OTP) Form -->
+      <form class="login-form auth-hidden" id="resetForm" onsubmit="handleResetPassword(event)">
+        <div class="login-header">
+          <h2 style="font-size:1.2rem; margin-bottom:0.5rem">Reset Password</h2>
+          <p id="resetSub">Enter the 6-digit OTP sent to your email</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="resetOtp">OTP Code</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔑</span>
+            <input type="text" class="form-input" id="resetOtp" placeholder="123456" maxlength="6" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="resetPassword">New Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" class="form-input" id="resetPassword" placeholder="Min 8 characters" minlength="8" required />
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="resetBtn">
+          <span id="resetBtnText">Reset My Password</span>
+          <span id="resetSpinner" class="spinner" style="display:none"></span>
+        </button>
+        <div style="text-align:center; margin-top:10px">
+          <a href="#" onclick="switchAuthMode('forgot')" style="color:var(--clr-primary); text-decoration:none; font-size:0.85rem">Didn't get OTP? Resend</a>
+        </div>
       </form>
 
       <form class="login-form auth-hidden" id="signupForm" onsubmit="handleSignup(event)">
@@ -139,19 +190,28 @@
     }
 
     if (getStoredToken() && getStoredAdmin()) {
-      window.location.replace('admin.html');
+      const role = getStoredAdmin().role;
+      let dest = 'admin.html';
+      if (role === 'customer' || role === 'User') dest = 'customer-dashboard.html';
+      if (role === 'partner' || role === 'Technician') dest = 'partner-dashboard.html';
+      window.location.replace(dest);
     }
 
-    function getPostLoginRedirect() {
+    function getPostLoginRedirect(role) {
       const redirect = new URLSearchParams(window.location.search).get('redirect');
-      if (!redirect) return 'admin.html';
+      
+      let defaultDest = 'admin.html';
+      if (role === 'customer' || role === 'User') defaultDest = 'customer-dashboard.html';
+      if (role === 'partner' || role === 'Technician') defaultDest = 'partner-dashboard.html';
+
+      if (!redirect) return defaultDest;
       try {
         const decoded = decodeURIComponent(redirect);
-        if (decoded.includes('login.html')) return 'admin.html';
-        if (decoded.startsWith('http://') || decoded.startsWith('https://')) return 'admin.html';
+        if (decoded.includes('login.html')) return defaultDest;
+        if (decoded.startsWith('http://') || decoded.startsWith('https://')) return defaultDest;
         return decoded;
       } catch {
-        return 'admin.html';
+        return defaultDest;
       }
     }
 
@@ -161,13 +221,19 @@
       const signupTab = document.getElementById('tabSignup');
       const loginForm = document.getElementById('loginForm');
       const signupForm = document.getElementById('signupForm');
+      const forgotForm = document.getElementById('forgotForm');
+      const resetForm = document.getElementById('resetForm');
       const title = document.getElementById('authTitle');
       const subtitle = document.getElementById('authSubtitle');
 
       loginTab.classList.toggle('active', mode === 'login');
       signupTab.classList.toggle('active', mode === 'signup');
+      
       loginForm.classList.toggle('auth-hidden', mode !== 'login');
       signupForm.classList.toggle('auth-hidden', mode !== 'signup');
+      forgotForm.classList.toggle('auth-hidden', mode !== 'forgot');
+      resetForm.classList.toggle('auth-hidden', mode !== 'reset');
+      
       hideAlert();
 
       if (mode === 'login') {
@@ -177,23 +243,34 @@
         document.getElementById('demoHintText').textContent = 'admin@repairvafe.com · Admin@1234';
         document.getElementById('demoFillBtn').textContent = 'Use Demo';
         document.getElementById('loginEmail').focus();
-      } else {
+        document.querySelector('.auth-switch').style.display = 'grid';
+      } else if (mode === 'signup') {
         title.textContent = 'Create Admin Account';
         subtitle.textContent = 'Register and continue to dashboard';
         document.getElementById('demoHintTitle').textContent = 'Sign Up Example';
         document.getElementById('demoHintText').textContent = 'Admin User · newadmin@repairvafe.com · Strong password';
         document.getElementById('demoFillBtn').textContent = 'Use Sample';
         document.getElementById('signupName').focus();
+        document.querySelector('.auth-switch').style.display = 'grid';
+      } else {
+        title.textContent = mode === 'forgot' ? 'Reset Password' : 'Enter OTP';
+        subtitle.textContent = 'Secure Admin Access';
+        document.querySelector('.auth-switch').style.display = 'none';
       }
     }
 
     function setLoading(form, on) {
-      const btn = document.getElementById(form === 'login' ? 'loginBtn' : 'signupBtn');
-      const text = document.getElementById(form === 'login' ? 'loginBtnText' : 'signupBtnText');
-      const spinner = document.getElementById(form === 'login' ? 'loginSpinner' : 'signupSpinner');
-      text.style.display = on ? 'none' : 'inline';
-      spinner.style.display = on ? 'inline-block' : 'none';
-      btn.disabled = on;
+      const btnId = `${form}Btn`;
+      const textId = `${form}BtnText`;
+      const spinnerId = `${form}Spinner`;
+      
+      const btn = document.getElementById(btnId);
+      const text = document.getElementById(textId);
+      const spinner = document.getElementById(spinnerId);
+      
+      if (text) text.style.display = on ? 'none' : 'inline';
+      if (spinner) spinner.style.display = on ? 'inline-block' : 'none';
+      if (btn) btn.disabled = on;
     }
 
     function storeAuth(data, remember) {
@@ -231,10 +308,66 @@
 
         storeAuth(data, remember);
         showToast('Login successful. Redirecting to dashboard...', 'success');
-        setTimeout(() => window.location.replace(getPostLoginRedirect()), 500);
+        setTimeout(() => window.location.replace(getPostLoginRedirect(data.data.role)), 500);
       } catch (err) {
         showAlert('Cannot connect to server. Make sure backend is running.');
         setLoading('login', false);
+      }
+    }
+
+    async function handleForgotPassword(e) {
+      e.preventDefault();
+      const email = document.getElementById('forgotEmail').value.trim();
+      setLoading('forgot', true);
+      
+      try {
+        const res = await fetch(`${API}/auth/forgot-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        
+        setLoading('forgot', false);
+        if (data.success) {
+          showToast('OTP sent to your email!', 'success');
+          document.getElementById('resetSub').textContent = `Enter the 6-digit OTP sent to ${email}`;
+          switchAuthMode('reset');
+        } else {
+          showAlert(data.message || 'Failed to send OTP');
+        }
+      } catch (err) {
+        showAlert('Network error');
+        setLoading('forgot', false);
+      }
+    }
+
+    async function handleResetPassword(e) {
+      e.preventDefault();
+      const email = document.getElementById('forgotEmail').value.trim();
+      const otp = document.getElementById('resetOtp').value.trim();
+      const newPassword = document.getElementById('resetPassword').value.trim();
+      
+      setLoading('reset', true);
+      
+      try {
+        const res = await fetch(`${API}/auth/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, otp, newPassword })
+        });
+        const data = await res.json();
+        
+        setLoading('reset', false);
+        if (data.success) {
+          showToast('Password reset successful! Please login.', 'success');
+          switchAuthMode('login');
+        } else {
+          showAlert(data.message || 'Reset failed');
+        }
+      } catch (err) {
+        showAlert('Network error');
+        setLoading('reset', false);
       }
     }
 

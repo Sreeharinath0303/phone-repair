@@ -1,25 +1,22 @@
 /* ============================================================
-   RepairVafe – Admin Dashboard JS (Fully Dynamic / API-driven)
-   All data fetched from backend: http://localhost:5000/api
+   RepairVafe – Admin Dashboard JS (Consolidated & Modular)
    ============================================================ */
 
 const API = (['localhost', '127.0.0.1', ''].includes(window.location.hostname))
   ? 'http://localhost:5000/api'
   : '/api';
 
-// ── Auth headers ──────────────────────────────────────────────
+// ── Auth & Headers ──────────────────────────────────────────────
 function headers() {
-  const token = (typeof getToken === 'function' ? getToken() : (localStorage.getItem('rv_token') || sessionStorage.getItem('rv_token')));
+  const token = localStorage.getItem('rv_token') || sessionStorage.getItem('rv_token') || localStorage.getItem('adminToken');
   return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token || ''}` };
 }
 
-// ── API helper ────────────────────────────────────────────────
 async function api(path, opts = {}) {
   try {
     const res = await fetch(`${API}${path}`, { ...opts, headers: { ...headers(), ...(opts.headers || {}) } });
     if (res.status === 401) {
-      if (typeof logout === 'function') logout();
-      else { localStorage.clear(); sessionStorage.clear(); window.location.replace('login.html'); }
+      localStorage.clear(); sessionStorage.clear(); window.location.replace('login.html');
       return null;
     }
     return await res.json();
@@ -30,497 +27,772 @@ async function api(path, opts = {}) {
 }
 
 // ── State ─────────────────────────────────────────────────────
-let allRepairs = [];
-let filteredRepairs = [];
+let allOrders = [];
 let currentRepairId = null;
+let currentDataTab = 'repair-types';
 
-// ── Sidebar Nav ───────────────────────────────────────────────
+// ── Navigation ────────────────────────────────────────────────
 function showPage(pageId, linkEl) {
   document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active'));
-  const pg = document.getElementById('page' + capitalize(pageId));
+  const pg = document.getElementById('page' + pageId.charAt(0).toUpperCase() + pageId.slice(1).replace(/-([a-z])/g, g => g[1].toUpperCase()));
   if (pg) pg.classList.add('active');
+  
   document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
   if (linkEl) linkEl.classList.add('active');
-  const titles = { dashboard: 'Dashboard', repairs: 'All Repairs', quotations: 'Quotations', customers: 'Customers', technicians: 'Technicians', feedback: 'Customer Feedback', reports: 'Analytics' };
-  document.getElementById('topbarTitle').textContent = titles[pageId] || 'Admin';
 
-  // Lazy-load section data
-  if (pageId === 'repairs')     loadRepairs();
-  if (pageId === 'quotations')  loadQuotations();
-  if (pageId === 'customers')   loadCustomers();
-  if (pageId === 'technicians') loadTechnicians();
-  if (pageId === 'feedback')    loadFeedback();
-  if (pageId === 'reports')     renderReports();
+  const titles = {
+    dashboard: 'Dashboard',
+    leads: 'Lead Management',
+    bookings: 'Booking Management',
+    orders: 'Order Management',
+    quotations: 'Quotations',
+    customers: 'Customer Base',
+    technicians: 'Partner Network',
+    reports: 'Business Analytics',
+    location: 'Location Intelligence',
+    feedback: 'Customer Feedback',
+    'email-templates': 'Email Templates',
+    logs: 'Communication Logs',
+    'system-data': 'System Data',
+    admins: 'Admin Users',
+    'comm-settings': 'Communication Settings'
+  };
+  document.getElementById('topbarTitle').textContent = titles[pageId] || 'Admin Dashboard';
+
+  // Load data for specific pages
+  if (pageId === 'dashboard')       buildDashboard();
+  if (pageId === 'leads')           loadLeads();
+  if (pageId === 'bookings')        loadBookings();
+  if (pageId === 'orders')          loadOrders();
+  if (pageId === 'quotations')      loadQuotations();
+  if (pageId === 'customers')       loadCustomers();
+  if (pageId === 'technicians')     loadTechnicians();
+  if (pageId === 'reports')         renderReports();
+  if (pageId === 'location')        loadLocationAnalytics();
+  if (pageId === 'feedback')        loadFeedback();
+  if (pageId === 'email-templates') loadEmailTemplates();
+  if (pageId === 'logs')            loadLogs();
+  if (pageId === 'system-data')     loadSystemData();
+  if (pageId === 'admins')          loadAllAdmins();
+  if (pageId === 'comm-settings')   loadCommunicationSettings();
 
   document.getElementById('sidebar').classList.remove('open');
   return false;
 }
 
-function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
-
-// ── Sidebar Mobile ────────────────────────────────────────────
-document.getElementById('sidebarToggle')?.addEventListener('click', () => document.getElementById('sidebar').classList.toggle('open'));
-document.getElementById('sidebarClose')?.addEventListener('click', () => document.getElementById('sidebar').classList.remove('open'));
-
-// ══════════════════════════════════════════════════════════════
-//  DASHBOARD
-// ══════════════════════════════════════════════════════════════
+// ── Dashboard ─────────────────────────────────────────────────
 async function buildDashboard() {
-  showSkeleton('recentRepairsTable', 5);
-
-  const data = await api('/bookings/stats');
+  const data = await api('/admin/analytics');
   if (!data?.success) return;
-
   const s = data.data;
 
-  // Stat cards
-  setEl('statNumTotal',    s.total        ?? 0);
-  setEl('statNumPending',  s.pending       ?? 0);
-  setEl('statNumProgress', s.inProgress    ?? 0);
-  setEl('statNumComplete', s.completed     ?? 0);
-  setEl('statNumRevenue',  s.revenue ? formatCurrency(s.revenue) : '₹0');
+  setEl('statNumTotalLeads',      s.totalLeads || 0);
+  setEl('statNumIncompleteLeads',  s.incompleteLeads || 0);
+  setEl('statNumTotalBookings',    s.totalBookings || 0);
+  setEl('statNumPendingQuotes',   s.pendingQuotations || 0);
+  setEl('statNumApprovedQuotes',  s.approvedQuotations || 0);
+  setEl('statNumAssignedOrders',  s.assignedOrders || 0);
 
-  // Feedback avg rating
-  const fb = await api('/feedback');
-  setEl('statNumRating', fb?.avgRating ?? '–');
+  setEl('metricsGrossRev',  formatCurrency(s.financials?.grossRevenue || 0));
+  setEl('metricsPayouts',   formatCurrency(s.financials?.totalPayouts || 0));
+  setEl('metricsNetProfit', formatCurrency(s.financials?.netProfit || 0));
 
-  // Recent repairs table
-  renderRecentTable(s.recent || []);
-
-  // Donut from counts
-  renderDonut({ 'In Progress': s.inProgress, 'Awaiting Approval': s.pending, 'Completed': s.completed, 'Received': s.total - s.inProgress - s.pending - s.completed });
-
-  // Pending list
-  loadPendingList();
-}
-
-function renderRecentTable(repairs) {
-  const el = document.getElementById('recentRepairsTable');
-  if (!el) return;
-  if (!repairs.length) { el.innerHTML = '<div style="padding:20px;color:var(--clr-text-muted);text-align:center">No repairs yet</div>'; return; }
-  el.innerHTML = repairs.map(r =>
-    `<div class="mt-row">
+  // Load recent orders
+  const ordersData = await api('/bookings?limit=5');
+  const recent = ordersData?.data || [];
+  document.getElementById('recentRepairsTable').innerHTML = recent.map(r => `
+    <div class="mt-row">
       <div><div class="mt-ref">${r.referenceNumber}</div><div class="mt-name">${r.customerName}</div></div>
-      <div class="mt-device">${r.deviceModel}</div>
-      <div class="mt-device">${r.quotationAmount ? formatCurrency(r.quotationAmount) : '—'}</div>
+      <div class="mt-device">${r.deviceBrand} ${r.deviceModel}</div>
       <div>${getBadge(r.status)}</div>
-    </div>`
-  ).join('');
+    </div>
+  `).join('') || '<div style="padding:20px;text-align:center">No recent orders</div>';
 }
 
-async function loadPendingList() {
-  const data = await api('/bookings?status=Awaiting%20Approval&limit=5');
-  const pending = data?.data || [];
-  document.getElementById('pendingBadge').textContent = data?.total || 0;
-  const list = document.getElementById('pendingList');
-  if (!list) return;
-  if (!pending.length) { list.innerHTML = '<div style="padding:16px;color:var(--clr-text-muted)">No pending approvals 🎉</div>'; return; }
-  list.innerHTML = pending.map(r =>
-    `<div class="pending-item">
-      <div class="pi-info">
-        <div class="pi-name">${r.customerName} · ${r.deviceBrand} ${r.deviceModel}</div>
-        <div class="pi-detail">Ref: ${r.referenceNumber} · ${r.repairTypes?.join(', ')} · ${formatDate(r.createdAt)}</div>
-      </div>
-      <div class="pi-amount">${r.quotationAmount ? formatCurrency(r.quotationAmount) : 'No Quote'}</div>
-      <div class="pi-actions">
-        <button class="btn btn-outline" style="padding:7px 14px;font-size:0.8rem" onclick="openRepairModal('${r._id}')">View</button>
-      </div>
-    </div>`
-  ).join('');
+// ── Communication Logs ────────────────────────────────────────
+async function loadLogs() {
+  const tbody = document.getElementById('logsTableBody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px">Loading logs...</td></tr>';
+  const data = await api('/admin/notification-logs');
+  const logs = data?.data || [];
+
+  tbody.innerHTML = logs.map(l => `
+    <tr>
+      <td class="td-muted">${formatDate(l.sentAt)}</td>
+      <td style="font-weight:600">${l.eventName}</td>
+      <td>${l.recipient}</td>
+      <td><span style="text-transform:uppercase; font-size:0.7rem">${l.channel}</span></td>
+      <td><span class="badge ${l.deliveryStatus === 'delivered' ? 'badge-completed' : 'badge-pending'}">${l.deliveryStatus}</span></td>
+      <td><button class="action-btn" onclick="viewLogDetail('${l._id}')">View</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" style="text-align:center;padding:20px">No logs found</td></tr>';
 }
 
-function renderDonut(counts) {
-  const colors = { 'In Progress': '#3b82f6', 'Awaiting Approval': '#f59e0b', 'Completed': '#10b981', 'Received': '#8b5cf6' };
-  const total = Object.values(counts).reduce((s, v) => s + (v || 0), 0);
-  if (!total) return;
-  let cum = 0;
-  const segs = [], legend = [];
-  Object.entries(counts).forEach(([k, v]) => {
-    if (!v || v <= 0) return;
-    const pct = (v / total) * 100;
-    segs.push(`${colors[k] || '#64748b'} ${cum}% ${cum + pct}%`);
-    cum += pct;
-    legend.push({ k, v, color: colors[k] || '#64748b' });
-  });
-  const donut = document.getElementById('donutChart');
-  if (donut) donut.style.background = `conic-gradient(${segs.join(', ')})`;
-  const leg = document.getElementById('donutLegend');
-  if (leg) leg.innerHTML = legend.map(i => `<div class="legend-item"><div class="legend-dot" style="background:${i.color}"></div><span class="legend-label">${i.k}</span><span class="legend-val">${i.v}</span></div>`).join('');
+async function viewLogDetail(id) {
+  const data = await api(`/admin/notification-logs?id=${id}`);
+  const log = data?.data?.[0];
+  if (!log) return;
+
+  document.getElementById('modalTitle').textContent = `Log Detail: ${log.eventName}`;
+  document.getElementById('modalBody').innerHTML = `
+    <div style="font-size:0.9rem">
+      <p><strong>Sent At:</strong> ${new Date(log.sentAt).toLocaleString()}</p>
+      <p><strong>Recipient:</strong> ${log.recipient}</p>
+      <p><strong>Channel:</strong> ${log.channel.toUpperCase()}</p>
+      <p><strong>Status:</strong> ${log.deliveryStatus}</p>
+      <div style="margin-top:15px; padding:15px; background:rgba(0,0,0,0.2); border-radius:10px; font-family:monospace; white-space:pre-wrap;">${log.messageBody || 'No message content stored.'}</div>
+    </div>
+  `;
+  document.getElementById('modalStatusActions').innerHTML = '';
+  document.getElementById('repairModal').style.display = 'flex';
 }
 
-// ══════════════════════════════════════════════════════════════
-//  REPAIRS TABLE (dynamic)
-// ══════════════════════════════════════════════════════════════
-async function loadRepairs() {
-  document.getElementById('repairsTableBody').innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--clr-text-muted)">Loading...</td></tr>`;
-  const search = document.getElementById('repairSearch')?.value || '';
-  const status = document.getElementById('repairFilter')?.value || '';
-
-  let url = '/bookings?limit=50';
-  if (status) url += `&status=${encodeURIComponent(status)}`;
-  if (search) url += `&search=${encodeURIComponent(search)}`;
-
-  const data = await api(url);
-  allRepairs = data?.data || [];
-  filteredRepairs = [...allRepairs];
-  document.getElementById('repairCount').textContent = `${data?.total || 0} records`;
-  renderRepairsTable(allRepairs);
+async function loadCommunicationSettings() {
+  const data = await api('/admin/communication-settings');
+  if (!data?.success) return;
+  const s = data.data;
+  setVal('otpExpiry', s.otpExpiry);
+  setVal('maxOtpAttempts', s.maxOtpAttempts);
+  setCheck('emailNotif', s.emailNotifications);
+  setCheck('smsNotif', s.smsNotifications);
+  setCheck('autoFollowup', s.autoFollowup);
+  setVal('followupDays', s.followupDays);
 }
 
-function renderRepairsTable(repairs) {
-  const tbody = document.getElementById('repairsTableBody');
-  if (!tbody) return;
-  if (!repairs.length) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--clr-text-muted)">No repairs found</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = repairs.map(r =>
-    `<tr>
-      <td class="td-ref">${r.referenceNumber}</td>
-      <td><div class="td-name">${r.customerName}</div><div class="td-muted" style="font-size:.75rem">${r.customerPhone}</div></td>
-      <td>${r.deviceBrand} ${r.deviceModel}</td>
-      <td class="td-muted">${(r.repairTypes || []).join(', ')}</td>
-      <td>${getBadge(r.status)}</td>
-      <td>${r.quotationAmount ? formatCurrency(r.quotationAmount) : '—'}</td>
-      <td class="td-muted">${formatDate(r.createdAt)}</td>
-      <td><div class="td-actions">
-        <button class="action-btn" onclick="openRepairModal('${r._id}')">View</button>
-        <button class="action-btn danger" onclick="confirmDelete('${r._id}', '${r.referenceNumber}')">Delete</button>
-      </div></td>
-    </tr>`
-  ).join('');
+async function saveCommunicationSettings() {
+  const payload = {
+    otpExpiry: Number(getVal('otpExpiry')),
+    maxOtpAttempts: Number(getVal('maxOtpAttempts')),
+    emailNotifications: getCheck('emailNotif'),
+    smsNotifications: getCheck('smsNotif'),
+    autoFollowup: getCheck('autoFollowup'),
+    followupDays: Number(getVal('followupDays'))
+  };
+  const res = await api('/admin/communication-settings', { method: 'PUT', body: JSON.stringify(payload) });
+  if (res?.success) showToast('Settings updated', 'success');
 }
 
-function filterRepairs() {
-  clearTimeout(window._filterTimer);
-  window._filterTimer = setTimeout(() => loadRepairs(), 400);
+// ── Lead Management ───────────────────────────────────────────
+async function loadLeads() {
+  const tbody = document.getElementById('leadsTableBody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px">Loading...</td></tr>';
+  const data = await api('/admin/incomplete-leads');
+  const leads = data?.data || [];
+  document.getElementById('leadsCount').textContent = `${leads.length} leads`;
+  
+  tbody.innerHTML = leads.map(l => `
+    <tr>
+      <td>${l.customerName}</td>
+      <td>${l.mobileNumber}<br><span class="td-muted">${l.email || ''}</span></td>
+      <td>${l.deviceBrand} ${l.deviceModel}</td>
+      <td><span class="badge badge-pending">${l.stage || 'New'}</span></td>
+      <td class="td-muted">${formatDate(l.createdAt)}</td>
+      <td><button class="action-btn" onclick="openLeadModal('${l._id}')">View</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" style="text-align:center;padding:20px">No leads found</td></tr>';
 }
 
-// ══════════════════════════════════════════════════════════════
-//  QUOTATIONS (dynamic)
-// ══════════════════════════════════════════════════════════════
+// ── Booking Management ────────────────────────────────────────
+async function loadBookings() {
+  const tbody = document.getElementById('bookingsTableBody');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px">Loading...</td></tr>';
+  const data = await api('/bookings?status=Pending');
+  const bookings = data?.data || [];
+  document.getElementById('bookingsCount').textContent = `${bookings.length} new bookings`;
+
+  tbody.innerHTML = bookings.map(b => `
+    <tr>
+      <td class="td-ref">${b.referenceNumber}</td>
+      <td>${b.customerName}</td>
+      <td>${b.deviceBrand} ${b.deviceModel}</td>
+      <td>${formatDate(b.preferredDate)}</td>
+      <td>${getBadge(b.status)}</td>
+      <td><button class="action-btn" onclick="openRepairModal('${b._id}')">Manage</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" style="text-align:center;padding:20px">No new bookings</td></tr>';
+}
+
+// ── Order Management ──────────────────────────────────────────
+async function loadOrders() {
+  const tbody = document.getElementById('ordersTableBody');
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px">Loading...</td></tr>';
+  const status  = document.getElementById('orderStatusFilter')?.value || '';
+  const search  = document.getElementById('ordersSearch')?.value || '';
+  const city    = document.getElementById('orderCityFilter')?.value || '';
+  const state   = document.getElementById('orderStateFilter')?.value || '';
+  const pincode = document.getElementById('orderPincodeFilter')?.value || '';
+
+  const qs = new URLSearchParams({ status, search, city, state, pincode }).toString();
+  const data = await api(`/bookings?${qs}`);
+  allOrders = data?.data || [];
+  document.getElementById('ordersCount').textContent = `${allOrders.length} orders`;
+
+  const srcIcon = (src) => ({ gps: '📍', ip: '🌐', manual: '✏️' }[src] || '');
+
+  tbody.innerHTML = allOrders.map(o => `
+    <tr>
+      <td class="td-ref">${o.referenceNumber}</td>
+      <td>${o.customerName}</td>
+      <td>${o.deviceBrand} ${o.deviceModel}</td>
+      <td style="font-size:0.8rem;">${srcIcon(o.locationSource)} ${o.city || '—'}${o.state ? ', ' + o.state : ''}<br><span class="td-muted">${o.pincode || ''}</span></td>
+      <td>${getBadge(o.status)}</td>
+      <td>${o.assignedTechnician?.name || '—'}</td>
+      <td style="font-weight:700">${formatCurrency(o.finalAmount || o.quotationAmount || 0)}</td>
+      <td><button class="action-btn" onclick="openRepairModal('${o._id}')">Details</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px">No orders found</td></tr>';
+}
+
+// ── Quotations ────────────────────────────────────────────────
 async function loadQuotations() {
-  document.getElementById('quotationsTableBody').innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--clr-text-muted)">Loading...</td></tr>`;
-  const data = await api('/quotations');
-  const rows = data?.data || [];
   const tbody = document.getElementById('quotationsTableBody');
-  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--clr-text-muted)">No quotations issued yet</td></tr>`; return; }
-  tbody.innerHTML = rows.map(r =>
-    `<tr>
-      <td class="td-ref">${r.referenceNumber}</td>
-      <td>${r.customerName}</td>
-      <td>${r.deviceBrand} ${r.deviceModel}</td>
-      <td>${r.quotationAmount ? formatCurrency(r.quotationAmount) : '—'}</td>
-      <td>${getQuoteBadge(r.quotationStatus)}</td>
-      <td class="td-muted">${formatDate(r.createdAt)}</td>
-      <td><div class="td-actions">
-        <button class="action-btn" onclick="openRepairModal('${r._id}')">View</button>
-      </div></td>
-    </tr>`
-  ).join('');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px">Loading...</td></tr>';
+  const data = await api('/bookings?hasQuotation=true');
+  const quotes = data?.data || [];
+
+  tbody.innerHTML = quotes.map(q => `
+    <tr>
+      <td class="td-ref">${q.referenceNumber}</td>
+      <td>${q.customerName}</td>
+      <td>${q.deviceBrand} ${q.deviceModel}</td>
+      <td style="font-weight:700">${formatCurrency(q.quotationAmount)}</td>
+      <td>${getQuoteBadge(q.quotationStatus)}</td>
+      <td class="td-muted">${formatDate(q.createdAt)}</td>
+      <td><button class="action-btn" onclick="openRepairModal('${q._id}')">View</button></td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" style="text-align:center;padding:20px">No quotations found</td></tr>';
 }
 
-// ══════════════════════════════════════════════════════════════
-//  CUSTOMERS (dynamic)
-// ══════════════════════════════════════════════════════════════
+// ── Customer Management ───────────────────────────────────────
 async function loadCustomers() {
   const grid = document.getElementById('customersGrid');
-  if (!grid) return;
-  grid.innerHTML = '<div style="padding:30px;color:var(--clr-text-muted);text-align:center">Loading customers...</div>';
-  const data = await api('/customers');
+  grid.innerHTML = '<div style="padding:20px;text-align:center">Loading...</div>';
+  const data = await api('/admin/customers');
   const custs = data?.data || [];
-  if (!custs.length) { grid.innerHTML = '<div style="padding:30px;color:var(--clr-text-muted);text-align:center">No customers yet</div>'; return; }
-  grid.innerHTML = custs.map(c =>
-    `<div class="customer-card">
-      <div class="cc-header">
-        <div class="cc-avatar">${(c.name || 'UN').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}</div>
-        <div><div class="cc-name">${c.name}</div><div class="cc-phone">${c.phone}</div></div>
-      </div>
-      <div class="cc-meta">
-        <div class="cc-meta-row"><span>Email</span><span style="font-size:.75rem">${c.email}</span></div>
-        <div class="cc-meta-row"><span>Total Repairs</span><span>${c.totalOrders}</span></div>
-        <div class="cc-meta-row"><span>Total Spent</span><span>${c.totalSpent > 0 ? formatCurrency(c.totalSpent) : '—'}</span></div>
-        <div class="cc-meta-row"><span>Last Device</span><span>${c.lastDevice || '—'}</span></div>
-      </div>
-    </div>`
-  ).join('');
+
+  grid.innerHTML = `
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Email / Phone</th><th>Location</th><th>Stats</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${custs.map(c => `
+            <tr>
+              <td style="font-weight:600">${c.name}</td>
+              <td>${c.email}<br><span class="td-muted">${c.phone || ''}</span></td>
+              <td>${c.city || '—'}${c.state ? ', ' + c.state : ''}</td>
+              <td class="td-muted">Repairs: ${c.totalRepairs || 0}</td>
+              <td><span class="badge ${c.isActive ? 'badge-completed' : 'badge-rejected'}">${c.isActive ? 'Active' : 'Inactive'}</span></td>
+              <td>
+                <div class="td-actions">
+                  <button class="action-btn" onclick="editCustomer('${c._id}')">Edit</button>
+                  <button class="action-btn" onclick="viewCustomerHistory('${c.email}')">History</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
-function filterCustomers() {
-  const search = document.getElementById('custSearch')?.value?.toLowerCase() || '';
-  document.querySelectorAll('.customer-card').forEach(card => {
-    card.style.display = card.textContent.toLowerCase().includes(search) ? '' : 'none';
-  });
-}
-
-// ══════════════════════════════════════════════════════════════
-//  TECHNICIANS (dynamic)
-// ══════════════════════════════════════════════════════════════
+// ── Partner Management ────────────────────────────────────────
 async function loadTechnicians() {
   const grid = document.getElementById('techGrid');
-  if (!grid) return;
-  grid.innerHTML = '<div style="padding:30px;color:var(--clr-text-muted);text-align:center">Loading technicians...</div>';
-  const data = await api('/technicians');
-  const techs = data?.data || [];
-  if (!techs.length) {
-    grid.innerHTML = `<div style="padding:30px;color:var(--clr-text-muted);text-align:center">No technicians added yet.<br><br>
-      <button class="btn btn-primary" onclick="openAddTechModal()">+ Add First Technician</button></div>`;
-    return;
-  }
-  grid.innerHTML = techs.map(t =>
-    `<div class="tech-card">
-      <div class="tc-header">
-        <div class="tc-avatar">${(t.name || 'T').split(' ').map(w => w[0]).join('').slice(0,2)}</div>
-        <div>
-          <div class="tc-name">${t.name}</div>
-          <div class="tc-spec">${t.specialization}</div>
-          <div class="tc-rating">★ ${t.averageRating?.toFixed(1) || '–'}/5.0</div>
-        </div>
-      </div>
-      <div class="tc-stats">
-        <div class="tc-stat"><div class="tc-stat-num">${t.totalRepairs}</div><div class="tc-stat-label">Total</div></div>
-        <div class="tc-stat"><div class="tc-stat-num">${t.completedRepairs}</div><div class="tc-stat-label">Completed</div></div>
-      </div>
-      <div class="tc-status ${t.status}">
-        <span class="tc-status-dot"></span>
-        ${t.status === 'available' ? 'Available' : t.status === 'busy' ? 'Busy' : 'Off Duty'}
-      </div>
-    </div>`
-  ).join('');
+  grid.innerHTML = '<div style="padding:20px;text-align:center">Loading partners...</div>';
+  const data = await api('/admin/partners');
+  const partners = data?.data || [];
+
+  grid.innerHTML = `
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Business / Profile</th><th>Location</th><th>Capability</th><th>Performance</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${partners.map(p => `
+            <tr>
+              <td><div style="font-weight:700">${p.businessName || p.name}</div><div class="td-muted">${p.phone}</div></td>
+              <td>${p.city || '—'}, ${p.state || '—'}</td>
+              <td class="td-muted">${p.supportedBrands?.slice(0,2).join(', ')}${p.supportedBrands?.length > 2 ? '...' : ''}</td>
+              <td>Done: ${p.completedRepairs || 0} / Bal: ${formatCurrency(p.payoutBalance || 0)}</td>
+              <td>${p.isActive ? '<span class="badge badge-completed">Active</span>' : '<span class="badge badge-rejected">Inactive</span>'}</td>
+              <td>
+                <div class="td-actions">
+                  <button class="action-btn" onclick="editPartner('${p._id}')">Profile</button>
+                  <button class="action-btn" onclick="openPayoutModal('${p._id}', ${p.payoutBalance})">Payout</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
-// ══════════════════════════════════════════════════════════════
-//  FEEDBACK (dynamic)
-// ══════════════════════════════════════════════════════════════
-async function loadFeedback() {
-  const statsRow = document.getElementById('fbStatsRow');
-  const list     = document.getElementById('adminFeedbackList');
-  if (list) list.innerHTML = '<div style="padding:30px;color:var(--clr-text-muted);text-align:center">Loading feedback...</div>';
-
-  const data = await api('/feedback');
-  const fbs  = data?.data || [];
-
-  if (statsRow) {
-    statsRow.innerHTML = `
-      <div class="fb-stat-card"><div class="fb-stat-num fb-star">${data?.avgRating ?? '–'}★</div><div class="fb-stat-label">Average Rating</div></div>
-      <div class="fb-stat-card"><div class="fb-stat-num">${data?.total ?? 0}</div><div class="fb-stat-label">Total Reviews</div></div>
-      <div class="fb-stat-card"><div class="fb-stat-num">${fbs.filter(f => f.overallRating === 5).length}</div><div class="fb-stat-label">5★ Reviews</div></div>
-      <div class="fb-stat-card"><div class="fb-stat-num">${fbs.filter(f => f.wouldRecommend === 'yes').length}</div><div class="fb-stat-label">Would Recommend</div></div>
-    `;
-  }
-  if (!fbs.length) { if (list) list.innerHTML = '<div style="padding:30px;color:var(--clr-text-muted);text-align:center">No feedback received yet</div>'; return; }
-  if (list) list.innerHTML = fbs.map(f =>
-    `<div class="fb-item">
-      <div class="fb-item-header">
-        <div class="fb-item-left">
-          <div class="fb-item-avatar">${(f.customerName || 'U').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}</div>
-          <div><div class="fb-item-name">${f.customerName}</div><div class="fb-item-device">${f.deviceName} · Ref: ${f.referenceNumber}</div></div>
-        </div>
-        <div>
-          <div class="fb-item-stars">${'★'.repeat(f.overallRating)}${'☆'.repeat(5 - f.overallRating)}</div>
-          <div class="fb-item-date">${formatDate(f.createdAt)}</div>
-        </div>
-      </div>
-      <div class="fb-item-text">"${f.comment || 'No written review'}"</div>
-    </div>`
-  ).join('');
+// ── Admin Management ──────────────────────────────────────────
+async function loadAllAdmins() {
+  const tbody = document.getElementById('adminsTableBody');
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px">Loading...</td></tr>';
+  const data = await api('/admin/admins');
+  const admins = data?.data || [];
+  tbody.innerHTML = admins.map(a => `
+    <tr>
+      <td style="font-weight:600">${a.name}</td>
+      <td>${a.email}</td>
+      <td><span class="badge" style="background:rgba(255,255,255,0.05)">${a.role.toUpperCase()}</span></td>
+      <td><span class="badge ${a.isActive ? 'badge-completed' : 'badge-rejected'}">${a.isActive ? 'Active' : 'Inactive'}</span></td>
+      <td><button class="action-btn" onclick="resetAdminPassword('${a._id}')">Reset Pass</button></td>
+    </tr>
+  `).join('');
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ANALYTICS (static charts — no dedicated API endpoint needed)
-// ══════════════════════════════════════════════════════════════
+async function showAddAdminModal() {
+  const modal = document.getElementById('formModal');
+  document.getElementById('formModalTitle').textContent = 'Create New Admin';
+  document.getElementById('formModalBody').innerHTML = `
+    <form class="modal-form">
+      <div class="form-group"><label>Name</label><input type="text" id="admName" class="form-input" required></div>
+      <div class="form-group"><label>Email</label><input type="email" id="admEmail" class="form-input" required></div>
+      <div class="form-group"><label>Password</label><input type="password" id="admPass" class="form-input" required></div>
+      <div class="form-group"><label>Role</label>
+        <select id="admRole" class="form-select">
+          <option value="admin">Admin</option>
+          <option value="superadmin">Super Admin</option>
+        </select>
+      </div>
+    </form>
+  `;
+  document.getElementById('formModalSubmit').onclick = saveAdmin;
+  modal.style.display = 'flex';
+}
+
+async function saveAdmin() {
+  const payload = {
+    name: getVal('admName'),
+    email: getVal('admEmail'),
+    password: getVal('admPass'),
+    role: getVal('admRole')
+  };
+  const res = await api('/admin/admins', { method: 'POST', body: JSON.stringify(payload) });
+  if (res?.success) { showToast('Admin created', 'success'); closeFormModal(); loadAllAdmins(); }
+}
+
+async function resetAdminPassword(id) {
+  const pass = prompt('New password for admin:');
+  if (!pass || pass.length < 8) return showToast('Min 8 chars', 'error');
+  const res = await api('/admin/reset-password', { method: 'POST', body: JSON.stringify({ userId: id, newPassword: pass }) });
+  if (res?.success) showToast('Password reset successfully', 'success');
+}
 async function renderReports() {
-  // Fetch real booking data for charts
-  const data = await api('/bookings?limit=200');
-  const repairs = data?.data || [];
+  const data = await api('/admin/analytics');
+  if (!data?.success) return;
+  const s = data.data;
 
-  // Device frequency
-  const deviceCounts = {};
-  repairs.forEach(r => { const k = `${r.deviceBrand} ${r.deviceModel}`; deviceCounts[k] = (deviceCounts[k] || 0) + 1; });
-  const topDevices = Object.entries(deviceCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  const maxD = topDevices[0]?.[1] || 1;
-  renderBarChart('deviceChart', topDevices.map(([l, v]) => ({ label: l, val: v, max: maxD })));
-
-  // Repair type frequency
-  const repairCounts = {};
-  repairs.forEach(r => (r.repairTypes || []).forEach(rt => { repairCounts[rt] = (repairCounts[rt] || 0) + 1; }));
-  const topRepairs = Object.entries(repairCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  const maxR = topRepairs[0]?.[1] || 1;
-  renderBarChart('repairChart', topRepairs.map(([l, v]) => ({ label: l, val: v, max: maxR })));
-
-  // Monthly volume (last 6 months)
-  const monthlyCounts = {};
-  const months = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(); d.setMonth(d.getMonth() - i);
-    const key = d.toLocaleString('en-IN', { month: 'short' });
-    monthlyCounts[key] = 0;
-    months.push(key);
-  }
-  repairs.forEach(r => {
-    const mn = new Date(r.createdAt).toLocaleString('en-IN', { month: 'short' });
-    if (monthlyCounts[mn] !== undefined) monthlyCounts[mn]++;
-  });
-  const maxM = Math.max(...Object.values(monthlyCounts), 1);
-  renderMonthChart(months.map(m => ({ m, h: (monthlyCounts[m] / maxM) * 100 })));
-
-  // Revenue by category
-  const catRev = {};
-  repairs.forEach(r => {
-    const c = r.deviceCategory || 'other';
-    catRev[c] = (catRev[c] || 0) + ((r.quotationAmount || 0) - (r.discount || 0));
-  });
-  const topCats = Object.entries(catRev).sort((a, b) => b[1] - a[1]);
-  const maxC = topCats[0]?.[1] || 1;
-  renderBarChart('revenueChart', topCats.map(([l, v]) => ({ label: capitalize(l), val: v, max: maxC, prefix: formatCurrency(v) })));
+  renderBarChart('stateChart', s.stateWise.map(x => ({ label: x._id || 'Unknown', val: x.count, max: s.stateWise[0]?.count || 1 })));
+  renderBarChart('cityChart', s.cityWise.map(x => ({ label: x._id || 'Unknown', val: x.count, max: s.cityWise[0]?.count || 1 })));
+  renderBarChart('deviceChart', s.brandDistributed.map(x => ({ label: x._id || 'Unknown', val: x.count, max: s.brandDistributed[0]?.count || 1 })));
+  
+  const convData = [
+    { label: 'Lead Conv %', val: s.conversions.leadConversionRate, max: 100 },
+    { label: 'Quote Approval %', val: s.conversions.quoteConversionRate, max: 100 }
+  ];
+  renderBarChart('conversionChart', convData);
 }
 
 function renderBarChart(id, data) {
   const el = document.getElementById(id);
   if (!el || !data.length) return;
-  el.innerHTML = data.map(item =>
-    `<div class="bar-row">
+  el.innerHTML = data.map(item => `
+    <div class="bar-row">
       <span class="bar-label">${item.label}</span>
       <div class="bar-track"><div class="bar-fill" style="width:${((item.val/item.max)*100).toFixed(1)}%"></div></div>
-      <span class="bar-val">${item.prefix || item.val}</span>
-    </div>`
-  ).join('');
+      <span class="bar-val">${item.val}</span>
+    </div>
+  `).join('');
 }
 
-function renderMonthChart(months) {
-  const el = document.getElementById('monthChart');
-  if (!el) return;
-  el.innerHTML = months.map(m =>
-    `<div class="month-bar-wrap">
-      <div class="month-bar" style="height:${m.h || 4}%"></div>
-      <span class="month-label">${m.m}</span>
-    </div>`
-  ).join('');
+// ── System Data Management ────────────────────────────────────
+async function loadSystemData() {
+  const header = document.getElementById('dataTableHeader');
+  const tbody  = document.getElementById('dataTableBody');
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px">Loading...</td></tr>';
+
+  const data = await api(`/admin/${currentDataTab}`);
+  const items = data?.data || [];
+
+  if (currentDataTab === 'repair-types') {
+    header.innerHTML = '<tr><th>Name</th><th>Base Price</th><th>Payout</th><th>Status</th><th>Actions</th></tr>';
+    tbody.innerHTML = items.map(i => `
+      <tr><td>${i.name}</td><td>${formatCurrency(i.basePrice)}</td><td>${formatCurrency(i.basePayout)}</td>
+      <td><span class="badge ${i.isActive ? 'badge-completed' : 'badge-rejected'}">${i.isActive ? 'Active' : 'Inactive'}</span></td>
+      <td><button class="action-btn" onclick="editSystemItem('${i._id}')">Edit</button></td></tr>
+    `).join('');
+  } else if (currentDataTab === 'brands') {
+    header.innerHTML = '<tr><th>Brand</th><th>Category</th><th>Status</th><th>Actions</th></tr>';
+    tbody.innerHTML = items.map(i => `
+      <tr><td>${i.name}</td><td>${i.category}</td>
+      <td><span class="badge ${i.isActive ? 'badge-completed' : 'badge-rejected'}">${i.isActive ? 'Active' : 'Inactive'}</span></td>
+      <td><button class="action-btn" onclick="editSystemItem('${i._id}')">Edit</button></td></tr>
+    `).join('');
+  } else if (currentDataTab === 'models') {
+    header.innerHTML = '<tr><th>Model</th><th>Brand</th><th>Category</th><th>Actions</th></tr>';
+    tbody.innerHTML = items.map(i => `
+      <tr><td>${i.name}</td><td>${i.brand?.name || '—'}</td><td>${i.category}</td>
+      <td><button class="action-btn" onclick="editSystemItem('${i._id}')">Edit</button></td></tr>
+    `).join('');
+  } else if (currentDataTab === 'offers') {
+    header.innerHTML = '<tr><th>Code</th><th>Discount</th><th>Uses</th><th>Status</th><th>Actions</th></tr>';
+    tbody.innerHTML = items.map(i => `
+      <tr><td style="color:var(--clr-primary); font-weight:700">${i.code}</td><td>${i.discountValue}${i.discountType === 'percentage' ? '%' : '₹'}</td>
+      <td>${i.usedCount} / ${i.maxUses || '∞'}</td><td><span class="badge ${i.isActive ? 'badge-completed' : 'badge-rejected'}">${i.isActive ? 'Active' : 'Inactive'}</span></td>
+      <td><button class="action-btn" onclick="editSystemItem('${i._id}')">Edit</button></td></tr>
+    `).join('');
+  }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  REPAIR MODAL (dynamic — fetch single booking by _id)
-// ══════════════════════════════════════════════════════════════
+function switchDataTab(tab, btn) {
+  currentDataTab = tab;
+  document.querySelectorAll('.tab-btns .btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadSystemData();
+}
+
+// ── Repair Detail Modal ───────────────────────────────────────
 async function openRepairModal(id) {
   currentRepairId = id;
-  document.getElementById('modalTitle').textContent = 'Loading...';
-  document.getElementById('modalBody').innerHTML = '<div style="padding:20px;text-align:center;color:var(--clr-text-muted)">Fetching details...</div>';
-  document.getElementById('repairModal').style.display = 'flex';
+  const modal = document.getElementById('repairModal');
+  const body = document.getElementById('modalBody');
+  body.innerHTML = '<div style="padding:20px;text-align:center">Fetching details...</div>';
+  modal.style.display = 'flex';
 
-  // Find in local cache first, else fetch
-  const cached = allRepairs.find(r => r._id === id);
-  const r = cached || (await api(`/bookings/${id}`))?.data;
-  if (!r) { document.getElementById('modalBody').innerHTML = '<div style="color:red;padding:20px">Failed to load repair details.</div>'; return; }
+  const data = await api(`/bookings/${id}`);
+  const r = data?.data;
+  if (!r) { body.innerHTML = '<div style="color:red;padding:20px">Failed to load booking.</div>'; return; }
 
-  document.getElementById('modalTitle').textContent = `Repair Details — ${r.referenceNumber}`;
-  document.getElementById('modalBody').innerHTML = `
+  body.innerHTML = `
     <div class="modal-detail-grid">
-      <div><label class="form-label">Customer</label><div>${r.customerName}</div></div>
-      <div><label class="form-label">Phone</label><div>${r.customerPhone}</div></div>
-      <div><label class="form-label">Email</label><div>${r.customerEmail}</div></div>
-      <div><label class="form-label">Service</label><div>${r.serviceType}</div></div>
-      <div><label class="form-label">Device</label><div>${r.deviceBrand} ${r.deviceModel} (${r.deviceCategory})</div></div>
-      <div><label class="form-label">Repair Type</label><div>${(r.repairTypes || []).join(', ')}</div></div>
+      <div><label class="form-label">Customer</label><div>${r.customerName} (${r.customerPhone})</div></div>
+      <div><label class="form-label">Device</label><div>${r.deviceBrand} ${r.deviceModel}</div></div>
+      <div><label class="form-label">Repair Types</label><div>${(r.repairTypes || []).join(', ')}</div></div>
       <div><label class="form-label">Status</label><div>${getBadge(r.status)}</div></div>
-      <div><label class="form-label">Quote Status</label><div>${getQuoteBadge(r.quotationStatus)}</div></div>
-      <div><label class="form-label">Amount</label><div>${r.quotationAmount ? formatCurrency(r.quotationAmount) : '—'}</div></div>
-      <div><label class="form-label">Discount</label><div>${r.discount ? formatCurrency(r.discount) : '—'}</div></div>
-      <div><label class="form-label">Booked</label><div>${formatDate(r.createdAt)}</div></div>
-      <div><label class="form-label">Preferred Date</label><div>${formatDate(r.preferredDate)}</div></div>
+      <div><label class="form-label">Amount</label><div style="font-weight:700; color:var(--clr-primary)">${r.quotationAmount ? formatCurrency(r.quotationAmount) : 'Pending Quote'}</div></div>
     </div>
-    ${r.technicianNote ? `<div style="margin-top:16px;padding:14px;background:rgba(59,130,246,0.08);border-radius:10px;font-size:.875rem;color:var(--clr-text-muted)"><strong>Technician Note:</strong> ${r.technicianNote}</div>` : ''}
-    ${r.issueDescription ? `<div style="margin-top:10px;padding:14px;background:rgba(255,255,255,0.04);border-radius:10px;font-size:.875rem;color:var(--clr-text-muted)"><strong>Issue Description:</strong> ${r.issueDescription}</div>` : ''}
+
+    <!-- Step 13: Location Detail Section -->
+    <div style="margin-top:16px; padding:14px; background:rgba(99,102,241,0.07); border:1px solid rgba(99,102,241,0.2); border-radius:12px;">
+      <div class="form-label" style="margin-bottom:8px;">📍 Order Location</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.85rem;">
+        <div><span style="color:var(--clr-text-faint)">Address:</span> ${r.address || '—'}</div>
+        <div><span style="color:var(--clr-text-faint)">City:</span> ${r.city || '—'}</div>
+        <div><span style="color:var(--clr-text-faint)">State:</span> ${r.state || '—'}</div>
+        <div><span style="color:var(--clr-text-faint)">Pincode:</span> ${r.pincode || '—'}</div>
+        ${r.latitude ? `<div><span style="color:var(--clr-text-faint)">GPS:</span> ${r.latitude?.toFixed(4)}, ${r.longitude?.toFixed(4)}</div>` : ''}
+        ${r.locationSource ? `<div><span style="color:var(--clr-text-faint)">Detected via:</span> <span style="text-transform:capitalize">${r.locationSource}</span>${r.ipCity ? ' (' + r.ipCity + ')' : ''}</div>` : ''}
+      </div>
+      ${r.latitude ? `<a href="https://www.google.com/maps?q=${r.latitude},${r.longitude}" target="_blank" style="display:inline-block;margin-top:10px;font-size:0.8rem;color:var(--clr-primary)">🗺️ Open in Google Maps</a>` : ''}
+    </div>
+
+    <!-- Partner Assignment -->
+    <div style="margin-top:16px; padding:15px; background:rgba(255,255,255,0.03); border-radius:10px; border:1px solid rgba(255,255,255,0.05)">
+      <div class="form-label">Assign Partner & Payout</div>
+      <div style="display:flex; gap:10px; margin-top:8px">
+        <select id="assignTechSelect" class="form-select" style="flex:2"></select>
+        <input type="number" id="partnerPayoutAmt" class="form-input" placeholder="Payout ₹" style="flex:1" value="${r.partnerPayout || ''}">
+        <button class="btn btn-outline" onclick="assignPartner()">Assign</button>
+      </div>
+    </div>
+
+    <!-- Quotation Management -->
+    <div style="margin-top:16px; padding:15px; background:rgba(255,255,255,0.03); border-radius:10px; border:1px solid rgba(255,255,255,0.05)">
+      <div class="form-label">Send Estimate to Customer</div>
+      <div style="display:grid; grid-template-columns: 1fr 2fr; gap:10px; margin-top:8px">
+        <input type="number" id="quoteAmt" class="form-input" placeholder="Amount ₹" value="${r.quotationAmount || ''}">
+        <input type="text" id="quoteNote" class="form-input" placeholder="Technician Notes" value="${r.technicianNote || ''}">
+      </div>
+      <button class="btn btn-primary" style="width:100%; margin-top:10px" onclick="setRepairQuote()">Send Quote</button>
+    </div>
+
+    <!-- Timeline -->
+    <div style="margin-top:16px;">
+      <div class="form-label">Order Timeline</div>
+      <div class="timeline" style="margin-top:10px; display:flex; flex-direction:column; gap:10px;">
+        ${(r.timeline || []).reverse().map(t => `
+          <div style="font-size:0.8rem; border-left:2px solid var(--clr-primary); padding-left:10px;">
+            <div style="font-weight:700">${t.stage}</div>
+            <div class="td-muted">${formatDate(t.date)} · ${t.note}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
   `;
-  document.getElementById('statusUpdateSelect').value = r.status;
+
+  // Load partners for dropdown
+  const partnersData = await api('/admin/partners');
+  const partners = partnersData?.data || [];
+  const select = document.getElementById('assignTechSelect');
+  select.innerHTML = '<option value="">-- Select Partner --</option>' + partners.map(p => `
+    <option value="${p._id}" ${r.assignedTechnician?._id === p._id ? 'selected' : ''}>${p.businessName || p.name} (${p.city})</option>
+  `).join('');
+
+  // Status Actions
+  document.getElementById('modalStatusActions').innerHTML = `
+    <select id="statusUpdateSelect" class="form-select">
+      ${['Pending', 'Received', 'Diagnosed', 'Repair Ongoing', 'Completed', 'Delivered', 'Cancelled'].map(s => `
+        <option value="${s}" ${r.status === s ? 'selected' : ''}>${s}</option>
+      `).join('')}
+    </select>
+    <button class="btn btn-primary" onclick="updateRepairStatus()">Update Status</button>
+  `;
 }
 
-function closeModal() {
-  document.getElementById('repairModal').style.display = 'none';
-  currentRepairId = null;
-}
-
-document.getElementById('repairModal')?.addEventListener('click', function(e) { if (e.target === this) closeModal(); });
-
+// ── Actions ───────────────────────────────────────────────────
 async function updateRepairStatus() {
-  if (!currentRepairId) return;
-  const newStatus = document.getElementById('statusUpdateSelect').value;
-  const btn = document.querySelector('.modal-footer .btn-primary');
-  btn.textContent = 'Updating...'; btn.disabled = true;
-
-  const data = await api(`/bookings/${currentRepairId}/status`, {
-    method: 'PUT',
-    body: JSON.stringify({ status: newStatus, note: `Status updated to ${newStatus} by admin` })
-  });
-
-  btn.textContent = 'Update Status'; btn.disabled = false;
-
-  if (data?.success) {
-    showToast(`✅ Status updated to "${newStatus}"`, 'success');
-    closeModal();
-    loadRepairs();
-    buildDashboard();
-  } else {
-    showToast(data?.message || 'Update failed', 'error');
-  }
+  const status = document.getElementById('statusUpdateSelect').value;
+  const data = await api(`/bookings/${currentRepairId}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
+  if (data?.success) { showToast('Status updated', 'success'); closeModal(); loadOrders(); buildDashboard(); }
 }
 
-async function confirmDelete(id, ref) {
-  if (!confirm(`Delete repair ${ref}? This cannot be undone.`)) return;
-  const data = await api(`/bookings/${id}`, { method: 'DELETE' });
-  if (data?.success) {
-    showToast('Repair deleted.', 'info');
-    loadRepairs();
-    buildDashboard();
-  } else {
-    showToast(data?.message || 'Delete failed', 'error');
-  }
+async function assignPartner() {
+  const technicianId = document.getElementById('assignTechSelect').value;
+  const payoutAmount = document.getElementById('partnerPayoutAmt').value;
+  if (!technicianId) return showToast('Select a partner', 'error');
+  const data = await api('/admin/assign-order', { method: 'POST', body: JSON.stringify({ bookingId: currentRepairId, technicianId, payoutAmount }) });
+  if (data?.success) { showToast('Partner assigned', 'success'); closeModal(); loadOrders(); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  UTILITIES
-// ══════════════════════════════════════════════════════════════
-function getBadge(status) {
-  const map = { 'Received': 'badge-received', 'Diagnosed': 'badge-inprogress', 'Awaiting Approval': 'badge-pending', 'In Progress': 'badge-inprogress', 'Completed': 'badge-completed', 'Cancelled': 'badge-rejected' };
-  return `<span class="badge ${map[status] || ''}">${status}</span>`;
+async function setRepairQuote() {
+  const quotationAmount = document.getElementById('quoteAmt').value;
+  const description = document.getElementById('quoteNote').value;
+  if (!quotationAmount) return showToast('Enter amount', 'error');
+  const data = await api('/admin/set-quote', { method: 'POST', body: JSON.stringify({ bookingId: currentRepairId, quotationAmount, description }) });
+  if (data?.success) { showToast('Quote sent to customer', 'success'); closeModal(); loadOrders(); }
 }
 
-function getQuoteBadge(qs) {
-  const map = { 'Approved': 'badge-completed', 'Pending': 'badge-pending', 'Rejected': 'badge-rejected', 'Not Issued': 'badge-received' };
-  return `<span class="badge ${map[qs] || ''}">${qs || '—'}</span>`;
+// ── Utilities ─────────────────────────────────────────────────
+function formatCurrency(n) { return '₹' + Number(n).toLocaleString('en-IN'); }
+function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) : '—'; }
+function setEl(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+function getVal(id) { return document.getElementById(id)?.value; }
+function setVal(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+function getCheck(id) { return document.getElementById(id)?.checked; }
+function setCheck(id, val) { const el = document.getElementById(id); if (el) el.checked = val; }
+function getBadge(s) {
+  const map = { 'Pending': 'badge-pending', 'Completed': 'badge-completed', 'Cancelled': 'badge-rejected', 'Received': 'badge-inprogress' };
+  return `<span class="badge ${map[s] || 'badge-pending'}">${s}</span>`;
 }
-
-function formatCurrency(n) {
-  return '₹' + Number(n).toLocaleString('en-IN');
+function getQuoteBadge(s) {
+  const map = { 'Approved': 'badge-completed', 'Rejected': 'badge-rejected', 'Pending': 'badge-pending' };
+  return `<span class="badge ${map[s] || 'badge-pending'}">${s || 'Pending'}</span>`;
 }
-
-function formatDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-function setEl(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
-}
-
-function showSkeleton(id, rows = 3) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.innerHTML = Array(rows).fill(`<div style="height:48px;border-radius:8px;background:rgba(255,255,255,0.05);margin-bottom:8px;animation:pulse 1.5s ease-in-out infinite"></div>`).join('');
-}
-
 function showToast(msg, type = 'info') {
   const container = document.getElementById('toastContainer');
-  if (!container) return;
-  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
   const el = document.createElement('div');
   el.className = `toast ${type}`;
-  el.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+  el.innerHTML = `<span>${type === 'success' ? '✅' : 'ℹ️'}</span> ${msg}`;
   container.appendChild(el);
   setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 4000);
 }
 
-// ── Init ──────────────────────────────────────────────────────
+function closeModal() { document.getElementById('repairModal').style.display = 'none'; }
+function closeFormModal() { document.getElementById('formModal').style.display = 'none'; }
+
+// ── Location Intelligence (Steps 6-14) ───────────────────────
+
+let _locDebounce = null;
+async function loadLocationAnalytics() {
+  clearTimeout(_locDebounce);
+  _locDebounce = setTimeout(async () => {
+    const state   = document.getElementById('locFilterState')?.value || '';
+    const city    = document.getElementById('locFilterCity')?.value  || '';
+    const pincode = document.getElementById('locFilterPin')?.value   || '';
+
+    const qs = new URLSearchParams({ state, city, pincode }).toString();
+    const res = await api(`/admin/location-analytics?${qs}`);
+    if (!res?.success) return showToast('Failed to load location data', 'error');
+
+    const d = res.data;
+    const s = d.summary;
+
+    // KPI cards
+    setEl('locStatOrders', s.total);
+    setEl('locStatCities', s.uniqueCities);
+    setEl('locStatStates', s.uniqueStates);
+    setEl('locStatPins',   s.uniquePincodes);
+    setEl('locTotal',      `${s.total} orders across ${s.uniqueCities} cities`);
+
+    // Step 8: City demand chart
+    const cityMax = d.cityWise[0]?.count || 1;
+    renderLocationBarChart('locCityChart', d.cityWise.slice(0, 12).map(x => ({
+      label: x._id || 'Unknown',
+      val: x.count,
+      sub: `₹${Number(x.revenue || 0).toLocaleString('en-IN')}`,
+      max: cityMax
+    })), '#6366f1');
+
+    // Step 9: State volume chart
+    const stateMax = d.stateWise[0]?.count || 1;
+    renderLocationBarChart('locStateChart', d.stateWise.slice(0, 10).map(x => ({
+      label: x._id || 'Unknown',
+      val: x.count,
+      sub: `${(x.cities || []).length} cities`,
+      max: stateMax
+    })), '#10b981');
+
+    // Step 11: Map dot view
+    renderLocationDotMap('locMapCanvas', d.mapPoints);
+    const locMapLegend = document.getElementById('locMapLegend');
+    if (locMapLegend) locMapLegend.textContent = `${d.mapPoints.length} GPS-tagged orders shown`;
+
+    // Pincode table (Step 9)
+    const pinTbody = document.getElementById('locPincodeTable');
+    if (pinTbody) {
+      pinTbody.innerHTML = d.pincodeWise.map(p => `
+        <tr>
+          <td style="font-weight:700">${p._id || '—'}</td>
+          <td>${p.city || '—'}</td>
+          <td>${p.state || '—'}</td>
+          <td>${p.count}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="4" style="text-align:center;padding:10px;color:var(--clr-text-faint)">No data</td></tr>';
+    }
+
+    // Location source chart
+    const srcMax = Math.max(...(d.locationSourceStats.map(x => x.count)), 1);
+    const srcColors = { gps: '#10b981', ip: '#6366f1', manual: '#f59e0b', null: '#6b7280' };
+    const srcLabels = { gps: '📍 GPS', ip: '🌐 IP-based', manual: '✏️ Manual', null: '❓ Unknown' };
+    renderLocationBarChart('locSourceChart', d.locationSourceStats.map(x => ({
+      label: srcLabels[x._id] || x._id || 'Unknown',
+      val: x.count,
+      max: srcMax
+    })), '#f59e0b');
+
+  }, 400);
+}
+
+/**
+ * Renders a horizontal bar chart with labels, bars, and values.
+ */
+function renderLocationBarChart(id, items, color = '#6366f1') {
+  const el = document.getElementById(id);
+  if (!el || !items.length) {
+    if (el) el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--clr-text-faint);font-size:0.85rem;">No data available</div>';
+    return;
+  }
+  el.innerHTML = items.map(item => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <span style="min-width:100px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.8rem;color:var(--clr-text-muted)">${item.label}</span>
+      <div style="flex:1;height:10px;background:rgba(255,255,255,0.06);border-radius:20px;overflow:hidden;">
+        <div style="height:100%;width:${Math.max(2, (item.val / item.max) * 100).toFixed(1)}%;background:${color};border-radius:20px;transition:width 0.6s ease;"></div>
+      </div>
+      <span style="min-width:28px;text-align:right;font-size:0.8rem;font-weight:700">${item.val}</span>
+      ${item.sub ? `<span style="min-width:70px;font-size:0.72rem;color:var(--clr-text-faint)">${item.sub}</span>` : ''}
+    </div>
+  `).join('');
+}
+
+/**
+ * Step 11: Renders a dot-map visualization using SVG.
+ * Maps India-approximate lat/lng to a bounded canvas.
+ */
+function renderLocationDotMap(id, points) {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  if (!points || !points.length) {
+    el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:240px;color:var(--clr-text-faint);font-size:0.85rem;">No GPS-tagged orders yet</div>';
+    return;
+  }
+
+  // India bounds approx: lat 8-37, lng 68-97
+  const LAT_MIN = 8, LAT_MAX = 37, LNG_MIN = 68, LNG_MAX = 97;
+  const W = el.offsetWidth || 400, H = 240;
+
+  const toX = (lng) => ((lng - LNG_MIN) / (LNG_MAX - LNG_MIN)) * (W - 20) + 10;
+  const toY = (lat) => H - ((lat - LAT_MIN) / (LAT_MAX - LAT_MIN)) * (H - 20) - 10;
+
+  const statusColor = (s) => {
+    if (['Completed', 'Delivered', 'Closed'].includes(s)) return '#10b981';
+    if (['Cancelled'].includes(s)) return '#ef4444';
+    if (['Repair Ongoing', 'Diagnosis In Progress'].includes(s)) return '#f59e0b';
+    return '#6366f1';
+  };
+
+  const dots = points.map(p => {
+    const x = toX(p.longitude);
+    const y = toY(p.latitude);
+    const color = statusColor(p.status);
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${color}" fill-opacity="0.75" stroke="rgba(255,255,255,0.3)" stroke-width="1">
+      <title>${p.referenceNumber} · ${p.city || ''}, ${p.state || ''} · ${p.status || ''}</title>
+    </circle>`;
+  }).join('');
+
+  el.innerHTML = `
+    <svg width="${W}" height="${H}" style="display:block;">
+      <rect width="${W}" height="${H}" fill="rgba(99,102,241,0.04)" rx="10"/>
+      ${dots}
+    </svg>
+    <div style="display:flex;gap:12px;padding:6px 4px;font-size:0.7rem;color:var(--clr-text-faint);">
+      <span><span style="color:#10b981">●</span> Completed</span>
+      <span><span style="color:#6366f1">●</span> Active</span>
+      <span><span style="color:#f59e0b">●</span> In Repair</span>
+      <span><span style="color:#ef4444">●</span> Cancelled</span>
+    </div>
+  `;
+}
+
+/**
+ * Step 10: Find nearby partners for a booking by ID or ref.
+ */
+async function findNearbyPartners() {
+  const input = document.getElementById('partnerFinderBookingId')?.value.trim();
+  const resultEl = document.getElementById('nearbyPartnersResult');
+  if (!input || !resultEl) return;
+
+  resultEl.innerHTML = '<div style="color:var(--clr-text-faint);font-size:0.85rem;padding:8px 0">Searching…</div>';
+
+  // Try to find the booking ID — could be either MongoDB _id or referenceNumber
+  // Step: first resolve ref → id if needed
+  let bookingId = input;
+  if (input.startsWith('RV-')) {
+    const bRes = await api(`/bookings?search=${input}&limit=1`);
+    const found = bRes?.data?.[0];
+    if (!found) { resultEl.innerHTML = '<div style="color:#ef4444;font-size:0.85rem">Booking not found</div>'; return; }
+    bookingId = found._id;
+  }
+
+  const res = await api(`/admin/nearby-partners?bookingId=${bookingId}`);
+  if (!res?.success) { resultEl.innerHTML = `<div style="color:#ef4444;font-size:0.85rem">${res?.message || 'Error'}</div>`; return; }
+
+  const { partners, bookingLocation } = res.data;
+  if (!partners.length) {
+    resultEl.innerHTML = '<div style="color:var(--clr-text-faint);font-size:0.85rem;padding:8px 0">No partners found in this area</div>';
+    return;
+  }
+
+  resultEl.innerHTML = `
+    <div style="font-size:0.78rem;color:var(--clr-text-faint);margin-bottom:8px;">
+      📍 Customer: ${bookingLocation.city}, ${bookingLocation.state} (${bookingLocation.pincode})
+    </div>
+    ${partners.slice(0, 6).map(p => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:8px;background:rgba(255,255,255,0.04);margin-bottom:6px;border:1px solid rgba(255,255,255,0.06);">
+        <div>
+          <div style="font-weight:600;font-size:0.85rem">${p.name}</div>
+          <div style="font-size:0.75rem;color:var(--clr-text-faint)">${p.city || '—'}, ${p.state || '—'} · ${p.specialization || ''}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.75rem;color:#10b981;font-weight:700">Score: ${p.matchScore?.toFixed(1)}</div>
+          <div style="font-size:0.72rem;color:var(--clr-text-faint)">⭐ ${p.averageRating?.toFixed(1) || '—'} · ${p.completedRepairs || 0} jobs</div>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+// ── Initialize ────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-  buildDashboard();
+  showPage('dashboard', document.querySelector('[data-page="dashboard"]'));
+  
+  // Sidebar Toggle
+  document.getElementById('sidebarToggle')?.addEventListener('click', () => document.getElementById('sidebar').classList.toggle('open'));
+  document.getElementById('sidebarClose')?.addEventListener('click', () => document.getElementById('sidebar').classList.remove('open'));
 });

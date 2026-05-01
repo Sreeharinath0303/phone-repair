@@ -28,9 +28,13 @@ app.use('/api/quotations',   require('./src/routes/quotationRoutes'));
 app.use('/api/tracking',     require('./src/routes/trackingRoutes'));
 app.use('/api/feedback',     require('./src/routes/feedbackRoutes'));
 app.use('/api/customers',    require('./src/routes/customerRoutes'));
+app.use('/api/customer',     require('./src/routes/customerDashboardRoutes'));
 app.use('/api/technicians',  require('./src/routes/technicianRoutes'));
+app.use('/api/technician-auth', require('./src/routes/technicianAuthRoutes'));
 app.use('/api/auth',         require('./src/routes/authRoutes'));
+app.use('/api/customer-auth', require('./src/routes/customerAuthRoutes'));
 app.use('/api/leads',        require('./src/routes/leadRoutes'));
+app.use('/api/admin',        require('./src/routes/adminRoutes'));
 
 // ─── Health Check ─────────────────────────────────────────
 app.get('/api/health', (req, res) => {

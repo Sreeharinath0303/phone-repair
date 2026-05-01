@@ -1,0 +1,80 @@
+const mongoose = require('mongoose');
+
+// Repair Types
+const repairTypeSchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true },
+  description: String,
+  basePrice: { type: Number, default: 0 },
+  basePayout: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+// Device Brands
+const brandSchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true },
+  category: { type: String, enum: ['smartphone', 'laptop', 'tablet', 'smartwatch'], required: true },
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+// Device Models
+const modelSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  brand: { type: mongoose.Schema.Types.ObjectId, ref: 'Brand', required: true },
+  category: { type: String, required: true },
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+// Email Templates
+const emailTemplateSchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true },
+  subject: { type: String, required: true },
+  body: { type: String, required: true },
+  variables: [String], // e.g., [customerName, referenceNumber, etc.]
+  type: { type: String, enum: ['booking', 'quotation', 'status_update', 'feedback_request', 'invoice'], required: true },
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+// OTP & Communication Settings
+const communicationSettingsSchema = new mongoose.Schema({
+  otpExpiry: { type: Number, default: 10 }, // minutes
+  maxOtpAttempts: { type: Number, default: 3 },
+  smtpEnabled: { type: Boolean, default: true },
+  smsEnabled: { type: Boolean, default: false },
+  whatsappEnabled: { type: Boolean, default: false },
+  emailNotifications: { type: Boolean, default: true },
+  smsNotifications: { type: Boolean, default: false },
+  autoFollowup: { type: Boolean, default: true },
+  followupDays: { type: Number, default: 3 },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+// Promotions & Offers
+const offerSchema = new mongoose.Schema({
+  code: { type: String, required: true, unique: true, uppercase: true },
+  description: String,
+  discountType: { type: String, enum: ['percentage', 'fixed'], required: true },
+  discountValue: { type: Number, required: true },
+  maxUses: { type: Number, default: null }, // null = unlimited
+  usedCount: { type: Number, default: 0 },
+  minOrderValue: { type: Number, default: 0 },
+  applicableCategories: [String], // e.g., ['smartphone', 'laptop']
+  startDate: { type: Date, required: true },
+  endDate: { type: Date, required: true },
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+module.exports = {
+  RepairType: mongoose.model('RepairType', repairTypeSchema),
+  Brand: mongoose.model('Brand', brandSchema),
+  Model: mongoose.model('Model', modelSchema),
+  EmailTemplate: mongoose.model('EmailTemplate', emailTemplateSchema),
+  CommunicationSettings: mongoose.model('CommunicationSettings', communicationSettingsSchema),
+  Offer: mongoose.model('Offer', offerSchema)
+};

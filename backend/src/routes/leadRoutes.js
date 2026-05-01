@@ -6,7 +6,8 @@ const {
   sendFollowUp,
   sendPromotionalMessage,
   getPromotionalTemplates,
-  updateLeadStage
+  updateLeadStage,
+  convertToBooking
 } = require('../controllers/leadController');
 const { protect } = require('../middleware/auth');
 
@@ -17,5 +18,6 @@ router.get('/promo-templates', protect, getPromotionalTemplates);
 router.put('/:id/follow-up', protect, sendFollowUp);
 router.post('/:id/promotional-message', protect, sendPromotionalMessage);
 router.put('/:id/stage', protect, updateLeadStage);
+router.post('/:id/convert', protect, convertToBooking);
 
 module.exports = router;

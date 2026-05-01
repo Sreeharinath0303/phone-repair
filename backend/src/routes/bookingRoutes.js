@@ -3,15 +3,18 @@ const {
   createBooking, getAllBookings, getBookingByRef, updateStatus,
   issueQuotation, quotationAction, getDashboardStats, deleteBooking
 } = require('../controllers/bookingController');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 
-router.get('/stats',             protect, getDashboardStats);
-router.get('/',                  protect, getAllBookings);
+const adminOnly = authorize('superadmin', 'admin', 'sales', 'services');
+const adminOrPartner = authorize('superadmin', 'admin', 'sales', 'services', 'Technician');
+
+router.get('/stats',             protect, adminOnly, getDashboardStats);
+router.get('/',                  protect, adminOnly, getAllBookings);
 router.post('/',                          createBooking);
 router.get('/:ref',                       getBookingByRef);
 router.put('/:ref/quote-action',          quotationAction);
-router.put('/:id/status',        protect, updateStatus);
-router.put('/:id/quotation',     protect, issueQuotation);
-router.delete('/:id',            protect, deleteBooking);
+router.put('/:id/status',        protect, adminOrPartner, updateStatus);
+router.put('/:id/quotation',     protect, adminOnly, issueQuotation);
+router.delete('/:id',            protect, adminOnly, deleteBooking);
 
 module.exports = router;

@@ -96,6 +96,24 @@ exports.captureLead = async (req, res) => {
         stage: nextStage,
         stageHistory: [{ stage: nextStage, note: 'Lead captured from website form' }]
       });
+
+      // Step 3 & 4: Event Trigger Engine - Lead Created Alert
+      try {
+         const sendEmail = require('../utils/sendEmail');
+         
+         // 1. WhatsApp/SMS Mock Trigger
+         console.log(`[WHATSAPP API DISPATCH] -> Messaging +91${normalizedMobile}: "Hello ${name}! We received your RepairVafe inquiry. Complete your booking online!"`);
+
+         // 2. Admin Alert Trigger
+         const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
+         await sendEmail({
+             email: adminEmail,
+             subject: `[EVENT] New Lead Created: ${name}`,
+             message: `An event was triggered: LEAD CAPTURED.\n\nCustomer: ${name}\nPhone: ${rawMobile}\nIntent: ${deviceBrand || 'General'} ${deviceModel || 'Inquiry'}\n\nPlease review in the Admin Notification Dashboard.`
+         });
+      } catch(e) {
+         console.error('Lead Event Trigger Error:', e.message);
+      }
     }
 
     return res.status(201).json({
@@ -267,6 +285,65 @@ exports.updateLeadStage = async (req, res) => {
     await lead.save();
 
     return res.json({ success: true, data: { leadId: lead._id, stage: lead.stage }, message: 'Lead stage updated' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.convertToBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid lead id' });
+    }
+
+    const lead = await Lead.findById(id);
+    if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
+    if (lead.bookingCompleted) {
+      return res.status(400).json({ success: false, message: 'Lead already converted to booking' });
+    }
+
+    // Import Booking controller or use the model directly to create a booking
+    const Booking = require('../models/Booking');
+    
+    // Create a basic booking from lead data
+    // Note: Some fields might be missing in a lead, we'll use defaults or leave them empty
+    const bookingData = {
+      deviceCategory: lead.deviceCategory || 'smartphone',
+      deviceBrand: lead.deviceBrand || 'Unknown',
+      deviceModel: lead.deviceModel || 'Unknown',
+      repairTypes: lead.repairTypes.length > 0 ? lead.repairTypes : ['General Service'],
+      customerName: lead.customerName,
+      customerPhone: lead.mobileNumber,
+      customerEmail: lead.email || 'customer@example.com',
+      serviceType: 'pickup', // Default
+      address: lead.address || 'Not Provided',
+      city: lead.city || 'Not Provided',
+      state: lead.state || 'Not Provided',
+      pincode: lead.pincode || '000000',
+      preferredDate: new Date(),
+      preferredTimeSlot: 'Anytime',
+      status: 'Pending',
+      timeline: [{ stage: 'Booking Created', note: 'Lead converted to booking by admin.' }]
+    };
+
+    const booking = await Booking.create(bookingData);
+
+    // Update lead
+    lead.bookingCompleted = true;
+    lead.stage = LEAD_STAGES.CONVERTED_TO_ORDER;
+    lead.bookingId = booking._id;
+    lead.bookingReference = booking.referenceNumber;
+    lead.convertedAt = new Date();
+    lead.lastActivityAt = new Date();
+    pushStageHistory(lead, LEAD_STAGES.CONVERTED_TO_ORDER, 'Lead converted to booking manually by admin');
+    await lead.save();
+
+    return res.json({
+      success: true,
+      data: { booking, lead },
+      message: 'Lead successfully converted to booking'
+    });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }

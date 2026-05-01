@@ -44,6 +44,103 @@ const leadCapture = {
   timer: null
 };
 
+// ── Location Intelligence Module ──────────────────────────────
+const locationIntel = {
+  latitude: null,
+  longitude: null,
+  ipCity: null,
+  locationSource: null // 'gps' | 'ip' | 'manual'
+};
+
+/**
+ * Step 2: Try browser Geolocation API first (GPS/WiFi-based).
+ * Resolves with coords or null — never rejects.
+ */
+function tryBrowserGeolocation() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve(null);
+    const timeout = setTimeout(() => resolve(null), 7000); // 7s max wait
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        clearTimeout(timeout);
+        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      () => { clearTimeout(timeout); resolve(null); },
+      { timeout: 6000, maximumAge: 300000 }
+    );
+  });
+}
+
+/**
+ * Step 3: IP-based fallback using a free public API (ip-api.com).
+ * Returns { city, regionName, lat, lon } or null.
+ */
+async function tryIPGeolocation() {
+  try {
+    const res = await fetch('http://ip-api.com/json/?fields=city,regionName,lat,lon,status', { signal: AbortSignal.timeout(5000) });
+    const data = await res.json();
+    if (data.status === 'success') return data;
+  } catch (_) { /* silent */ }
+  return null;
+}
+
+/**
+ * Step 4 & 5: Main location capture flow.
+ * GPS → IP fallback → manual (whatever user typed).
+ * Pre-fills city/state if fields are empty.
+ */
+async function captureLocationIntelligence() {
+  updateLocationBadge('detecting', '📡 Detecting your location…');
+
+  // Step 2: Try GPS
+  const gps = await tryBrowserGeolocation();
+  if (gps) {
+    locationIntel.latitude  = gps.lat;
+    locationIntel.longitude = gps.lng;
+    locationIntel.locationSource = 'gps';
+    updateLocationBadge('success', '📍 Location detected via GPS');
+    return;
+  }
+
+  // Step 3: IP fallback
+  updateLocationBadge('detecting', '🌐 Using IP-based location…');
+  const ip = await tryIPGeolocation();
+  if (ip) {
+    locationIntel.latitude  = ip.lat;
+    locationIntel.longitude = ip.lon;
+    locationIntel.ipCity    = ip.city;
+    locationIntel.locationSource = 'ip';
+
+    // Pre-fill city & state only if user hasn't typed anything
+    const cityEl  = document.getElementById('custCity');
+    const stateEl = document.getElementById('custState');
+    if (cityEl && !cityEl.value.trim() && ip.city)       cityEl.value = ip.city;
+    if (stateEl && !stateEl.value && ip.regionName) {
+      // Try to match against the option values
+      const opts = Array.from(stateEl.options);
+      const match = opts.find(o => o.text.toLowerCase().includes(ip.regionName.toLowerCase()) ||
+                                   ip.regionName.toLowerCase().includes(o.text.toLowerCase()));
+      if (match) stateEl.value = match.value;
+    }
+    updateLocationBadge('success', `🌐 Location via IP: ${ip.city || 'Unknown'}`);
+    return;
+  }
+
+  // Step 4: Pure manual — address fields are primary
+  locationIntel.locationSource = 'manual';
+  updateLocationBadge('manual', '✏️ Using your entered address');
+}
+
+function updateLocationBadge(type, text) {
+  const badge = document.getElementById('locationBadge');
+  if (!badge) return;
+  const colors = { detecting: '#f59e0b', success: '#10b981', manual: '#6366f1' };
+  badge.textContent = text;
+  badge.style.color = colors[type] || '#94a3b8';
+  badge.style.display = 'inline-flex';
+}
+
+
 function getValue(id) {
   return document.getElementById(id)?.value?.trim() || '';
 }
@@ -129,6 +226,12 @@ function goToStep(step) {
     if (line) line.classList.toggle('active', index < step);
     document.getElementById(`panel${index}`)?.classList.toggle('active', index === step);
   }
+
+  // Step 2 trigger: kick off location detection when user reaches details step
+  if (step === 3 && !locationIntel.locationSource) {
+    captureLocationIntelligence();
+  }
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -302,13 +405,22 @@ async function submitBooking() {
     serviceType: state.serviceType,
     preferredDate: getValue('preferDate'),
     preferredTimeSlot: getValue('preferTime'),
-    leadId: leadCapture.leadId
+    leadId: leadCapture.leadId,
+    // Location Intelligence (Step 5)
+    latitude:       locationIntel.latitude,
+    longitude:      locationIntel.longitude,
+    ipCity:         locationIntel.ipCity,
+    locationSource: locationIntel.locationSource || 'manual'
   };
+
+  const userToken = localStorage.getItem('rv_user_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (userToken) headers['Authorization'] = `Bearer ${userToken}`;
 
   try {
     const response = await fetch(`${API}/bookings`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headers,
       body: JSON.stringify(payload)
     });
     const data = await response.json();
@@ -344,10 +456,32 @@ window.addEventListener('DOMContentLoaded', () => {
   const dateInput = document.getElementById('preferDate');
   if (dateInput) dateInput.min = today;
 
-  document.getElementById('custName')?.addEventListener('input', scheduleLeadCapture);
-  document.getElementById('custPhone')?.addEventListener('input', scheduleLeadCapture);
-  document.getElementById('custName')?.addEventListener('blur', captureLeadNow);
   document.getElementById('custPhone')?.addEventListener('blur', captureLeadNow);
+
+  // Start location detection silently in background (Step 2 & 3)
+  captureLocationIntelligence();
+
+  // Pre-fill user data if logged in
+  const userToken = localStorage.getItem('rv_user_token');
+  if (userToken) {
+    const apiBase = (['localhost', '127.0.0.1', ''].includes(window.location.hostname)) ? 'http://localhost:5000/api' : '/api';
+    fetch(`${apiBase}/customer-auth/me`, {
+      headers: { 'Authorization': `Bearer ${userToken}` }
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success && res.data) {
+        const u = res.data;
+        if (document.getElementById('custName')) document.getElementById('custName').value = u.name || '';
+        if (document.getElementById('custPhone')) document.getElementById('custPhone').value = u.phone || '';
+        if (document.getElementById('custEmail')) document.getElementById('custEmail').value = u.email || '';
+        if (document.getElementById('custAddress')) document.getElementById('custAddress').value = u.address || '';
+        if (document.getElementById('custCity')) document.getElementById('custCity').value = u.city || '';
+        if (document.getElementById('custState')) document.getElementById('custState').value = u.state || '';
+        if (document.getElementById('custPincode')) document.getElementById('custPincode').value = u.pincode || '';
+      }
+    }).catch(() => {});
+  }
 });
 
 window.addEventListener('pagehide', markLeadAbandoned);

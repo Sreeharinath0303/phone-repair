@@ -21,28 +21,60 @@
     </div>
     <nav class="sidebar-nav">
       <div class="nav-section-label">Main</div>
-      <a href="#" class="sidebar-link active" data-page="dashboard" id="sNavDashboard" onclick="showPage('dashboard', this)">
+      <a href="#" class="sidebar-link active" data-page="dashboard" onclick="showPage('dashboard', this)">
         <span class="sl-icon">📊</span> Dashboard
       </a>
-      <a href="#" class="sidebar-link" data-page="repairs" id="sNavRepairs" onclick="showPage('repairs', this)">
-        <span class="sl-icon">🔧</span> All Repairs
-        <span class="sl-badge" id="pendingBadge">5</span>
+      
+      <div class="nav-section-label">Operations</div>
+      <a href="#" class="sidebar-link" data-page="leads" onclick="showPage('leads', this)">
+        <span class="sl-icon">📋</span> Leads
       </a>
-      <a href="#" class="sidebar-link" data-page="quotations" id="sNavQuotations" onclick="showPage('quotations', this)">
+      <a href="#" class="sidebar-link" data-page="bookings" onclick="showPage('bookings', this)">
+        <span class="sl-icon">📅</span> Bookings
+      </a>
+      <a href="#" class="sidebar-link" data-page="orders" onclick="showPage('orders', this)">
+        <span class="sl-icon">📦</span> Orders
+      </a>
+      <a href="#" class="sidebar-link" data-page="quotations" onclick="showPage('quotations', this)">
         <span class="sl-icon">💰</span> Quotations
       </a>
-      <a href="#" class="sidebar-link" data-page="customers" id="sNavCustomers" onclick="showPage('customers', this)">
+
+      <div class="nav-section-label">Stakeholders</div>
+      <a href="#" class="sidebar-link" data-page="customers" onclick="showPage('customers', this)">
         <span class="sl-icon">👥</span> Customers
       </a>
-      <a href="#" class="sidebar-link" data-page="technicians" id="sNavTechnicians" onclick="showPage('technicians', this)">
-        <span class="sl-icon">👨‍🔧</span> Technicians
+      <a href="#" class="sidebar-link" data-page="technicians" onclick="showPage('technicians', this)">
+        <span class="sl-icon">🤝</span> Partners
       </a>
+
+      <div class="nav-section-label">Governance</div>
+      <a href="#" class="sidebar-link" data-page="email-templates" onclick="showPage('email-templates', this)">
+        <span class="sl-icon">📧</span> Email Templates
+      </a>
+      <a href="#" class="sidebar-link" data-page="logs" onclick="showPage('logs', this)">
+        <span class="sl-icon">📜</span> Comm Logs
+      </a>
+      <a href="#" class="sidebar-link" data-page="system-data" onclick="showPage('system-data', this)">
+        <span class="sl-icon">⚙️</span> System Data
+      </a>
+      <a href="#" class="sidebar-link" data-page="admins" onclick="showPage('admins', this)">
+        <span class="sl-icon">👨‍💼</span> Admins
+      </a>
+
       <div class="nav-section-label">Reports</div>
-      <a href="#" class="sidebar-link" data-page="feedback" id="sNavFeedback" onclick="showPage('feedback', this)">
+      <a href="#" class="sidebar-link" data-page="feedback" onclick="showPage('feedback', this)">
         <span class="sl-icon">⭐</span> Feedback
       </a>
-      <a href="#" class="sidebar-link" data-page="reports" id="sNavReports" onclick="showPage('reports', this)">
+      <a href="#" class="sidebar-link" data-page="reports" onclick="showPage('reports', this)">
         <span class="sl-icon">📈</span> Analytics
+      </a>
+      <a href="#" class="sidebar-link" data-page="location" onclick="showPage('location', this)">
+        <span class="sl-icon">🗺️</span> Location Intel
+      </a>
+      
+      <div class="nav-section-label">Configuration</div>
+      <a href="#" class="sidebar-link" data-page="comm-settings" onclick="showPage('comm-settings', this)">
+        <span class="sl-icon">⚙️</span> Settings
       </a>
       <div class="nav-section-label">System</div>
       <a href="../../index.html" class="sidebar-link">
@@ -78,131 +110,91 @@
 
     <!-- === DASHBOARD PAGE === -->
     <div class="admin-page active" id="pageDashboard">
-      <!-- Stats Cards -->
       <div class="stats-grid">
-        <div class="stat-card" id="statTotal">
-          <div class="stat-card-icon" style="background:rgba(59,130,246,0.15);color:#60a5fa">🔧</div>
-          <div class="stat-card-info">
-            <div class="stat-card-num" id="statNumTotal">248</div>
-            <div class="stat-card-label">Total Repairs</div>
-            <div class="stat-card-trend up">+12% this month</div>
-          </div>
+        <div class="stat-card"><div class="stat-card-num" id="statNumTotalLeads">0</div><div class="stat-card-label">Total Leads</div></div>
+        <div class="stat-card"><div class="stat-card-num" id="statNumIncompleteLeads">0</div><div class="stat-card-label">Incomplete Leads</div></div>
+        <div class="stat-card"><div class="stat-card-num" id="statNumTotalBookings">0</div><div class="stat-card-label">Total Bookings</div></div>
+        <div class="stat-card"><div class="stat-card-num" id="statNumPendingQuotes">0</div><div class="stat-card-label">Pending Quotes</div></div>
+        <div class="stat-card"><div class="stat-card-num" id="statNumApprovedQuotes">0</div><div class="stat-card-label">Approved Quotes</div></div>
+        <div class="stat-card"><div class="stat-card-num" id="statNumAssignedOrders">0</div><div class="stat-card-label">Assigned Orders</div></div>
+      </div>
+
+      <div class="financial-strip" style="margin:20px 0; display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px;">
+        <div class="fin-card" style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); padding:20px; border-radius:12px; text-align:center;">
+          <div style="color:var(--clr-green); font-size:0.8rem;">Gross Revenue</div>
+          <div id="metricsGrossRev" style="font-size:1.5rem; font-weight:800;">₹0</div>
         </div>
-        <div class="stat-card" id="statPending">
-          <div class="stat-card-icon" style="background:rgba(245,158,11,0.15);color:#fbbf24">⏳</div>
-          <div class="stat-card-info">
-            <div class="stat-card-num" id="statNumPending">5</div>
-            <div class="stat-card-label">Pending Quote Approval</div>
-            <div class="stat-card-trend">Needs attention</div>
-          </div>
+        <div class="fin-card" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); padding:20px; border-radius:12px; text-align:center;">
+          <div style="color:#ef4444; font-size:0.8rem;">Partner Payouts</div>
+          <div id="metricsPayouts" style="font-size:1.5rem; font-weight:800;">₹0</div>
         </div>
-        <div class="stat-card" id="statProgress">
-          <div class="stat-card-icon" style="background:rgba(6,182,212,0.15);color:#22d3ee">⚡</div>
-          <div class="stat-card-info">
-            <div class="stat-card-num" id="statNumProgress">18</div>
-            <div class="stat-card-label">In Progress</div>
-            <div class="stat-card-trend up">Active repairs</div>
-          </div>
-        </div>
-        <div class="stat-card" id="statComplete">
-          <div class="stat-card-icon" style="background:rgba(16,185,129,0.15);color:#34d399">✅</div>
-          <div class="stat-card-info">
-            <div class="stat-card-num" id="statNumComplete">225</div>
-            <div class="stat-card-label">Completed</div>
-            <div class="stat-card-trend up">+8% this week</div>
-          </div>
-        </div>
-        <div class="stat-card" id="statRevenue">
-          <div class="stat-card-icon" style="background:rgba(139,92,246,0.15);color:#a78bfa">💰</div>
-          <div class="stat-card-info">
-            <div class="stat-card-num" id="statNumRevenue">₹3.2L</div>
-            <div class="stat-card-label">Monthly Revenue</div>
-            <div class="stat-card-trend up">+22% vs last month</div>
-          </div>
-        </div>
-        <div class="stat-card" id="statRating">
-          <div class="stat-card-icon" style="background:rgba(251,191,36,0.15);color:#fbbf24">⭐</div>
-          <div class="stat-card-info">
-            <div class="stat-card-num" id="statNumRating">4.9</div>
-            <div class="stat-card-label">Avg. Rating</div>
-            <div class="stat-card-trend up">Out of 5.0</div>
-          </div>
+        <div class="fin-card" style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); padding:20px; border-radius:12px; text-align:center;">
+          <div style="color:var(--clr-primary-light); font-size:0.8rem;">Net Profit</div>
+          <div id="metricsNetProfit" style="font-size:1.5rem; font-weight:800;">₹0</div>
         </div>
       </div>
 
       <div class="dashboard-grid">
-        <!-- Recent Repairs -->
         <div class="dashboard-card">
-          <div class="dc-header">
-            <h3>Recent Repair Requests</h3>
-            <button class="btn btn-ghost" onclick="showPage('repairs', document.getElementById('sNavRepairs'))">View All →</button>
-          </div>
-          <div class="mini-table" id="recentRepairsTable">
-            <!-- Populated by JS -->
-          </div>
+          <div class="dc-header"><h3>Recent Orders</h3><button class="btn btn-ghost" onclick="showPage('orders')">View All →</button></div>
+          <div class="mini-table" id="recentRepairsTable"></div>
         </div>
-
-        <!-- Status Chart (CSS-based) -->
         <div class="dashboard-card">
-          <div class="dc-header">
-            <h3>Repair Status Overview</h3>
-          </div>
-          <div class="donut-chart-wrap">
-            <div class="donut-chart" id="donutChart"></div>
-            <div class="donut-legend" id="donutLegend"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Pending Actions -->
-      <div class="dashboard-card pending-actions-card">
-        <div class="dc-header">
-          <h3>⚠️ Pending Quote Approvals</h3>
-          <span class="badge badge-pending">5 pending</span>
-        </div>
-        <div class="pending-list" id="pendingList">
-          <!-- Populated by JS -->
+          <div class="dc-header"><h3>Status Distribution</h3></div>
+          <div id="statusChart" style="padding:20px;"></div>
         </div>
       </div>
     </div>
 
-    <!-- === REPAIRS PAGE === -->
-    <div class="admin-page" id="pageRepairs">
+    <!-- === LEADS PAGE === -->
+    <div class="admin-page" id="pageLeads">
       <div class="page-actions-bar">
-        <div class="pab-left">
-          <h2>All Repairs</h2>
-          <span class="record-count" id="repairCount">248 records</span>
-        </div>
-        <div class="pab-right">
-          <input type="text" class="form-input search-input" id="repairSearch" placeholder="Search by name, device, ref..." oninput="filterRepairs()" />
-          <select class="form-select filter-select" id="repairFilter" onchange="filterRepairs()">
-            <option value="">All Status</option>
-            <option value="Received">Received</option>
-            <option value="Diagnosed">Diagnosed</option>
-            <option value="Awaiting Approval">Awaiting Approval</option>
-            <option value="In Progress">In Progress</option>
+        <div class="pab-left"><h2>Lead Management</h2><span class="record-count" id="leadsCount">0 leads</span></div>
+        <div class="pab-right"><input type="text" class="form-input search-input" id="leadsSearch" placeholder="Search leads..." oninput="loadLeads()" /></div>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Contact</th><th>Device</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="leadsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- === BOOKINGS PAGE === -->
+    <div class="admin-page" id="pageBookings">
+      <div class="page-actions-bar">
+        <div class="pab-left"><h2>Booking Management</h2><span class="record-count" id="bookingsCount">0 bookings</span></div>
+        <div class="pab-right"><input type="text" class="form-input search-input" id="bookingsSearch" placeholder="Search bookings..." oninput="loadBookings()" /></div>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Ref #</th><th>Customer</th><th>Device</th><th>Preferred Date</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="bookingsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- === ORDERS PAGE === -->
+    <div class="admin-page" id="pageOrders">
+      <div class="page-actions-bar">
+        <div class="pab-left"><h2>Order Management</h2><span class="record-count" id="ordersCount">0 orders</span></div>
+        <div class="pab-right" style="flex-wrap:wrap;gap:8px;">
+          <input type="text" class="form-input search-input" id="orderCityFilter" placeholder="Filter by city…" oninput="loadOrders()" style="width:130px" />
+          <input type="text" class="form-input search-input" id="orderStateFilter" placeholder="Filter by state…" oninput="loadOrders()" style="width:130px" />
+          <input type="text" class="form-input search-input" id="orderPincodeFilter" placeholder="Pincode…" oninput="loadOrders()" style="width:100px" />
+          <select id="orderStatusFilter" class="form-select" onchange="loadOrders()">
+            <option value="">All Statuses</option>
+            <option value="Assigned to Partner">Assigned</option>
+            <option value="Repair Ongoing">In Repair</option>
             <option value="Completed">Completed</option>
           </select>
-          <a href="booking.html" class="btn btn-primary" style="padding:10px 18px;font-size:0.85rem">+ Add Repair</a>
+          <input type="text" class="form-input search-input" id="ordersSearch" placeholder="Search…" oninput="loadOrders()" />
         </div>
       </div>
       <div class="data-table-wrap">
-        <table class="data-table" id="repairsTable">
-          <thead>
-            <tr>
-              <th>Reference</th>
-              <th>Customer</th>
-              <th>Device</th>
-              <th>Repair Type</th>
-              <th>Status</th>
-              <th>Amount</th>
-              <th>Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="repairsTableBody">
-            <!-- Populated by JS -->
-          </tbody>
+        <table class="data-table">
+          <thead><tr><th>Ref #</th><th>Customer</th><th>Device</th><th>Location</th><th>Status</th><th>Partner</th><th>Bill</th><th>Actions</th></tr></thead>
+          <tbody id="ordersTableBody"></tbody>
         </table>
       </div>
     </div>
@@ -210,27 +202,12 @@
     <!-- === QUOTATIONS PAGE === -->
     <div class="admin-page" id="pageQuotations">
       <div class="page-actions-bar">
-        <div class="pab-left">
-          <h2>Quotations</h2>
-          <span class="record-count">Manage all customer quotes</span>
-        </div>
+        <div class="pab-left"><h2>Quotation Management</h2></div>
       </div>
       <div class="data-table-wrap">
-        <table class="data-table" id="quotationsTable">
-          <thead>
-            <tr>
-              <th>Ref #</th>
-              <th>Customer</th>
-              <th>Device</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Issued</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="quotationsTableBody">
-            <!-- Populated by JS -->
-          </tbody>
+        <table class="data-table">
+          <thead><tr><th>Ref #</th><th>Customer</th><th>Device</th><th>Amount</th><th>Status</th><th>Issued</th><th>Actions</th></tr></thead>
+          <tbody id="quotationsTableBody"></tbody>
         </table>
       </div>
     </div>
@@ -238,99 +215,211 @@
     <!-- === CUSTOMERS PAGE === -->
     <div class="admin-page" id="pageCustomers">
       <div class="page-actions-bar">
-        <div class="pab-left">
-          <h2>Customers</h2>
-        </div>
-        <input type="text" class="form-input search-input" id="custSearch" placeholder="Search customers..." oninput="filterCustomers()" />
+        <div class="pab-left"><h2>Customer Base</h2></div>
+        <div class="pab-right"><button class="btn btn-primary" onclick="showAddCustomerModal()">+ Add Customer</button></div>
       </div>
-      <div class="customers-grid" id="customersGrid">
-        <!-- Populated by JS -->
-      </div>
+      <div id="customersGrid"></div>
     </div>
 
     <!-- === TECHNICIANS PAGE === -->
     <div class="admin-page" id="pageTechnicians">
       <div class="page-actions-bar">
-        <div class="pab-left"><h2>Technicians</h2></div>
-        <button class="btn btn-primary" onclick="alert('Add Technician modal coming soon!')">+ Add Technician</button>
+        <div class="pab-left"><h2>Partner Network</h2></div>
+        <div class="pab-right"><button class="btn btn-primary" onclick="showAddPartnerModal()">+ Add Partner</button></div>
       </div>
-      <div class="tech-grid" id="techGrid">
-        <!-- Populated by JS -->
-      </div>
+      <div class="tech-grid" id="techGrid"></div>
     </div>
 
-    <!-- === FEEDBACK PAGE === -->
-    <div class="admin-page" id="pageFeedback">
+    <!-- === LOCATION INTELLIGENCE PAGE === -->
+    <div class="admin-page" id="pageLocation">
       <div class="page-actions-bar">
-        <div class="pab-left"><h2>Customer Feedback</h2></div>
+        <div class="pab-left"><h2>Location Intelligence</h2><span class="record-count" id="locTotal">—</span></div>
+        <div class="pab-right" style="gap:8px;flex-wrap:wrap;">
+          <input type="text" class="form-input" id="locFilterState" placeholder="Filter State…" style="width:130px" oninput="loadLocationAnalytics()" />
+          <input type="text" class="form-input" id="locFilterCity"  placeholder="Filter City…"  style="width:130px" oninput="loadLocationAnalytics()" />
+          <input type="text" class="form-input" id="locFilterPin"   placeholder="Pincode…"       style="width:100px" oninput="loadLocationAnalytics()" />
+          <button class="btn btn-outline" onclick="loadLocationAnalytics()">🔍 Apply</button>
+        </div>
       </div>
-      <div class="feedback-stats-row" id="fbStatsRow"></div>
-      <div class="feedback-list" id="adminFeedbackList">
-        <!-- Populated by JS -->
+
+      <!-- KPI Cards -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+        <div class="stat-card"><div class="stat-card-num" id="locStatOrders">0</div><div class="stat-card-label">Total Orders</div></div>
+        <div class="stat-card"><div class="stat-card-num" id="locStatCities">0</div><div class="stat-card-label">Unique Cities</div></div>
+        <div class="stat-card"><div class="stat-card-num" id="locStatStates">0</div><div class="stat-card-label">States Covered</div></div>
+        <div class="stat-card"><div class="stat-card-num" id="locStatPins">0</div><div class="stat-card-label">Pincodes</div></div>
+      </div>
+
+      <!-- Charts Row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+        <div class="dashboard-card">
+          <div class="dc-header"><h3>📊 City-wise Demand</h3></div>
+          <div id="locCityChart" style="padding:10px 0;"></div>
+        </div>
+        <div class="dashboard-card">
+          <div class="dc-header"><h3>🗾 State-wise Volume</h3></div>
+          <div id="locStateChart" style="padding:10px 0;"></div>
+        </div>
+      </div>
+
+      <!-- Map Dot View + Pincode Table -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+        <div class="dashboard-card">
+          <div class="dc-header"><h3>🗺️ Order Map View</h3><span style="font-size:0.72rem;color:var(--clr-text-faint)">GPS-tagged orders</span></div>
+          <div id="locMapView" style="min-height:240px;position:relative;background:rgba(99,102,241,0.05);border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+            <div id="locMapCanvas" style="width:100%;height:240px;position:relative;"></div>
+          </div>
+          <div id="locMapLegend" style="font-size:0.72rem;color:var(--clr-text-faint);padding:8px 0;"></div>
+        </div>
+        <div class="dashboard-card">
+          <div class="dc-header"><h3>📮 Top Pincodes</h3></div>
+          <div class="data-table-wrap" style="max-height:260px;overflow-y:auto;">
+            <table class="data-table" style="font-size:0.82rem;">
+              <thead><tr><th>Pincode</th><th>City</th><th>State</th><th>Orders</th></tr></thead>
+              <tbody id="locPincodeTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Location Source Breakdown + Partner Finder -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="dashboard-card">
+          <div class="dc-header"><h3>📡 Location Source</h3></div>
+          <div id="locSourceChart" style="padding:10px 0;"></div>
+        </div>
+        <div class="dashboard-card">
+          <div class="dc-header"><h3>🤝 Nearby Partner Finder</h3></div>
+          <div style="padding:10px 0;">
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+              <input type="text" id="partnerFinderBookingId" class="form-input" placeholder="Booking ID or Ref #…" style="flex:1;" />
+              <button class="btn btn-primary" onclick="findNearbyPartners()">Find</button>
+            </div>
+            <div id="nearbyPartnersResult"></div>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- === ANALYTICS PAGE === -->
     <div class="admin-page" id="pageReports">
       <div class="page-actions-bar">
-        <div class="pab-left"><h2>Analytics & Reports</h2></div>
+        <div class="pab-left"><h2>Business Analytics</h2></div>
+        <div class="pab-right"><button class="btn btn-outline" onclick="exportData('csv')">Export CSV</button></div>
       </div>
-      <div class="analytics-grid">
-        <div class="analytics-card">
-          <h4>📱 Most Repaired Devices</h4>
-          <div class="bar-chart" id="deviceChart"></div>
+      <div class="analytics-grid" style="grid-template-columns: 1fr 1fr; gap:20px;">
+        <div class="analytics-card"><h4>State-wise Performance</h4><div id="stateChart"></div></div>
+        <div class="analytics-card"><h4>City-wise Performance</h4><div id="cityChart"></div></div>
+        <div class="analytics-card"><h4>Device Brand Distribution</h4><div id="deviceChart"></div></div>
+        <div class="analytics-card"><h4>Conversion Pipeline</h4><div id="conversionChart"></div></div>
+      </div>
+    </div>
+
+    <!-- === FEEDBACK PAGE === -->
+    <div class="admin-page" id="pageFeedback">
+      <div class="page-actions-bar"><h2>Customer Feedback</h2></div>
+      <div class="feedback-stats-row" id="fbStatsRow"></div>
+      <div class="feedback-list" id="adminFeedbackList"></div>
+    </div>
+
+    <!-- === EMAIL TEMPLATES PAGE === -->
+    <div class="admin-page" id="pageEmailTemplates">
+      <div class="page-actions-bar"><h2>Email Templates</h2><button class="btn btn-primary" onclick="showAddTemplateModal()">+ New Template</button></div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Type</th><th>Subject</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="templatesTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- === COMMUNICATION LOGS PAGE === -->
+    <div class="admin-page" id="pageLogs">
+      <div class="page-actions-bar"><h2>Communication Logs</h2></div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Time</th><th>Event</th><th>Recipient</th><th>Channel</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="logsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- === SYSTEM DATA PAGE === -->
+    <div class="admin-page" id="pageSystemData">
+      <div class="page-actions-bar"><h2>System Data Management</h2><button class="btn btn-primary" onclick="showAddSystemItemModal()">+ Add Item</button></div>
+      <div class="tabs-wrap" style="margin-bottom:20px;">
+        <div class="tab-btns">
+          <button class="btn btn-outline active" onclick="switchDataTab('repair-types', this)">Repair Types</button>
+          <button class="btn btn-outline" onclick="switchDataTab('brands', this)">Brands</button>
+          <button class="btn btn-outline" onclick="switchDataTab('models', this)">Models</button>
+          <button class="btn btn-outline" onclick="switchDataTab('offers', this)">Offers</button>
         </div>
-        <div class="analytics-card">
-          <h4>🔧 Most Common Repairs</h4>
-          <div class="bar-chart" id="repairChart"></div>
-        </div>
-        <div class="analytics-card">
-          <h4>📅 Monthly Booking Volume</h4>
-          <div class="month-chart" id="monthChart"></div>
-        </div>
-        <div class="analytics-card">
-          <h4>💰 Revenue by Category</h4>
-          <div class="bar-chart" id="revenueChart"></div>
-        </div>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead id="dataTableHeader"></thead>
+          <tbody id="dataTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- === ADMINS PAGE === -->
+    <div class="admin-page" id="pageAdmins">
+      <div class="page-actions-bar"><h2>Admin Users</h2><button class="btn btn-primary" onclick="showAddAdminModal()">+ Add Admin</button></div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="adminsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- === COMMUNICATION SETTINGS PAGE === -->
+    <div class="admin-page" id="pageCommSettings">
+      <div class="page-actions-bar"><h2>Communication Settings</h2></div>
+      <div class="settings-panel" style="max-width:600px; padding:20px; background:rgba(255,255,255,0.02); border-radius:15px;">
+        <div class="form-group"><label>OTP Expiry (min)</label><input type="number" id="otpExpiry" class="form-input"></div>
+        <div class="form-group"><label>Max OTP Attempts</label><input type="number" id="maxOtpAttempts" class="form-input"></div>
+        <div class="setting-checkbox"><input type="checkbox" id="emailNotif"><label>Email Notifications</label></div>
+        <div class="setting-checkbox"><input type="checkbox" id="smsNotif"><label>SMS Notifications</label></div>
+        <div class="setting-checkbox"><input type="checkbox" id="autoFollowup"><label>Auto Follow-up</label></div>
+        <div class="form-group"><label>Follow-up Days</label><input type="number" id="followupDays" class="form-input"></div>
+        <button class="btn btn-primary" style="width:100%" onclick="saveCommunicationSettings()">Save Settings</button>
       </div>
     </div>
   </div>
 
   <!-- Repair Detail Modal -->
   <div class="modal-overlay" id="repairModal" style="display:none">
-    <div class="modal" id="repairModalContent">
-      <div class="modal-header">
-        <h3 id="modalTitle">Repair Details</h3>
-        <button class="modal-close" onclick="closeModal()">×</button>
-      </div>
-      <div class="modal-body" id="modalBody">
-        <!-- Populated by JS -->
-      </div>
+    <div class="modal">
+      <div class="modal-header"><h3 id="modalTitle">Details</h3><button class="modal-close" onclick="closeModal()">×</button></div>
+      <div class="modal-body" id="modalBody"></div>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeModal()">Close</button>
-        <div class="modal-status-actions" id="modalStatusActions">
-          <select class="form-select" id="statusUpdateSelect" style="width:200px">
-            <option value="Received">Received</option>
-            <option value="Diagnosed">Diagnosed</option>
-            <option value="Awaiting Approval">Awaiting Approval</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Completed">Completed</option>
-          </select>
-          <button class="btn btn-primary" onclick="updateRepairStatus()">Update Status</button>
-        </div>
+        <div id="modalStatusActions" style="display:flex; gap:10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Universal Form Modal -->
+  <div class="modal-overlay" id="formModal" style="display:none">
+    <div class="modal">
+      <div class="modal-header"><h3 id="formModalTitle">Form</h3><button class="modal-close" onclick="closeFormModal()">×</button></div>
+      <div class="modal-body" id="formModalBody"></div>
+      <div class="modal-footer" id="formModalFooter">
+        <button class="btn btn-outline" onclick="closeFormModal()">Cancel</button>
+        <button class="btn btn-primary" id="formModalSubmit">Save</button>
       </div>
     </div>
   </div>
 
   <div class="toast-container" id="toastContainer"></div>
+
   <script src="../utils/admin.js"></script>
   <script src="../utils/main.js"></script>
   <script>
-    // Set live date
-    document.getElementById('topbarDate').textContent =
-      new Date().toLocaleDateString('en-IN', { year:'numeric', month:'long', day:'numeric' });
-    // Populate admin info from token
-    populateAdminUI();
+    document.getElementById('topbarDate').textContent = new Date().toLocaleDateString('en-IN', { year:'numeric', month:'long', day:'numeric' });
+    // Init will be handled by admin.js DOMContentLoaded
   </script>
 </body>
 </html>

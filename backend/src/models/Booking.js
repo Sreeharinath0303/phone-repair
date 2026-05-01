@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 
 const bookingSchema = new mongoose.Schema({
   referenceNumber: { type: String, unique: true },
+  // Customer Link
+  customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   // Device Info
   deviceCategory: { type: String, required: true, enum: ['smartphone', 'laptop', 'tablet', 'smartwatch'] },
   deviceBrand:    { type: String, required: true },
@@ -22,23 +24,54 @@ const bookingSchema = new mongoose.Schema({
   // Repair Status
   status: {
     type: String,
-    enum: ['Received', 'Diagnosed', 'Awaiting Approval', 'In Progress', 'Completed', 'Cancelled'],
-    default: 'Received'
+    enum: [
+      'Pending', 'Under Review', 'Quote Prepared', 'Offer Sent', 'Awaiting Customer Approval', 
+      'Approved by Customer', 'Rejected by Customer', 'Assigned to Partner', 
+      'Pickup Scheduled', 'Picked Up', 'Device Received',
+      'Diagnosis In Progress', 'Repair Ongoing', 'Waiting for Part', 'Order Paused', 
+      'Repair Completed', 'Quality Check Done', 'Ready for Dispatch', 'Out for Delivery / Ready for Pickup', 
+      'Delivered', 'Completed', 'Feedback Pending', 'Closed', 'Cancelled', 
+      'In Diagnosis', 'In Progress', 'Repair In Progress', 'Ready for Delivery', 'Job Closed', 'Device Picked Up', 'Assigned', 'Awaiting Approval',
+      'Ongoing', 'Waiting for Spare Part', 'Ready for Return'
+    ],
+    default: 'Pending'
   },
   assignedTechnician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', default: null },
   // Timeline
   timeline: [{
     stage:     { type: String },
     note:      { type: String },
-    timestamp: { type: Date, default: Date.now }
+    date: { type: Date, default: Date.now }
   }],
   // Financials
   quotationAmount: { type: Number, default: 0 },
-  quotationStatus: { type: String, enum: ['Pending', 'Approved', 'Rejected', 'Not Issued'], default: 'Not Issued' },
+  partnerPayout:   { type: Number, default: 0 }, // Amount assigned by Admin to the partner
+  quotationStatus: { type: String, enum: ['Pending', 'Quote Prepared', 'Offer Sent', 'Awaiting Customer Approval', 'Approved by Customer', 'Rejected by Customer', 'Not Issued', 'Approved', 'Rejected'], default: 'Not Issued' },
   discount:        { type: Number, default: 0 },
   estimatedTime:   { type: String, default: '' },
   warrantyPeriod:  { type: String, default: '3 Months' },
   technicianNote:  { type: String, default: '' },
+  repairSummary:   { type: String, default: '' },
+  termsAndConditions: { type: String, default: '' },
+  partnerRemarks:  [{
+    note: { type: String },
+    date: { type: Date, default: Date.now }
+  }],
+  // Step 7: Rejected Quote Tracking
+  rejectionReason: { type: String, default: null },
+  followUpStatus:  { type: String, enum: ['Not Applicable', 'Follow-Up Pending', 'Followed Up', 'Reopened Quotes', 'Cancelled Cases'], default: 'Not Applicable' },
+  followUpNotes:   { type: String, default: '' },
+  // Invoice
+  invoiceNumber: { type: String, default: null },
+  invoiceDate: { type: Date, default: null },
+  finalAmount: { type: Number, default: 0 },
+  paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Partial', 'Refunded'], default: 'Pending' },
+  paymentDate: { type: Date, default: null },
+  // ─── Location Intelligence ─────────────────────────────────
+  latitude:       { type: Number, default: null },
+  longitude:      { type: Number, default: null },
+  ipCity:         { type: String, default: null },  // IP-based approximate city
+  locationSource: { type: String, enum: ['gps', 'ip', 'manual', null], default: null },
 }, { timestamps: true });
 
 // Auto-generate reference number before saving

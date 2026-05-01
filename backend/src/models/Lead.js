@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
 
 const LEAD_STAGES = Object.freeze({
-  NEW_LEAD: 'New lead',
+  NEW_LEAD: 'Lead Created',
   INCOMPLETE_BOOKING: 'Incomplete booking',
-  BOOKING_COMPLETED: 'Booking completed',
+  BOOKING_COMPLETED: 'Booking Submitted',
+  UNDER_REVIEW: 'Under Review',
   FOLLOW_UP_SENT: 'Follow-up sent',
   CONVERTED_TO_ORDER: 'Converted to order',
   LOST_INACTIVE: 'Lost / inactive'
