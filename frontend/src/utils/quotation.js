@@ -113,22 +113,59 @@ function renderQuotation(q) {
   content.scrollIntoView({ behavior: 'smooth' });
 }
 
-async function approveQuote() {
+async function requestQuoteApprovalOtp() {
   if (!currentRef) return;
   const btn = document.getElementById('approveBtn');
-  btn.textContent = '⏳ Processing...';
+  btn.textContent = '⏳ Sending OTP...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/bookings/${currentRef}/quote-otp`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+    btn.textContent = '✓ Approve & Proceed'; 
+    btn.disabled = false;
+
+    if (data.success) {
+      document.getElementById('quotActions').style.display = 'none';
+      document.getElementById('quoteOtpBlock').style.display = 'flex';
+      showToast('OTP sent to your registered contacts.', 'info');
+    } else {
+      showToast(data.message || 'Failed to send OTP', 'error');
+    }
+  } catch (e) {
+    btn.textContent = '✓ Approve & Proceed'; 
+    btn.disabled = false;
+    showToast('Cannot connect to server.', 'error');
+  }
+}
+
+function cancelApproval() {
+  document.getElementById('quoteOtpBlock').style.display = 'none';
+  document.getElementById('quotActions').style.display = 'flex';
+  document.getElementById('quoteOtpInput').value = '';
+}
+
+async function approveQuoteWithOtp() {
+  if (!currentRef) return;
+  const otpVal = document.getElementById('quoteOtpInput').value.trim();
+  if (!otpVal) return showToast('Please enter the OTP.', 'error');
+
+  const btn = document.getElementById('confirmOtpBtn');
+  btn.textContent = '⏳ Verifying...';
   btn.disabled = true;
 
   try {
     const res  = await fetch(`${API}/bookings/${currentRef}/quote-action`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'approve' })
+      body: JSON.stringify({ action: 'approve', otp: otpVal })
     });
     const data = await res.json();
-    btn.textContent = 'Approve & Confirm'; btn.disabled = false;
+    btn.textContent = 'Confirm Approval'; btn.disabled = false;
 
     if (data.success) {
-      document.getElementById('quotActions').style.display = 'none';
+      document.getElementById('quoteOtpBlock').style.display = 'none';
       const p = document.getElementById('quotPostAction');
       p.style.display = 'block';
       p.innerHTML = `<span style="font-size:2rem">✅</span><br><strong>Approved Successfully!</strong><br><p style="color:var(--clr-text-muted);margin-top:8px">Repair has started. You'll get SMS updates.</p><br><a href="tracking.html" class="btn btn-primary" style="margin-top:12px">Track My Repair</a>`;
@@ -139,7 +176,7 @@ async function approveQuote() {
       showToast(data.message || 'Action failed', 'error');
     }
   } catch (e) {
-    btn.textContent = 'Approve & Confirm'; btn.disabled = false;
+    btn.textContent = 'Confirm Approval'; btn.disabled = false;
     showToast('Cannot connect to server.', 'error');
   }
 }

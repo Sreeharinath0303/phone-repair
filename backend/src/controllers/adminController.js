@@ -1,7 +1,63 @@
 const Admin = require('../models/Admin');
-const { Booking } = require('../models/Booking');
+const AuditLog = require('../models/AuditLog');
+const sendEmail = require('../utils/sendEmail');
+const Booking = require('../models/Booking');
 const { Lead } = require('../models/Lead');
-const { Technician } = require('../models/Technician');
+const Technician = require('../models/Technician');
+const User = require('../models/User');
+
+
+// @desc  Get all accounts (Admins, Customers, Partners) with unified filtering
+// @route GET /api/admin/accounts
+// @access Private (Admin)
+exports.getAllAccounts = async (req, res) => {
+  try {
+    const { search, role, status } = req.query;
+    
+    // Fetch from all 3 models
+    const [admins, customers, partners] = await Promise.all([
+      Admin.find({}).select('+isActive +isLocked'),
+      User.find({}).select('+isActive +isLocked'),
+      Technician.find({}).select('+isActive +isLocked')
+    ]);
+
+    // Map to a unified format
+    let all = [
+      ...admins.map(a => ({ ...a._doc, role: a.role || 'admin', type: 'admin' })),
+      ...customers.map(c => ({ ...c._doc, role: 'customer', type: 'customer' })),
+      ...partners.map(p => ({ ...p._doc, role: 'partner', type: 'partner' }))
+    ];
+
+    // Filter by search (Name, Email)
+    if (search) {
+      const s = search.toLowerCase();
+      all = all.filter(u => 
+        (u.name && u.name.toLowerCase().includes(s)) || 
+        (u.email && u.email.toLowerCase().includes(s)) ||
+        (u.phone && u.phone.includes(s))
+      );
+    }
+
+    // Filter by role
+    if (role) {
+      all = all.filter(u => u.role === role || u.type === role);
+    }
+
+    // Filter by status
+    if (status) {
+      if (status === 'locked') all = all.filter(u => u.isLocked);
+      else if (status === 'active') all = all.filter(u => u.isActive && !u.isLocked);
+      else if (status === 'inactive') all = all.filter(u => !u.isActive);
+    }
+
+    // Sort by last login or created date
+    all.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    res.json({ success: true, count: all.length, data: all });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 const Feedback = require('../models/Feedback');
 const { RepairType, Brand, Model, EmailTemplate, CommunicationSettings, Offer } = require('../models/Settings');
 const mongoose = require('mongoose');
@@ -19,24 +75,219 @@ exports.getAllAdmins = async (req, res) => {
   }
 };
 
-// Reset/Change password for users
-exports.resetPassword = async (req, res) => {
+// Reset/Change password for Admins
+exports.resetAdminPassword = async (req, res) => {
   try {
     const { userId, newPassword } = req.body;
     if (!userId || !newPassword) {
       return res.status(400).json({ success: false, message: 'userId and newPassword required' });
     }
-    if (newPassword.length < 8) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
-    }
+    const adminId = req.user.id;
+    const ipAddress = req.ip;
 
     const user = await Admin.findById(userId);
-    if (!user) return res.status(404).json({ success: false, message: 'Admin not found' });
+    if (!user) return res.status(404).json({ success: false, message: 'Account not found' });
 
     user.password = newPassword;
     await user.save();
 
-    res.json({ success: true, message: 'Password reset successfully' });
+    // Step 12: Audit Log
+    await AuditLog.create({
+      performedBy: adminId,
+      performerModel: 'Admin',
+      action: 'PASSWORD_RESET_ADMIN',
+      entityType: 'Admin',
+      entityId: userId,
+      description: `Admin reset password for admin: ${user.email}`,
+      ipAddress
+    });
+
+
+    // Step 13: Notification
+    try {
+      if (user.email) {
+        await sendEmail({
+          email: user.email,
+          subject: 'Security Alert: Your Password Has Been Reset',
+          message: `Hello ${user.name},\n\nAn administrator has reset your password for security reasons.\n\nYour new temporary password is: ${newPassword}\n\nPlease log in and change your password immediately.\n\nIf you did not expect this, please contact support immediately.`,
+          html: `<h3>Security Alert</h3><p>Hello <strong>${user.name}</strong>,</p><p>An administrator has reset your password for security reasons.</p><p>Your new temporary password is: <strong>${newPassword}</strong></p><p>Please log in and change your password immediately.</p><p>If you did not expect this, please contact support immediately.</p>`
+        });
+      }
+    } catch (e) { console.error('Notification failed:', e.message); }
+
+    res.json({ success: true, message: 'Password updated and user notified' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ─── USER & PARTNER ACCOUNT CONTROLS ───────────────────────
+// Step 2 & 3: Reset/Change password for Customer or Partner
+exports.manageUserPassword = async (req, res) => {
+  try {
+    const { id, type, newPassword } = req.body; // type: 'customer' | 'partner'
+    if (!id || !newPassword) return res.status(400).json({ success: false, message: 'ID and newPassword required' });
+
+    let account;
+    if (type === 'customer') {
+      const User = require('../models/User');
+      account = await User.findById(id);
+    } else {
+      account = await Technician.findById(id);
+    }
+
+    if (!account) return res.status(404).json({ success: false, message: 'Account not found' });
+
+    const adminId = req.user.id;
+    const ipAddress = req.ip;
+
+    account.password = newPassword;
+    await account.save();
+
+    // Step 12: Audit Log
+    await AuditLog.create({
+      adminId,
+      action: 'PASSWORD_RESET_ADMIN',
+      targetType: type,
+      targetId: id,
+      details: `Admin reset password for ${type}: ${account.email || account.phone}`,
+      ipAddress
+    });
+
+    // Step 13: Notification
+    try {
+      if (account.email) {
+        await sendEmail({
+          email: account.email,
+          subject: 'Security Alert: Your Password Has Been Reset',
+          message: `Hello ${account.name},\n\nAn administrator has reset your password for security reasons.\n\nYour new temporary password is: ${newPassword}\n\nPlease log in and change your password immediately.\n\nIf you did not expect this, please contact support immediately.`,
+          html: `<h3>Security Alert</h3><p>Hello <strong>${account.name}</strong>,</p><p>An administrator has reset your password for security reasons.</p><p>Your new temporary password is: <strong>${newPassword}</strong></p><p>Please log in and change your password immediately.</p><p>If you did not expect this, please contact support immediately.</p>`
+        });
+      }
+    } catch (e) { console.error('Notification failed:', e.message); }
+
+    res.json({ success: true, message: `${type} password updated and user notified` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Step 4, 5 & 6: Manage Account Status (Activate/Lock/Force Reset)
+exports.updateAccountStatus = async (req, res) => {
+  try {
+    const { id, type, action } = req.body; // action: 'activate' | 'deactivate' | 'lock' | 'unlock' | 'forceReset'
+    if (!id || !action) return res.status(400).json({ success: false, message: 'ID and action required' });
+
+    let account;
+    if (type === 'customer') {
+      const User = require('../models/User');
+      account = await User.findById(id);
+    } else {
+      account = await Technician.findById(id);
+    }
+
+    if (!account) return res.status(404).json({ success: false, message: 'Account not found' });
+
+    const adminId = req.user.id;
+    const ipAddress = req.ip;
+
+    let detailMsg = '';
+    switch (action) {
+      case 'activate':   account.isActive = true; detailMsg = 'Activated account'; break;
+      case 'deactivate': account.isActive = false; detailMsg = 'Deactivated account'; break;
+      case 'lock':       account.isLocked = true; account.lockedUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); detailMsg = 'Locked account'; break;
+      case 'unlock':     account.isLocked = false; account.lockedUntil = undefined; account.loginAttempts = 0; detailMsg = 'Unlocked account'; break;
+      case 'forceReset': account.mustResetPassword = true; detailMsg = 'Forced password reset'; break;
+      default: return res.status(400).json({ success: false, message: 'Invalid action' });
+    }
+
+    await account.save();
+
+    // Step 12: Audit Log
+    await AuditLog.create({
+      performedBy: adminId,
+      performerModel: 'Admin',
+      action: action.toUpperCase(),
+      entityType: type === 'customer' ? 'User' : 'Technician',
+      entityId: id,
+      description: detailMsg,
+      ipAddress
+    });
+
+
+    // Step 13: Notification
+    try {
+      if (account.email) {
+        const subjects = {
+          activate: 'Your Account Has Been Activated',
+          deactivate: 'Your Account Has Been Deactivated',
+          lock: 'Security Alert: Your Account Has Been Locked',
+          unlock: 'Your Account Has Been Unlocked',
+          forceReset: 'Security Action Required: Password Reset'
+        };
+        const messages = {
+          activate: 'Great news! Your account is now active and you can access all features.',
+          deactivate: 'Your account has been deactivated by an administrator. Please contact support if you believe this is an error.',
+          lock: 'Your account has been locked due to security concerns or suspicious activity. Access is restricted until further notice.',
+          unlock: 'Your account has been unlocked. You can now log in normally.',
+          forceReset: 'For your security, an administrator requires you to reset your password. You will be prompted to do this on your next login.'
+        };
+
+        if (subjects[action]) {
+          await sendEmail({
+            email: account.email,
+            subject: `RepairVafe Security: ${subjects[action]}`,
+            message: `Hello ${account.name},\n\n${messages[action]}\n\nBest regards,\nRepairVafe Security Team`,
+            html: `<h3>Account Update</h3><p>Hello <strong>${account.name}</strong>,</p><p>${messages[action]}</p><p>Best regards,<br>RepairVafe Security Team</p>`
+          });
+        }
+      }
+    } catch (e) { console.error('Notification failed:', e.message); }
+
+    res.json({ success: true, message: `Account status updated: ${action}` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Create new Customer
+exports.createCustomerAccount = async (req, res) => {
+  try {
+    const { name, email, phone, password } = req.body;
+    const User = require('../models/User');
+    const user = await User.create({ name, email, phone, password, isActive: true });
+    
+    const { logActivity } = require('../utils/logger');
+    await logActivity({
+      action: 'CUSTOMER_CREATED_ADMIN',
+      entityType: 'User',
+      entityId: user._id,
+      req,
+      description: `Admin created customer account: ${email}`
+    });
+
+    res.status(201).json({ success: true, data: user });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Create new Partner
+exports.createPartnerAccount = async (req, res) => {
+  try {
+    const { name, email, phone, password, businessName, city } = req.body;
+    const partner = await Technician.create({ name, email, phone, password, businessName, city, isActive: true });
+    
+    const { logActivity } = require('../utils/logger');
+    await logActivity({
+      action: 'PARTNER_CREATED_ADMIN',
+      entityType: 'Technician',
+      entityId: partner._id,
+      req,
+      description: `Admin created partner account: ${email}`
+    });
+
+    res.status(201).json({ success: true, data: partner });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -51,6 +302,42 @@ exports.createAdmin = async (req, res) => {
 
     const admin = await Admin.create({ name, email, password, role, permissions });
     res.status(201).json({ success: true, data: admin });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Update admin details
+exports.updateAdmin = async (req, res) => {
+  try {
+    const { name, role, permissions, isActive } = req.body;
+    const admin = await Admin.findById(req.params.id);
+    if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' });
+
+    if (name) admin.name = name;
+    if (role) admin.role = role;
+    if (permissions) admin.permissions = permissions;
+    if (isActive !== undefined) admin.isActive = isActive;
+
+    await admin.save();
+    res.json({ success: true, data: admin });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Delete admin
+exports.deleteAdmin = async (req, res) => {
+  try {
+    // Prevent self-deletion
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({ success: false, message: 'You cannot delete your own account' });
+    }
+
+    const admin = await Admin.findByIdAndDelete(req.params.id);
+    if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' });
+
+    res.json({ success: true, message: 'Admin account removed' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -107,6 +394,27 @@ exports.getIncompleteLeads = async (req, res) => {
   }
 };
 
+// ─── PARTNER ASSIGNMENT LOGIC ──────────────────────────────
+// Step 16: Recommended Partners based on location & specialization
+exports.getRecommendedPartners = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const booking = await Booking.findById(bookingId);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+    // Match by city and specialization (basic)
+    const partners = await Technician.find({
+      city: { $regex: new RegExp(booking.city, 'i') },
+      isActive: true,
+      status: 'available'
+    }).limit(10);
+
+    res.json({ success: true, data: partners });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // ─── ORDER ASSIGNMENT ──────────────────────────────────────
 // Assign order to technician
 exports.assignOrderToTechnician = async (req, res) => {
@@ -139,31 +447,35 @@ exports.assignOrderToTechnician = async (req, res) => {
     });
     await booking.save();
     
-    // Step 6: Create Partner Assignment Events (Partner Assigned, Notice, Alerts)
+    // Step 13 & 19: Dynamic Notification Integration
     try {
        const sendEmail = require('../utils/sendEmail');
        
-       // 1. Partner Assignment Notice (Email + SMS Mock)
-       console.log(`[SMS WEBHOOK DISPATCH] -> Texting +91${tech.phone}: "RepairVafe: New Job ${booking.referenceNumber} assigned to you! Log in to view details."`);
+       // 1. Notify Partner
        await sendEmail({
           email: tech.email,
-          subject: `New Job Assigned: Order #${booking.referenceNumber}`,
-          message: `Hello ${tech.name},\n\nA new job has been formally assigned to you.\n\nOrder Details: ${booking.deviceBrand} ${booking.deviceModel} - ${booking.repairTypes.join(', ')}\nCustomer Address: ${booking.address}, ${booking.city}, ${booking.pincode}\nAssigned Payout: ₹${payoutAmount || 0}\nRepair Task: ${booking.issueDescription}\n\nPlease check your Partner Dashboard and coordinate the pickup.\n\nThanks,\nRepairVafe Operations.`
+          type: 'assignment',
+          data: { 
+            partnerName: tech.name, 
+            orderId: booking.referenceNumber, 
+            customerAddress: `${booking.address}, ${booking.city}`,
+            device: `${booking.deviceBrand} ${booking.deviceModel}`
+          }
        });
        
-       // 2. Alert Customer (Partner Assigned)
+       // 2. Notify Customer
        await sendEmail({
           email: booking.customerEmail,
-          subject: `Partner Assigned: Order #${booking.referenceNumber} is on the move!`,
-          message: `Hello ${booking.customerName},\n\nWe have strictly assigned a dedicated Service Partner (${tech.name || 'Technician'}) for your ${booking.deviceModel}.\n\nThey will arrange a pickup and track your device precisely across our pipeline.\n\nYou can track the exact status inside your Repair Dashboard.`
+          subject: `Partner Assigned: #${booking.referenceNumber}`,
+          message: `Hello ${booking.customerName}, your repair partner ${tech.name} has been assigned.`
        });
 
-       // 3. Admin Alert Map
+       // 3. Admin Alert
        const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
        await sendEmail({
           email: adminEmail,
-          subject: `[EVENT] Partner Assigned: Job #${booking.referenceNumber}`,
-          message: `An event was triggered: PARTNER ASSIGNED.\n\nJob: #${booking.referenceNumber}\nTechnician: ${tech.name}\nCommission Pledged: ₹${payoutAmount || 0}\n\nOperation mapped securely into active matrix.`
+          subject: `Partner Assigned: #${booking.referenceNumber}`,
+          message: `Partner ${tech.name} assigned to order #${booking.referenceNumber}.`
        });
        
     } catch (e) {
@@ -204,28 +516,30 @@ exports.setServiceQuote = async (req, res) => {
     });
     await booking.save();
 
-    // Step 5: Add Quotation Events (Offer Sent Notification Triggers)
+    // Step 15: Quote Management & Notifications
     try {
       const sendEmail = require('../utils/sendEmail');
       
       // 1. Notify Customer
       await sendEmail({
         email: booking.customerEmail,
-        subject: `Repair Estimate Action Required: #${booking.referenceNumber}`,
-        message: `Your estimated repair cost is ₹${quotationAmount}. \nSummary: ${booking.repairSummary || 'Hardware Verification Complete'}\n\nPlease approve the quotation to proceed with the repair. Sign in to your web dashboard to review detailed notes and terms.`
+        type: 'quotation',
+        data: { 
+          name: booking.customerName, 
+          orderId: booking.referenceNumber, 
+          price: quotationAmount, 
+          device: `${booking.deviceBrand} ${booking.deviceModel}`,
+          service: booking.repairTypes.join(', '),
+          actionUrl: `http://repairvafe.com/pages/tracking.html?ref=${booking.referenceNumber}`
+        }
       });
       
-      if (booking.customerPhone) {
-         console.log(`[SMS WEBHOOK DISPATCH] -> Texting +91${booking.customerPhone}: "RepairVafe: Your Repair Estimate of ₹${quotationAmount} is ready. Review and Approve online."`);
-         console.log(`[WHATSAPP API DISPATCH] -> Messaging +91${booking.customerPhone}: "RepairVafe Estimate Alert: Order ${booking.referenceNumber} Quote generated: ₹${quotationAmount}. 💸"`);
-      }
-
-      // 2. Alert Admin logically mapping event structure
+      // 2. Alert Admin
       const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
       await sendEmail({
          email: adminEmail,
-         subject: `[EVENT] Quotation Dispatched: #${booking.referenceNumber}`,
-         message: `An event was triggered: OFFER SENT.\n\nJob: #${booking.referenceNumber}\nAmount Quoted: ₹${quotationAmount}\nAwaiting Customer Approval action.`
+         subject: `Quotation Sent: #${booking.referenceNumber}`,
+         message: `Estimate of ₹${quotationAmount} dispatched for Order #${booking.referenceNumber}.`
       });
 
     } catch (ignoreErr) {
@@ -435,7 +749,6 @@ exports.updateBookingStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: 'bookingId and status required' });
     }
 
-    const Booking = require('../models/Booking');
     const validStatuses = Booking.schema.path('status').enumValues;
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status pipeline configuration' });
@@ -477,7 +790,14 @@ exports.sendEmailNotification = async (req, res) => {
 // Get all repair types
 exports.getRepairTypes = async (req, res) => {
   try {
-    const types = await RepairType.find({ isActive: true });
+    const { search, category, model, isActive } = req.query;
+    let filter = {};
+    if (search) filter.name = { $regex: search, $options: 'i' };
+    if (category) filter.category = category;
+    if (model) filter.applicableModels = { $in: [model] };
+    if (isActive !== undefined) filter.isActive = isActive === 'true';
+
+    const types = await RepairType.find(filter).populate('applicableModels', 'name');
     res.json({ success: true, data: types, total: types.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -487,13 +807,16 @@ exports.getRepairTypes = async (req, res) => {
 // Create repair type
 exports.createRepairType = async (req, res) => {
   try {
-    const { name, description, basePrice, basePayout } = req.body;
+    const { name, description, category, applicableModels, basePrice, basePayout, isActive } = req.body;
     if (!name) return res.status(400).json({ success: false, message: 'name required' });
 
     const existing = await RepairType.findOne({ name });
     if (existing) return res.status(400).json({ success: false, message: 'Repair type already exists' });
 
-    const type = await RepairType.create({ name, description, basePrice, basePayout });
+    const type = await RepairType.create({ 
+      name, description, category, applicableModels, basePrice, basePayout,
+      isActive: isActive !== undefined ? isActive : true 
+    });
     res.status(201).json({ success: true, data: type });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -504,10 +827,10 @@ exports.createRepairType = async (req, res) => {
 exports.updateRepairType = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, isActive, basePrice, basePayout } = req.body;
+    const { name, description, category, applicableModels, isActive, basePrice, basePayout } = req.body;
 
     const type = await RepairType.findByIdAndUpdate(id, { 
-      name, description, isActive, basePrice, basePayout 
+      name, description, category, applicableModels, isActive, basePrice, basePayout 
     }, { new: true });
     if (!type) return res.status(404).json({ success: false, message: 'Repair type not found' });
 
@@ -534,7 +857,13 @@ exports.deleteRepairType = async (req, res) => {
 // Get all brands
 exports.getBrands = async (req, res) => {
   try {
-    const brands = await Brand.find({ isActive: true });
+    const { search, category, isActive } = req.query;
+    let filter = {};
+    if (search) filter.name = { $regex: search, $options: 'i' };
+    if (category) filter.category = category;
+    if (isActive !== undefined) filter.isActive = isActive === 'true';
+
+    const brands = await Brand.find(filter).sort({ name: 1 });
     res.json({ success: true, data: brands, total: brands.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -546,11 +875,11 @@ exports.createBrand = async (req, res) => {
   try {
     const { name, category } = req.body;
     if (!name || !category) {
-      return res.status(400).json({ success: false, message: 'name and category required' });
+      return res.status(400).json({ success: false, message: 'Brand name and category are required' });
     }
 
-    const existing = await Brand.findOne({ name, category });
-    if (existing) return res.status(400).json({ success: false, message: 'Brand already exists' });
+    const existing = await Brand.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
+    if (existing) return res.status(400).json({ success: false, message: `Brand "${name}" already exists` });
 
     const brand = await Brand.create({ name, category });
     res.status(201).json({ success: true, data: brand });
@@ -588,7 +917,25 @@ exports.deleteBrand = async (req, res) => {
 // Get all models
 exports.getModels = async (req, res) => {
   try {
-    const models = await Model.find({ isActive: true }).populate('brand');
+    const { search, brand, category, isActive } = req.query;
+    let filter = {};
+    
+    if (search) {
+      // Find brands that match the search first to include in filter
+      const matchingBrands = await Brand.find({ name: { $regex: search, $options: 'i' } }).select('_id');
+      const brandIds = matchingBrands.map(b => b._id);
+      
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { brand: { $in: brandIds } }
+      ];
+    }
+    
+    if (brand) filter.brand = brand;
+    if (category) filter.category = category;
+    if (isActive !== undefined) filter.isActive = isActive === 'true';
+
+    const models = await Model.find(filter).populate('brand').sort({ name: 1 });
     res.json({ success: true, data: models, total: models.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -668,12 +1015,19 @@ exports.getFeedbackAnalytics = async (req, res) => {
 // Create model
 exports.createModel = async (req, res) => {
   try {
-    const { name, brand, category } = req.body;
+    const { name, brand, category, isActive } = req.body;
     if (!name || !brand || !category) {
-      return res.status(400).json({ success: false, message: 'name, brand, and category required' });
+      return res.status(400).json({ success: false, message: 'Model name, brand, and category are required' });
     }
 
-    const model = await Model.create({ name, brand, category });
+    // Step 16: Check for duplicate models under same brand
+    const existing = await Model.findOne({ 
+      name: { $regex: new RegExp(`^${name}$`, 'i') }, 
+      brand 
+    });
+    if (existing) return res.status(400).json({ success: false, message: `Model "${name}" already exists for this brand` });
+
+    const model = await Model.create({ name, brand, category, isActive: isActive !== undefined ? isActive : true });
     res.status(201).json({ success: true, data: model });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -694,7 +1048,7 @@ exports.getEmailTemplates = async (req, res) => {
 // Create email template
 exports.createEmailTemplate = async (req, res) => {
   try {
-    const { name, subject, body, variables, type } = req.body;
+    const { name, subject, header, body, footer, ctaText, ctaLink, variables, type } = req.body;
     if (!name || !subject || !body || !type) {
       return res.status(400).json({ success: false, message: 'name, subject, body, and type required' });
     }
@@ -702,7 +1056,7 @@ exports.createEmailTemplate = async (req, res) => {
     const existing = await EmailTemplate.findOne({ name });
     if (existing) return res.status(400).json({ success: false, message: 'Template already exists' });
 
-    const template = await EmailTemplate.create({ name, subject, body, variables, type });
+    const template = await EmailTemplate.create({ name, subject, header, body, footer, ctaText, ctaLink, variables, type });
     res.status(201).json({ success: true, data: template });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -713,12 +1067,51 @@ exports.createEmailTemplate = async (req, res) => {
 exports.updateEmailTemplate = async (req, res) => {
   try {
     const { id } = req.params;
-    const { subject, body, isActive } = req.body;
+    const { subject, header, body, footer, ctaText, ctaLink, isActive } = req.body;
 
-    const template = await EmailTemplate.findByIdAndUpdate(id, { subject, body, isActive }, { new: true });
+    const template = await EmailTemplate.findByIdAndUpdate(id, { 
+      subject, header, body, footer, ctaText, ctaLink, isActive, 
+      updatedAt: Date.now() 
+    }, { new: true });
     if (!template) return res.status(404).json({ success: false, message: 'Template not found' });
 
     res.json({ success: true, data: template });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Preview email template with mock data
+exports.previewTemplate = async (req, res) => {
+  try {
+    const { templateId, mockData } = req.body;
+    const template = await EmailTemplate.findById(templateId);
+    if (!template) return res.status(404).json({ success: false, message: 'Template not found' });
+
+    const { getEmailTemplate } = require('../utils/emailTemplates');
+    const { html } = await getEmailTemplate(template.type, mockData || {});
+    
+    res.json({ success: true, html });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Send test email
+exports.sendTestEmail = async (req, res) => {
+  try {
+    const { templateId, testEmail } = req.body;
+    const template = await EmailTemplate.findById(templateId);
+    if (!template) return res.status(404).json({ success: false, message: 'Template not found' });
+
+    const sendEmail = require('../utils/sendEmail');
+    await sendEmail({
+      email: testEmail,
+      type: template.type,
+      data: { customerName: 'Test Admin', orderId: 'RV-TEST-999', brand: 'Apple', model: 'iPhone Test' }
+    });
+
+    res.json({ success: true, message: 'Test email sent' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1288,5 +1681,83 @@ exports.getNotificationLogs = async (req, res) => {
      res.json({ success: true, data: logs, total: logs.length });
   } catch (err) {
      res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ─── AUDIT LOGS MANAGEMENT ──────────────────────────────
+// ─── FEEDBACK MANAGEMENT ───────────────────────────────────
+// Step 14: View all feedback
+exports.getAllFeedback = async (req, res) => {
+  try {
+    const feedback = await Feedback.find({})
+      .populate('orderId', 'referenceNumber deviceBrand deviceModel')
+      .populate('userId', 'name email')
+      .sort({ createdAt: -1 });
+    res.json({ success: true, count: feedback.length, data: feedback });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Step 7, 8, 9: Admin Log Viewer with Filtering
+exports.getAuditLogs = async (req, res) => {
+  try {
+    const { action, role, orderId, startDate, endDate, page = 1, limit = 50 } = req.query;
+    const query = {};
+
+    if (action) query.action = action;
+    if (role) query.performerRole = role;
+    if (orderId) {
+      if (mongoose.Types.ObjectId.isValid(orderId)) {
+        query.$or = [{ entityId: orderId }, { entityType: 'Booking' }];
+      } else {
+        const b = await Booking.findOne({ referenceNumber: orderId.toUpperCase() });
+        if (b) query.entityId = b._id;
+      }
+    }
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(new Date(endDate).setHours(23, 59, 59));
+    }
+
+    const total = await AuditLog.countDocuments(query);
+    const logs = await AuditLog.find(query)
+      .populate('performedBy', 'name email')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    res.json({ success: true, total, data: logs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Step 10: Detailed Log View
+exports.getAuditLogDetails = async (req, res) => {
+  try {
+    const log = await AuditLog.findById(req.params.id).populate('performedBy', 'name email');
+    if (!log) return res.status(404).json({ success: false, message: 'Log not found' });
+    res.json({ success: true, data: log });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Step 12: Ensure logs are immutable (No Update/Delete APIs provided)
+// Step 14: Role-Based Access for Audit Logs (Users/Partners viewing their own logs)
+exports.getMyAuditLogs = async (req, res) => {
+  try {
+    const query = {
+      performedBy: req.user._id,
+      performerModel: req.user.constructor.modelName || 'User'
+    };
+
+    const logs = await AuditLog.find(query).sort({ createdAt: -1 }).limit(50);
+    res.json({ success: true, data: logs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };

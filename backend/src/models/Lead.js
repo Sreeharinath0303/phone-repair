@@ -51,7 +51,9 @@ const leadSchema = new mongoose.Schema({
   }]
 }, { timestamps: true });
 
+// Step 17: Performance Optimization Indexes
 leadSchema.index({ normalizedMobile: 1, bookingCompleted: 1 });
+leadSchema.index({ customerName: 'text', email: 'text', address: 'text', city: 1, state: 1, pincode: 1 });
 
 module.exports = {
   Lead: mongoose.model('Lead', leadSchema),

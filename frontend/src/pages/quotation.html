@@ -164,9 +164,20 @@
           <div class="action-note">
             <span>By approving, you authorize RepairVafe to proceed with the repair at the quoted price.</span>
           </div>
-          <button class="btn btn-success btn-lg" onclick="approveQuote()" id="approveBtn">
+          <button class="btn btn-success btn-lg" onclick="requestQuoteApprovalOtp()" id="approveBtn">
             ✓ Approve & Proceed
           </button>
+        </div>
+
+        <!-- OTP Verification Block (Hidden by default) -->
+        <div class="quot-actions" id="quoteOtpBlock" style="display:none; flex-direction:column; align-items:center; gap: 10px;">
+          <h4>Secure Approval Verification</h4>
+          <p style="color:var(--clr-text-muted); font-size:0.9rem;">An OTP has been sent to your registered mobile/email.</p>
+          <input type="text" id="quoteOtpInput" class="form-input" placeholder="Enter 6-digit OTP" maxlength="6" style="text-align:center; letter-spacing:8px; font-size:1.5rem; width:200px;" />
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn btn-outline" onclick="cancelApproval()">Cancel</button>
+            <button class="btn btn-success" id="confirmOtpBtn" onclick="approveQuoteWithOtp()">Confirm Approval</button>
+          </div>
         </div>
 
         <!-- Post-action state -->

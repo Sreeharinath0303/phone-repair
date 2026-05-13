@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Get in touch with RepairVafe – Support, Sales, and General Enquiries.">
+  <title>Contact & Support – RepairVafe</title>
+  <link rel="stylesheet" href="../styles/global.css">
+  <link rel="stylesheet" href="../styles/contact.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar scrolled" id="navbar">
+    <div class="nav-container">
+      <a href="../../index.html" class="nav-logo">
+        <div class="logo-icon">⚡</div>
+        <span>Repair<strong>Vafe</strong></span>
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="../../index.html">Home</a></li>
+        <li><a href="booking.html">Book Repair</a></li>
+        <li><a href="tracking.html">Track Repair</a></li>
+        <li><a href="contact.html" class="active">Support</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="booking.html" class="btn btn-primary">Book Now</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="container">
+      <h1 class="page-title gradient-text">Support &amp; Enquiries</h1>
+      <p class="page-subtitle">We're here to help. Select the type of enquiry below to get started.</p>
+    </div>
+  </header>
+
+  <!-- Enquiry Tabs -->
+  <section class="enquiry-section">
+    <div class="container">
+      <div class="enquiry-tabs">
+        <button class="tab-btn active" data-type="contact">
+          <span class="tab-icon">✉️</span> Contact Us
+        </button>
+        <button class="tab-btn" data-type="sales">
+          <span class="tab-icon">💼</span> Sales Enquiry
+        </button>
+        <button class="tab-btn" data-type="support">
+          <span class="tab-icon">🛠️</span> Support Request
+        </button>
+        <button class="tab-btn" data-type="promotional">
+          <span class="tab-icon">📢</span> Promotions
+        </button>
+      </div>
+
+      <div class="enquiry-card">
+        <!-- ══ Contact Form ══ -->
+        <form id="formContact" class="enquiry-form active">
+          <div class="form-header">
+            <h3>General Contact</h3>
+            <p>For general questions, feedback, or media enquiries.</p>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Full Name</label>
+              <input type="text" name="name" class="form-input" placeholder="Enter your name" required>
+            </div>
+            <div class="form-group">
+              <label>Email Address</label>
+              <input type="email" name="email" class="form-input" placeholder="email@example.com" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Mobile Number</label>
+            <input type="tel" name="phone" class="form-input" placeholder="+91 XXXXX XXXXX" required>
+          </div>
+          <div class="form-group">
+            <label>Your Message</label>
+            <textarea name="message" class="form-textarea" placeholder="How can we help you today?" rows="4" required></textarea>
+          </div>
+          <input type="hidden" name="type" value="contact">
+          <button type="submit" class="btn btn-primary w-100">Send Message</button>
+        </form>
+
+        <!-- ══ Sales Form ══ -->
+        <form id="formSales" class="enquiry-form">
+          <div class="form-header">
+            <h3>Business &amp; Sales Enquiry</h3>
+            <p>Interested in bulk repairs, corporate tie-ups, or fleet management?</p>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Contact Person</label>
+              <input type="text" name="name" class="form-input" placeholder="Name" required>
+            </div>
+            <div class="form-group">
+              <label>Company Name (Optional)</label>
+              <input type="text" name="company" class="form-input" placeholder="Your Business">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Work Email</label>
+              <input type="email" name="email" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label>Phone Number</label>
+              <input type="tel" name="phone" class="form-input" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Requirement Details</label>
+            <textarea name="requirementDetails" class="form-textarea" placeholder="Describe your business needs..." rows="4" required></textarea>
+          </div>
+          <input type="hidden" name="type" value="sales">
+          <button type="submit" class="btn btn-primary w-100">Submit Sales Request</button>
+        </form>
+
+        <!-- ══ Support Form ══ -->
+        <form id="formSupport" class="enquiry-form">
+          <div class="form-header">
+            <h3>Support Request</h3>
+            <p>Need help with an existing order or technical issue?</p>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Your Name</label>
+              <input type="text" name="name" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label>Order Reference (Optional)</label>
+              <input type="text" name="orderReference" class="form-input" placeholder="e.g. RV-12345">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Email / Mobile</label>
+              <input type="text" name="contact" class="form-input" placeholder="Used during booking" required>
+            </div>
+            <div class="form-group">
+              <label>Issue Type</label>
+              <select name="issueType" class="form-select">
+                <option value="tracking">Order Tracking</option>
+                <option value="quotation">Quotation Issue</option>
+                <option value="repair_quality">Repair Quality</option>
+                <option value="payment">Payment Issue</option>
+                <option value="other">Other Technical Issue</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Describe the Issue</label>
+            <textarea name="description" class="form-textarea" rows="4" required></textarea>
+          </div>
+          <!-- Hidden helper to split email/phone in JS -->
+          <input type="hidden" name="email" value="">
+          <input type="hidden" name="phone" value="">
+          <input type="hidden" name="type" value="support">
+          <button type="submit" class="btn btn-primary w-100">Submit Support Ticket</button>
+        </form>
+
+        <!-- ══ Promotional Form ══ -->
+        <form id="formPromotional" class="enquiry-form">
+          <div class="form-header">
+            <h3>Campaigns &amp; Promotions</h3>
+            <p>Join our newsletter or enquire about ongoing offers.</p>
+          </div>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" name="name" class="form-input" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" name="email" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="tel" name="phone" class="form-input" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>I'm interested in...</label>
+            <select name="interest" class="form-select">
+              <option value="seasonal_offers">Seasonal Offers</option>
+              <option value="partner_program">Becoming a Partner</option>
+              <option value="newsletter">Weekly Tech Tips</option>
+            </select>
+          </div>
+          <input type="hidden" name="type" value="promotional">
+          <input type="hidden" name="campaignSource" value="web_contact_page">
+          <button type="submit" class="btn btn-primary w-100">Claim Offer / Join</button>
+        </form>
+      </div>
+
+      <!-- Success State -->
+      <div id="successState" class="success-card" style="display:none">
+        <div class="success-icon">✨</div>
+        <h2>Thank You!</h2>
+        <p id="successMsg">Your enquiry has been received. Our team will contact you shortly.</p>
+        <button class="btn btn-outline" onclick="location.reload()">Send Another Enquiry</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 RepairVafe. Premium Device Repairs.</p>
+    </div>
+  </footer>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="../utils/contact.js"></script>
+</body>
+</html>

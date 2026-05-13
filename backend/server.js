@@ -34,6 +34,7 @@ app.use('/api/technician-auth', require('./src/routes/technicianAuthRoutes'));
 app.use('/api/auth',         require('./src/routes/authRoutes'));
 app.use('/api/customer-auth', require('./src/routes/customerAuthRoutes'));
 app.use('/api/leads',        require('./src/routes/leadRoutes'));
+app.use('/api/enquiries',    require('./src/routes/enquiryRoutes'));
 app.use('/api/admin',        require('./src/routes/adminRoutes'));
 
 // ─── Health Check ─────────────────────────────────────────

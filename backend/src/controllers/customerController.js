@@ -19,6 +19,30 @@ exports.getMyBookings = async (req, res) => {
   }
 };
 
+// @desc  Get logged-in customer's bookings (alias for React dashboard)
+// @route GET /api/customer/orders
+// @access Private (Customer)
+exports.getMyOrders = exports.getMyBookings;
+
+// @desc  Get a customer order by reference for tracking
+// @route GET /api/customer/order/:ref
+// @access Private (Customer)
+exports.getOrderByRef = async (req, res) => {
+  try {
+    const booking = await Booking.findOne({ referenceNumber: req.params.ref.toUpperCase() })
+      .populate('assignedTechnician', 'name phone specialization');
+
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (!booking.customerId?.equals(req.user._id) && booking.customerEmail !== req.user.email) {
+      return res.status(403).json({ success: false, message: 'Access denied to this order' });
+    }
+
+    res.json({ success: true, data: booking });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // @desc  Get customer dashboard stats
 // @route GET /api/customer/stats
 // @access Private (Customer)
@@ -59,13 +83,15 @@ exports.approveQuote = async (req, res) => {
     });
 
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
-    if (booking.quotationStatus !== 'Pending') return res.status(400).json({ success: false, message: 'Quotation is not in pending state' });
+    if (!['Pending', 'Awaiting Customer Approval', 'Quote Prepared', 'Offer Sent'].includes(booking.quotationStatus)) {
+      return res.status(400).json({ success: false, message: 'Quotation is not in a state that can be approved' });
+    }
 
-    booking.quotationStatus = 'Approved';
-    booking.status = 'In Progress';
+    booking.quotationStatus = 'Approved by Customer';
+    booking.status = 'Approved by Customer';
     booking.timeline.push({ 
-      stage: 'In Progress', 
-      note: 'Quotation approved by customer. Repair work initiated.' 
+      stage: 'Approved by Customer', 
+      note: 'Quotation approved by customer. Repair work will move to the next service phase.' 
     });
 
     await booking.save();
@@ -128,11 +154,23 @@ exports.rejectQuote = async (req, res) => {
 // @access Private (Customer)
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, phone, address, city, state, pincode, password } = req.body;
-    const user = await User.findById(req.user.id);
+    const { name, email, phone, address, city, state, pincode, password } = req.body;
+    const user = await User.findById(req.user.id).select('+password');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-    
+
+    const conflict = await User.findOne({
+      _id: { $ne: user._id },
+      $or: [
+        ...(email ? [{ email: email.toLowerCase() }] : []),
+        ...(phone ? [{ phone }] : [])
+      ]
+    });
+    if (conflict) {
+      return res.status(400).json({ success: false, message: 'Email or phone number already in use' });
+    }
+
     if (name) user.name = name;
+    if (email) user.email = email.toLowerCase();
     if (phone) user.phone = phone;
     if (address) user.address = address;
     if (city) user.city = city;
@@ -141,7 +179,9 @@ exports.updateProfile = async (req, res) => {
     if (password) user.password = password;
 
     await user.save();
-    res.json({ success: true, message: 'Profile updated successfully', data: user });
+    const safeData = user.toObject();
+    delete safeData.password;
+    res.json({ success: true, message: 'Profile updated successfully', data: safeData });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

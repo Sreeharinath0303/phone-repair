@@ -54,11 +54,20 @@
       <a href="#" class="sidebar-link" data-page="logs" onclick="showPage('logs', this)">
         <span class="sl-icon">📜</span> Comm Logs
       </a>
+      <a href="#" class="sidebar-link" data-page="audit-logs" onclick="showPage('audit-logs', this)">
+        <span class="sl-icon">🔍</span> Audit Logs
+      </a>
       <a href="#" class="sidebar-link" data-page="system-data" onclick="showPage('system-data', this)">
         <span class="sl-icon">⚙️</span> System Data
       </a>
       <a href="#" class="sidebar-link" data-page="admins" onclick="showPage('admins', this)">
         <span class="sl-icon">👨‍💼</span> Admins
+      </a>
+      <a href="#" class="sidebar-link" data-page="all-users" onclick="showPage('all-users', this)">
+        <span class="sl-icon">📇</span> User Directory
+      </a>
+      <a href="#" class="sidebar-link" data-page="enquiries" onclick="showPage('enquiries', this)">
+        <span class="sl-icon">✉️</span> Enquiries
       </a>
 
       <div class="nav-section-label">Reports</div>
@@ -95,7 +104,160 @@
 
   <!-- Main Content -->
   <div class="admin-main" id="adminMain">
-    <!-- Top Bar -->
+    <!-- ══ ENQUIRIES & SUPPORT PAGE ══ -->
+    <div class="admin-page" id="pageEnquiries">
+      <div class="page-actions-bar">
+        <div class="pab-left"><h2>Enquiry Management</h2><span class="record-count" id="enquiryRecordCount">0 items</span></div>
+        <div class="pab-right" style="gap:10px;">
+          <select id="enquiryStatusFilter" class="form-select" style="width:130px" onchange="debouncedLoadEnquiries()">
+            <option value="">All Status</option>
+            <option value="new">New</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
+          <div class="date-filter-group" style="display:flex;gap:5px;align-items:center">
+            <input type="date" id="enquiryStartDate" class="form-input" style="width:130px" onchange="debouncedLoadEnquiries()">
+            <span>to</span>
+            <input type="date" id="enquiryEndDate" class="form-input" style="width:130px" onchange="debouncedLoadEnquiries()">
+          </div>
+          <input type="text" id="enquirySearch" class="form-input" placeholder="Search name/email..." style="width:180px" oninput="debouncedLoadEnquiries()">
+        </div>
+      </div>
+      
+      <div class="tabs-wrap" style="margin-bottom:20px;">
+        <div class="tab-btns">
+          <button class="t-btn active" onclick="switchEnquiryTab('contact', this)">Contact Us</button>
+          <button class="t-btn" onclick="switchEnquiryTab('sales', this)">Sales Leads</button>
+          <button class="t-btn" onclick="switchEnquiryTab('support', this)">Support Tickets</button>
+          <button class="t-btn" onclick="switchEnquiryTab('promotional', this)">Promo Leads</button>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <table class="admin-table">
+          <thead id="enquiryTableHeader">
+            <!-- Dynamic -->
+          </thead>
+          <tbody id="enquiryTableBody">
+            <!-- Dynamic -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ EMAIL TEMPLATES PAGE ══ -->
+    <div class="admin-page" id="pageEmail-templates">
+      <div class="page-actions-bar">
+        <div class="pab-left"><h2>Email Template Editor</h2><span class="record-count" id="templateRecordCount">0 templates</span></div>
+        <div class="pab-right">
+          <button class="btn btn-primary" onclick="openTemplateModal()">+ New Template</button>
+        </div>
+      </div>
+      
+      <div class="table-card">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Template Name</th>
+              <th>Event Type</th>
+              <th>Subject</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="templateTableBody">
+            <!-- Dynamic -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    </div>
+
+    <!-- ══ COMMUNICATION LOGS PAGE ══ -->
+    <div class="admin-page" id="pageLogs">
+      <div class="page-actions-bar">
+        <div class="pab-left"><h2>Communication Logs</h2><span class="record-count" id="logRecordCount">0 logs</span></div>
+        <div class="pab-right" style="gap:10px; flex-wrap:wrap;">
+          <select id="logTypeFilter" class="form-select" style="width:140px" onchange="loadLogs()">
+            <option value="">All Types</option>
+            <option value="otp">OTP</option>
+            <option value="booking">Booking</option>
+            <option value="quotation">Quotation</option>
+            <option value="status_update">Status Update</option>
+          </select>
+          <select id="logStatusFilter" class="form-select" style="width:130px" onchange="loadLogs()">
+            <option value="">All Status</option>
+            <option value="SENT">Sent</option>
+            <option value="FAILED">Failed</option>
+          </select>
+          <input type="date" id="logDateFilter" class="form-input" style="width:140px" onchange="loadLogs()">
+          <input type="text" id="logSearch" class="form-input" placeholder="Recipient email..." style="width:180px" oninput="debouncedLoadLogs()">
+        </div>
+      </div>
+      
+      <div class="table-card">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Recipient</th>
+              <th>Event / Type</th>
+              <th>Subject</th>
+              <th>Channel</th>
+              <th>Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="logsTableBody">
+            <!-- Dynamic -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ AUDIT LOGS PAGE ══ -->
+    <div class="admin-page" id="pageAuditLogs">
+      <div class="page-actions-bar">
+        <div class="pab-left"><h2>Audit Logs / Activity Trail</h2><span class="record-count" id="auditRecordCount">0 logs</span></div>
+        <div class="pab-right" style="gap:10px; flex-wrap:wrap;">
+          <select id="auditActionFilter" class="form-select" style="width:160px" onchange="loadAuditLogs()">
+            <option value="">All Actions</option>
+            <option value="BOOKING_CREATED">Booking Created</option>
+            <option value="BOOKING_STATUS_UPDATED">Status Update</option>
+            <option value="PASSWORD_RESET">Password Reset</option>
+          </select>
+          <select id="auditRoleFilter" class="form-select" style="width:130px" onchange="loadAuditLogs()">
+            <option value="">All Roles</option>
+            <option value="admin">Admin</option>
+            <option value="partner">Partner</option>
+            <option value="customer">Customer</option>
+          </select>
+          <input type="date" id="auditDateFilter" class="form-input" style="width:140px" onchange="loadAuditLogs()">
+          <input type="text" id="auditSearch" class="form-input" placeholder="Search Order ID..." style="width:180px" oninput="debouncedLoadAuditLogs()">
+        </div>
+      </div>
+      
+      <div class="table-card">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>User</th>
+              <th>Role</th>
+              <th>Date & Time</th>
+              <th>Reference / Entity</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="auditLogsTableBody">
+            <!-- Dynamic -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ FOOTER ══ -->
     <header class="admin-topbar">
       <div class="topbar-left">
         <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
@@ -150,7 +312,7 @@
     <div class="admin-page" id="pageLeads">
       <div class="page-actions-bar">
         <div class="pab-left"><h2>Lead Management</h2><span class="record-count" id="leadsCount">0 leads</span></div>
-        <div class="pab-right"><input type="text" class="form-input search-input" id="leadsSearch" placeholder="Search leads..." oninput="loadLeads()" /></div>
+        <div class="pab-right"><input type="text" class="form-input search-input" id="leadsSearch" placeholder="Search leads..." oninput="debouncedLoadLeads()" /></div>
       </div>
       <div class="data-table-wrap">
         <table class="data-table">
@@ -164,7 +326,7 @@
     <div class="admin-page" id="pageBookings">
       <div class="page-actions-bar">
         <div class="pab-left"><h2>Booking Management</h2><span class="record-count" id="bookingsCount">0 bookings</span></div>
-        <div class="pab-right"><input type="text" class="form-input search-input" id="bookingsSearch" placeholder="Search bookings..." oninput="loadBookings()" /></div>
+        <div class="pab-right"><input type="text" class="form-input search-input" id="bookingsSearch" placeholder="Search bookings..." oninput="debouncedLoadOrders()" /></div>
       </div>
       <div class="data-table-wrap">
         <table class="data-table">
@@ -178,22 +340,88 @@
     <div class="admin-page" id="pageOrders">
       <div class="page-actions-bar">
         <div class="pab-left"><h2>Order Management</h2><span class="record-count" id="ordersCount">0 orders</span></div>
-        <div class="pab-right" style="flex-wrap:wrap;gap:8px;">
-          <input type="text" class="form-input search-input" id="orderCityFilter" placeholder="Filter by city…" oninput="loadOrders()" style="width:130px" />
-          <input type="text" class="form-input search-input" id="orderStateFilter" placeholder="Filter by state…" oninput="loadOrders()" style="width:130px" />
-          <input type="text" class="form-input search-input" id="orderPincodeFilter" placeholder="Pincode…" oninput="loadOrders()" style="width:100px" />
-          <select id="orderStatusFilter" class="form-select" onchange="loadOrders()">
-            <option value="">All Statuses</option>
-            <option value="Assigned to Partner">Assigned</option>
-            <option value="Repair Ongoing">In Repair</option>
-            <option value="Completed">Completed</option>
-          </select>
-          <input type="text" class="form-input search-input" id="ordersSearch" placeholder="Search…" oninput="loadOrders()" />
+        <div class="pab-right" style="flex:1; max-width:500px;">
+          <input type="text" class="form-input search-input" id="ordersSearch" placeholder="Global Search: Order ID, Customer, Phone, Email, Partner..." oninput="debouncedLoadOrders()" style="width:100%;" />
         </div>
       </div>
+      
+      <!-- Advanced Filter Panel -->
+      <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:10px; border:1px solid rgba(255,255,255,0.05); margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+          <div style="font-weight:600; font-size:0.9rem; color:var(--clr-primary);">Advanced Filters</div>
+          <button class="btn btn-outline" style="padding:4px 10px; font-size:0.8rem;" onclick="resetFilters()">🔄 Clear All Filters</button>
+        </div>
+        
+        <!-- Quick Preset Filters -->
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+          <button class="btn" style="background:rgba(59,130,246,0.1); color:#3b82f6; border:1px solid #3b82f6; font-size:0.75rem; padding:4px 8px;" onclick="applyPresetFilter('pending_quotes')">Pending Quotes (Local)</button>
+          <button class="btn" style="background:rgba(16,185,129,0.1); color:#10b981; border:1px solid #10b981; font-size:0.75rem; padding:4px 8px;" onclick="applyPresetFilter('assigned_partner')">Assigned Orders</button>
+          <button class="btn" style="background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid #f59e0b; font-size:0.75rem; padding:4px 8px;" onclick="applyPresetFilter('incomplete_leads')">Incomplete Leads</button>
+          <button class="btn" style="background:rgba(139,92,246,0.1); color:#8b5cf6; border:1px solid #8b5cf6; font-size:0.75rem; padding:4px 8px;" onclick="applyPresetFilter('completed_iphone')">Completed iPhone Repairs</button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px;">
+          <!-- Date & Device Filters -->
+          <input type="date" class="form-input search-input" id="orderStartDateFilter" onchange="loadOrders()" title="Start Date" />
+          <input type="date" class="form-input search-input" id="orderEndDateFilter" onchange="loadOrders()" title="End Date" />
+          <input type="text" class="form-input search-input" id="orderBrandFilter" placeholder="Device Brand…" oninput="debouncedLoadOrders()" />
+          <input type="text" class="form-input search-input" id="orderModelFilter" placeholder="Device Model…" oninput="debouncedLoadOrders()" />
+          <input type="text" class="form-input search-input" id="orderRepairTypeFilter" placeholder="Repair Type…" oninput="debouncedLoadOrders()" />
+          
+          <!-- Status & Service Filters -->
+          <select id="orderStatusFilter" class="form-select" onchange="loadOrders()">
+            <option value="">All Order Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Ongoing">Ongoing</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+          <select id="orderQuoteStatusFilter" class="form-select" onchange="loadOrders()">
+            <option value="">All Quote Statuses</option>
+            <option value="Approved">Approved</option>
+            <option value="Pending">Pending</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+          <select id="orderAssignedStatusFilter" class="form-select" onchange="loadOrders()">
+            <option value="">All Assignment Statuses</option>
+            <option value="Assigned">Assigned</option>
+            <option value="Unassigned">Unassigned</option>
+          </select>
+          <select id="orderServiceModeFilter" class="form-select" onchange="loadOrders()">
+            <option value="">All Service Modes</option>
+            <option value="Pickup">Pickup</option>
+            <option value="Store Visit">Store Visit / Dropoff</option>
+          </select>
+          <select id="orderFeedbackFilter" class="form-select" onchange="loadOrders()">
+            <option value="">All Feedback Ratings</option>
+            <option value="5">5 Stars</option>
+            <option value="4">4 Stars</option>
+            <option value="3">3 Stars</option>
+            <option value="2">2 Stars</option>
+            <option value="1">1 Star</option>
+          </select>
+          
+          <!-- Location Filters -->
+          <input type="text" class="form-input search-input" id="orderCityFilter" placeholder="Filter by City…" oninput="debouncedLoadOrders()" />
+          <input type="text" class="form-input search-input" id="orderStateFilter" placeholder="Filter by State…" oninput="debouncedLoadOrders()" />
+          <input type="text" class="form-input search-input" id="orderPincodeFilter" placeholder="Pincode…" oninput="debouncedLoadOrders()" />
+        </div>
+      </div>
+
       <div class="data-table-wrap">
         <table class="data-table">
-          <thead><tr><th>Ref #</th><th>Customer</th><th>Device</th><th>Location</th><th>Status</th><th>Partner</th><th>Bill</th><th>Actions</th></tr></thead>
+          <thead>
+            <tr>
+              <th onclick="toggleSort('referenceNumber')" style="cursor:pointer">Ref # <span id="sort_referenceNumber"></span></th>
+              <th onclick="toggleSort('customerName')" style="cursor:pointer">Customer <span id="sort_customerName"></span></th>
+              <th onclick="toggleSort('deviceBrand')" style="cursor:pointer">Device <span id="sort_deviceBrand"></span></th>
+              <th onclick="toggleSort('city')" style="cursor:pointer">Location <span id="sort_city"></span></th>
+              <th onclick="toggleSort('status')" style="cursor:pointer">Status <span id="sort_status"></span></th>
+              <th onclick="toggleSort('assignedTechnician')" style="cursor:pointer">Partner <span id="sort_assignedTechnician"></span></th>
+              <th onclick="toggleSort('createdAt')" style="cursor:pointer">Date <span id="sort_createdAt">▼</span></th>
+              <th>Actions</th>
+            </tr>
+          </thead>
           <tbody id="ordersTableBody"></tbody>
         </table>
       </div>
@@ -216,16 +444,69 @@
     <div class="admin-page" id="pageCustomers">
       <div class="page-actions-bar">
         <div class="pab-left"><h2>Customer Base</h2></div>
-        <div class="pab-right"><button class="btn btn-primary" onclick="showAddCustomerModal()">+ Add Customer</button></div>
+        <div class="pab-right">
+          <input type="text" class="form-input search-input" id="customersSearch" placeholder="Search customers..." oninput="debouncedLoadCustomers()" />
+          <button class="btn btn-primary" onclick="showAddCustomerModal()">+ Add Customer</button>
+        </div>
       </div>
-      <div id="customersGrid"></div>
+      <!-- FEEDBACK SECTION (Steps 8-11) -->
+      <div id="feedbackSection" class="auth-hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px">
+           <h2 class="section-title" style="margin-bottom:0">⭐ Service Feedback Intelligence</h2>
+           <div id="fbQuickStats" style="display:flex; gap:15px">
+              <!-- Populated by JS -->
+           </div>
+        </div>
+
+        <div class="stats-grid" id="fbStatsGrid" style="margin-bottom:30px">
+           <!-- Analytics Summary (Step 10) -->
+        </div>
+
+        <div class="table-card">
+           <div style="padding:20px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; gap:15px; align-items:center; flex-wrap:wrap">
+              <input type="text" id="fbSearch" class="form-input" placeholder="Search Order ID, Name..." style="flex:1" onkeyup="loadFeedback()">
+              <select id="fbType" class="form-input" style="width:180px" onchange="loadFeedback()">
+                 <option value="">All Feedback Types</option>
+                 <option value="customer">Customer Reviews</option>
+                 <option value="partner">Partner Post-Jobs</option>
+              </select>
+              <select id="fbMinRating" class="form-input" style="width:150px" onchange="loadFeedback()">
+                 <option value="">Min Rating</option>
+                 <option value="5">5 Stars</option>
+                 <option value="4">4+ Stars</option>
+                 <option value="3">3+ Stars</option>
+                 <option value="2">2+ Stars</option>
+              </select>
+              <button class="btn btn-primary" onclick="loadFeedback()">🔍 Filter</button>
+           </div>
+           <div style="overflow-x:auto">
+              <table class="admin-table">
+                 <thead>
+                    <tr>
+                       <th>Date</th>
+                       <th>Order ID</th>
+                       <th>From</th>
+                       <th>Type</th>
+                       <th>Rating / Score</th>
+                       <th>Remarks / Reviews</th>
+                       <th>Actions</th>
+                    </tr>
+                 </thead>
+                 <tbody id="fbTableBody"></tbody>
+              </table>
+           </div>
+        </div>
+      </div></div>
     </div>
 
     <!-- === TECHNICIANS PAGE === -->
     <div class="admin-page" id="pageTechnicians">
       <div class="page-actions-bar">
         <div class="pab-left"><h2>Partner Network</h2></div>
-        <div class="pab-right"><button class="btn btn-primary" onclick="showAddPartnerModal()">+ Add Partner</button></div>
+        <div class="pab-right">
+          <input type="text" class="form-input search-input" id="techniciansSearch" placeholder="Search partners..." oninput="debouncedLoadTechnicians()" />
+          <button class="btn btn-primary" onclick="showAddPartnerModal()">+ Add Partner</button>
+        </div>
       </div>
       <div class="tech-grid" id="techGrid"></div>
     </div>
@@ -235,9 +516,9 @@
       <div class="page-actions-bar">
         <div class="pab-left"><h2>Location Intelligence</h2><span class="record-count" id="locTotal">—</span></div>
         <div class="pab-right" style="gap:8px;flex-wrap:wrap;">
-          <input type="text" class="form-input" id="locFilterState" placeholder="Filter State…" style="width:130px" oninput="loadLocationAnalytics()" />
-          <input type="text" class="form-input" id="locFilterCity"  placeholder="Filter City…"  style="width:130px" oninput="loadLocationAnalytics()" />
-          <input type="text" class="form-input" id="locFilterPin"   placeholder="Pincode…"       style="width:100px" oninput="loadLocationAnalytics()" />
+          <input type="text" class="form-input" id="locFilterState" placeholder="Filter State…" style="width:130px" oninput="debouncedLoadLocationAnalytics()" />
+          <input type="text" class="form-input" id="locFilterCity"  placeholder="Filter City…"  style="width:130px" oninput="debouncedLoadLocationAnalytics()" />
+          <input type="text" class="form-input" id="locFilterPin"   placeholder="Pincode…"       style="width:100px" oninput="debouncedLoadLocationAnalytics()" />
           <button class="btn btn-outline" onclick="loadLocationAnalytics()">🔍 Apply</button>
         </div>
       </div>
@@ -315,11 +596,59 @@
       </div>
     </div>
 
-    <!-- === FEEDBACK PAGE === -->
+    <!-- === FEEDBACK PAGE (Steps 8-11) === -->
     <div class="admin-page" id="pageFeedback">
-      <div class="page-actions-bar"><h2>Customer Feedback</h2></div>
-      <div class="feedback-stats-row" id="fbStatsRow"></div>
-      <div class="feedback-list" id="adminFeedbackList"></div>
+      <div class="page-actions-bar">
+        <div class="pab-left"><h2>⭐ Feedback Intelligence</h2></div>
+        <div class="pab-right">
+           <div id="fbQuickStats" style="display:flex; gap:12px; align-items:center;">
+              <!-- Quick Overview Chips -->
+           </div>
+        </div>
+      </div>
+
+      <!-- Feedback Analytics Summary (Step 10) -->
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;" id="fbAnalyticsGrid">
+         <div class="stat-card"><div class="stat-card-num" id="fbStatAvg">0.0</div><div class="stat-card-label">Overall Rating</div></div>
+         <div class="stat-card"><div class="stat-card-num" id="fbStatCust">0</div><div class="stat-card-label">Customer Reviews</div></div>
+         <div class="stat-card"><div class="stat-card-num" id="fbStatPart">0</div><div class="stat-card-label">Partner Post-Jobs</div></div>
+         <div class="stat-card"><div class="stat-card-num" id="fbStatSatis">0%</div><div class="stat-card-label">Satisfaction Rate</div></div>
+      </div>
+
+      <div class="dashboard-card">
+         <div style="padding:16px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; gap:12px; align-items:center; flex-wrap:wrap">
+            <input type="text" id="fbSearch" class="form-input" placeholder="Search Order ID, Name..." style="flex:1; min-width:150px" onkeyup="loadFeedback()">
+            <select id="fbType" class="form-input" style="width:160px" onchange="loadFeedback()">
+               <option value="">All Types</option>
+               <option value="customer">Customer Feedback</option>
+               <option value="partner">Partner Feedback</option>
+            </select>
+            <select id="fbMinRating" class="form-input" style="width:140px" onchange="loadFeedback()">
+               <option value="">Min Rating</option>
+               <option value="5">5 Stars</option>
+               <option value="4">4+ Stars</option>
+               <option value="3">3+ Stars</option>
+               <option value="2">2+ Stars</option>
+            </select>
+            <button class="btn btn-primary" onclick="loadFeedback()">Apply Filters</button>
+         </div>
+         <div class="data-table-wrap">
+            <table class="data-table">
+               <thead>
+                  <tr>
+                     <th>Date</th>
+                     <th>Order ID</th>
+                     <th>Stakeholder</th>
+                     <th>Type</th>
+                     <th>Rating / Score</th>
+                     <th>Review / Notes</th>
+                     <th>Action</th>
+                  </tr>
+               </thead>
+               <tbody id="fbTableBody"></tbody>
+            </table>
+         </div>
+      </div>
     </div>
 
     <!-- === EMAIL TEMPLATES PAGE === -->
@@ -346,19 +675,73 @@
 
     <!-- === SYSTEM DATA PAGE === -->
     <div class="admin-page" id="pageSystemData">
-      <div class="page-actions-bar"><h2>System Data Management</h2><button class="btn btn-primary" onclick="showAddSystemItemModal()">+ Add Item</button></div>
+      <div class="page-actions-bar">
+        <div class="pab-left"><h2>System Data Management</h2><span class="record-count" id="sysRecordCount">0 items</span></div>
+        <div class="pab-right" style="gap:10px;">
+          <select id="sysStatusFilter" class="form-select" style="width:120px" onchange="debouncedLoadSystemData()">
+            <option value="">All Status</option>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </select>
+          <div id="sysBrandFilterWrap" style="display:none">
+            <select id="sysBrandFilter" class="form-select" style="width:140px" onchange="debouncedLoadSystemData()">
+              <option value="">All Brands</option>
+            </select>
+          </div>
+          <input type="text" id="sysSearch" class="form-input" placeholder="Search items..." style="width:180px" oninput="debouncedLoadSystemData()">
+          <button class="btn btn-primary" onclick="showAddSystemItemModal()">+ Add New Item</button>
+        </div>
+      </div>
       <div class="tabs-wrap" style="margin-bottom:20px;">
         <div class="tab-btns">
-          <button class="btn btn-outline active" onclick="switchDataTab('repair-types', this)">Repair Types</button>
-          <button class="btn btn-outline" onclick="switchDataTab('brands', this)">Brands</button>
-          <button class="btn btn-outline" onclick="switchDataTab('models', this)">Models</button>
-          <button class="btn btn-outline" onclick="switchDataTab('offers', this)">Offers</button>
+          <button class="btn btn-outline active" onclick="switchDataTab('repair-types', this)">🔧 Repair Types</button>
+          <button class="btn btn-outline" onclick="switchDataTab('brands', this)">📱 Brands</button>
+          <button class="btn btn-outline" onclick="switchDataTab('models', this)">📱 Models</button>
+          <button class="btn btn-outline" onclick="switchDataTab('offers', this)">🎟️ Offers</button>
         </div>
       </div>
       <div class="data-table-wrap">
         <table class="data-table">
           <thead id="dataTableHeader"></thead>
           <tbody id="dataTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- === ALL USERS DIRECTORY PAGE === -->
+    <div class="admin-page" id="pageAllUsers">
+      <div class="page-actions-bar">
+        <div class="pab-left"><h2>User Management Directory</h2></div>
+        <div class="pab-right" style="gap:10px; flex-wrap:wrap;">
+          <input type="text" class="form-input" id="userDirSearch" placeholder="Search name, email, phone..." style="width:200px" oninput="debouncedLoadAllUsers()">
+          <select id="userDirRoleFilter" class="form-select" style="width:130px" onchange="loadAllUsers()">
+            <option value="">All Roles</option>
+            <option value="admin">Admins</option>
+            <option value="partner">Partners</option>
+            <option value="customer">Customers</option>
+          </select>
+          <select id="userDirStatusFilter" class="form-select" style="width:130px" onchange="loadAllUsers()">
+            <option value="">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="locked">Locked</option>
+          </select>
+          <button class="btn btn-outline" onclick="loadAllUsers()">🔍 Filter</button>
+        </div>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>User Name</th>
+              <th>Email / Contact</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Last Login</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="allUsersTableBody"></tbody>
         </table>
       </div>
     </div>

@@ -40,12 +40,30 @@ exports.login = async (req, res) => {
 
     // Verify Password against whatever model was hit (all use bcrypt/matchPassword logic)
     const isMatch = await account.matchPassword ? await account.matchPassword(password) : await require('bcryptjs').compare(password, account.password);
+    
     if (!isMatch) {
+      // Step 11: Track failed attempts
+      account.loginAttempts = (account.loginAttempts || 0) + 1;
+      if (account.loginAttempts >= 5) {
+        account.isLocked = true;
+        account.lockedUntil = new Date(Date.now() + 30 * 60 * 1000); // Lock for 30 mins
+      }
+      await account.save();
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
+    // Success - Reset attempts
+    account.loginAttempts = 0;
+    account.isLocked = false;
+    account.lockedUntil = undefined;
+    await account.save();
+
     if (account.isActive === false) {
       return res.status(403).json({ success: false, message: 'Account is deactivated' });
+    }
+
+    if (account.isLocked && (!account.lockedUntil || account.lockedUntil > new Date())) {
+      return res.status(403).json({ success: false, message: 'Account is locked. Please contact support.' });
     }
 
     const token = signToken(account._id);
@@ -56,9 +74,12 @@ exports.login = async (req, res) => {
       await account.save();
     }
 
+    const mustReset = account.mustResetPassword;
     res.json({
       success: true,
       token,
+      mustResetPassword: mustReset,
+      message: mustReset ? 'Login successful. Please reset your password.' : 'Login successful',
       data: { id: account._id, name: account.name, email: account.email, role: account.role || role }
     });
   } catch (err) {
@@ -82,9 +103,8 @@ exports.forgotPassword = async (req, res) => {
 
     await sendEmail({
       email: admin.email,
-      subject: 'Password Reset OTP - RepairVafe',
-      message: `Your OTP for password reset is: ${otp}. It expires in 10 minutes.`,
-      html: `<h3>Password Reset OTP</h3><p>Your OTP for password reset is: <strong>${otp}</strong></p><p>It expires in 10 minutes.</p>`
+      type: 'otp',
+      data: { customerName: admin.name, otp }
     });
 
     res.json({ success: true, message: 'OTP sent to email' });
@@ -145,8 +165,8 @@ exports.resetPassword = async (req, res) => {
     try {
        await sendEmail({
          email: admin.email,
-         subject: 'RepairVafe Security: Password Reset Successfully',
-         message: `Your administrative password was successfully reset just now.\n\nIf you did not authorize this change, please contact SuperAdmin immediately as your access limits may be compromised.`
+         type: 'password_reset',
+         data: { name: admin.name, resetUrl: '#' }
        });
        
        // Log to Master System Array
@@ -154,6 +174,16 @@ exports.resetPassword = async (req, res) => {
     } catch(e) {
        console.error('Password reset security webhook fallback:', e.message);
     }
+
+    // Step 2: Log Activity
+    const { logActivity } = require('../utils/logger');
+    await logActivity({
+      action: 'PASSWORD_RESET',
+      entityType: 'Admin',
+      entityId: admin._id,
+      req,
+      description: 'Password reset successfully via OTP'
+    });
 
     res.json({ success: true, message: 'Password reset successfully' });
   } catch (err) {

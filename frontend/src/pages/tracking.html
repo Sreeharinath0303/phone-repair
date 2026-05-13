@@ -41,21 +41,29 @@
 
   <section class="tracking-section">
     <div class="container">
-      <!-- Search -->
-      <div class="track-search-card">
-        <div class="track-search-icon">🔍</div>
-        <h3>Find Your Repair</h3>
-        <div class="track-search-form">
-          <div class="search-input-wrap">
-            <input type="text" class="form-input" id="trackRefInput" placeholder="Enter booking reference (e.g. RV-2026-00042)" />
-          </div>
-          <button class="btn btn-primary" onclick="trackRepair()" id="trackBtn">Track Now</button>
+      <!-- Search & OTP -->
+      <div class="track-search-card" id="trackingRequestCard">
+        <div class="track-search-icon">🔒</div>
+        <h3>Secure Repair Tracking</h3>
+        <p style="text-align:center; margin-bottom:15px; font-size:0.9rem; color:var(--text-muted);">Enter your Order ID and registered Mobile Number to receive a tracking OTP.</p>
+        
+        <div class="track-search-form" style="flex-direction:column; gap:15px;">
+          <input type="text" class="form-input" id="trackRefInput" placeholder="Order ID (e.g. RV-2026-00042)" style="width:100%; border-radius:8px;" />
+          <input type="tel" class="form-input" id="trackPhoneInput" placeholder="Registered Mobile Number" style="width:100%; border-radius:8px;" />
+          <button class="btn btn-primary" onclick="requestTrackingOtp()" id="requestOtpBtn" style="width:100%; padding:12px; border-radius:8px;">Request OTP</button>
         </div>
-        <div class="quick-track">
-          <span>Quick demos:</span>
-          <button class="quick-btn" onclick="quickTrack('RV-2026-00042')">RV-2026-00042</button>
-          <button class="quick-btn" onclick="quickTrack('RV-2026-00087')">RV-2026-00087</button>
-          <button class="quick-btn" onclick="quickTrack('RV-2026-00013')">RV-2026-00013</button>
+      </div>
+
+      <!-- OTP Verification Section (Hidden Initially) -->
+      <div class="track-search-card" id="otpVerificationCard" style="display:none; margin-top:20px;">
+        <div class="track-search-icon">🔑</div>
+        <h3>Verify OTP</h3>
+        <p style="text-align:center; margin-bottom:15px; font-size:0.9rem; color:var(--text-muted);">We've sent a 6-digit OTP to your registered contact.</p>
+        
+        <div class="track-search-form" style="flex-direction:column; gap:15px;">
+          <input type="text" class="form-input" id="trackOtpInput" placeholder="Enter 6-digit OTP" style="width:100%; border-radius:8px; text-align:center; letter-spacing:4px; font-size:1.2rem; font-weight:bold;" maxlength="6" />
+          <button class="btn btn-primary" onclick="verifyTrackingOtp()" id="verifyOtpBtn" style="width:100%; padding:12px; border-radius:8px;">Verify & Track Order</button>
+          <button class="btn btn-outline" onclick="resetTrackingForm()" style="width:100%; padding:12px; border-radius:8px;">Cancel</button>
         </div>
       </div>
 
@@ -72,7 +80,10 @@
             </div>
           </div>
           <div class="track-summary-right">
-            <div class="badge" id="tStatusBadge">In Progress</div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+              <div class="badge" id="tStatusBadge">In Progress</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);" id="tLastUpdated">Last Updated: —</div>
+            </div>
             <div class="track-est" id="tEst">Est. Today, 6:00 PM</div>
           </div>
         </div>
@@ -112,6 +123,7 @@
         <!-- Action Buttons -->
         <div class="track-actions" id="trackActions">
           <a href="quotation.html" class="btn btn-primary" id="viewQuotBtn">View/Approve Quotation</a>
+          <button class="btn btn-outline" id="requestUpdateBtn" onclick="requestOrderUpdate()">🔔 Request Update</button>
           <a href="feedback.html" class="btn btn-outline" id="feedbackBtn" style="display:none">Leave Feedback</a>
           <button class="btn btn-outline" onclick="trackRepair()">🔄 Refresh Status</button>
         </div>

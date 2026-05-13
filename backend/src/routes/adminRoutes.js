@@ -4,9 +4,14 @@ const {
   // Admin Management
   getAllAdmins,
   createAdmin,
+  createCustomerAccount,
+  createPartnerAccount,
+  getAllAccounts,
   updateAdmin,
   deleteAdmin,
-  resetPassword,
+  resetAdminPassword,
+  manageUserPassword,
+  updateAccountStatus,
   // Leads
   getIncompleteLeads,
   convertLeadToBooking,
@@ -43,6 +48,8 @@ const {
   createEmailTemplate,
   updateEmailTemplate,
   deleteEmailTemplate,
+  previewTemplate,
+  sendTestEmail,
   // Communication Settings
   getCommunicationSettings,
   updateCommunicationSettings,
@@ -55,6 +62,12 @@ const {
   exportBookings,
   // Analytics
   getAnalytics,
+  // Feedback
+  getAllFeedback,
+  // Audit Logs
+  getAuditLogs,
+  getAuditLogDetails,
+  getMyAuditLogs,
   // Feedback Analytics
   getFeedbackAnalytics,
   // Search
@@ -104,25 +117,28 @@ router.get('/admins', authorize('superadmin'), getAllAdmins);
 router.post('/admins', authorize('superadmin'), createAdmin);
 router.put('/admins/:id', authorize('superadmin'), updateAdmin);
 router.delete('/admins/:id', authorize('superadmin'), deleteAdmin);
-router.post('/reset-password', authorize('superadmin'), resetPassword);
+router.post('/admins/reset-password', authorize('superadmin'), resetAdminPassword);
+router.get('/accounts', authorize('admin', 'superadmin'), getAllAccounts);
+router.post('/accounts/manage-password', authorize('admin', 'superadmin'), manageUserPassword);
+router.post('/accounts/update-status', authorize('admin', 'superadmin'), updateAccountStatus);
 
 // ─── CUSTOMER MANAGEMENT ───────────────────────────────────
-router.get('/customers', getAllCustomers);
-router.post('/customers', createCustomer);
-router.put('/customers/:id', updateCustomer);
-router.delete('/customers/:id', deleteCustomer);
-router.get('/customers/:email/history', getCustomerHistory);
-router.post('/customers/:id/reset-password', resetCustomerPassword);
+router.get('/customers', authorize('admin', 'superadmin'), getAllCustomers);
+router.post('/customers', authorize('admin', 'superadmin'), createCustomer);
+router.put('/customers/:id', authorize('admin', 'superadmin'), updateCustomer);
+router.delete('/customers/:id', authorize('admin', 'superadmin'), deleteCustomer);
+router.get('/customers/:email/history', authorize('admin', 'superadmin'), getCustomerHistory);
+router.post('/customers/:id/reset-password', authorize('admin', 'superadmin'), resetCustomerPassword);
 
 // ─── INCOMPLETE LEADS ──────────────────────────────────────
-router.get('/incomplete-leads', getIncompleteLeads);
-router.post('/convert-lead', convertLeadToBooking);
+router.get('/incomplete-leads', authorize('admin', 'superadmin'), getIncompleteLeads);
+router.post('/convert-lead', authorize('admin', 'superadmin'), convertLeadToBooking);
 
 // ─── ORDER MANAGEMENT ──────────────────────────────────────
 router.post('/assign-order', authorize('admin', 'superadmin'), assignOrderToTechnician);
 
 // ─── QUOTATION MANAGEMENT ──────────────────────────────────
-router.post('/set-quote', setServiceQuote);
+router.post('/set-quote', authorize('admin', 'superadmin'), setServiceQuote);
 router.post('/trigger-quote-reminders', authorize('admin', 'superadmin'), triggerQuoteReminders);
 router.post('/save-follow-up', authorize('admin', 'superadmin'), saveFollowUp);
 
@@ -130,67 +146,79 @@ router.post('/save-follow-up', authorize('admin', 'superadmin'), saveFollowUp);
 router.post('/set-invoice', authorize('admin', 'superadmin'), setFinalInvoice);
 
 // ─── TECHNICIAN PAYOUT ────────────────────────────────────
-router.post('/set-payout', setTechnicianPayout);
+router.post('/set-payout', authorize('admin', 'superadmin'), setTechnicianPayout);
 
 // ─── STATUS UPDATES ───────────────────────────────────────
-router.put('/update-status', updateBookingStatus);
+router.put('/update-status', authorize('admin', 'superadmin'), updateBookingStatus);
 
 // ─── EMAIL NOTIFICATIONS ──────────────────────────────────
-router.post('/send-email', sendEmailNotification);
+router.post('/send-email', authorize('admin', 'superadmin'), sendEmailNotification);
 
 // ─── REPAIR TYPES ─────────────────────────────────────────
-router.get('/repair-types', getRepairTypes);
-router.post('/repair-types', createRepairType);
-router.put('/repair-types/:id', updateRepairType);
-router.delete('/repair-types/:id', deleteRepairType);
+router.get('/repair-types', getRepairTypes); // Public for booking
+router.post('/repair-types', authorize('admin', 'superadmin'), createRepairType);
+router.put('/repair-types/:id', authorize('admin', 'superadmin'), updateRepairType);
+router.delete('/repair-types/:id', authorize('admin', 'superadmin'), deleteRepairType);
 
 // ─── BRANDS ────────────────────────────────────────────────
-router.get('/brands', getBrands);
-router.post('/brands', createBrand);
-router.put('/brands/:id', updateBrand);
-router.delete('/brands/:id', deleteBrand);
+router.get('/brands', getBrands); // Public for booking
+router.post('/brands', authorize('admin', 'superadmin'), createBrand);
+router.put('/brands/:id', authorize('admin', 'superadmin'), updateBrand);
+router.delete('/brands/:id', authorize('admin', 'superadmin'), deleteBrand);
 
 // ─── MODELS ────────────────────────────────────────────────
-router.get('/models', getModels);
-router.post('/models', createModel);
-router.put('/models/:id', updateModel);
-router.delete('/models/:id', deleteModel);
+router.get('/models', getModels); // Public for booking
+router.post('/models', authorize('admin', 'superadmin'), createModel);
+router.put('/models/:id', authorize('admin', 'superadmin'), updateModel);
+router.delete('/models/:id', authorize('admin', 'superadmin'), deleteModel);
 
 // ─── EMAIL TEMPLATES ──────────────────────────────────────
-router.get('/email-templates', getEmailTemplates);
-router.post('/email-templates', createEmailTemplate);
-router.put('/email-templates/:id', updateEmailTemplate);
-router.delete('/email-templates/:id', deleteEmailTemplate);
+router.get('/email-templates', authorize('admin', 'superadmin'), getEmailTemplates);
+router.post('/email-templates', authorize('admin', 'superadmin'), createEmailTemplate);
+router.put('/email-templates/:id', authorize('admin', 'superadmin'), updateEmailTemplate);
+router.delete('/email-templates/:id', authorize('admin', 'superadmin'), deleteEmailTemplate);
+router.post('/preview-template', authorize('admin', 'superadmin'), previewTemplate);
+router.post('/send-test-email', authorize('admin', 'superadmin'), sendTestEmail);
 
 // ─── COMMUNICATION SETTINGS ───────────────────────────────
-router.get('/communication-settings', getCommunicationSettings);
-router.put('/communication-settings', updateCommunicationSettings);
+router.get('/communication-settings', authorize('admin', 'superadmin'), getCommunicationSettings);
+router.put('/communication-settings', authorize('admin', 'superadmin'), updateCommunicationSettings);
 
 // ─── OFFERS/PROMOTIONS ────────────────────────────────────
-router.get('/offers', getOffers);
-router.post('/offers', createOffer);
-router.put('/offers/:id', updateOffer);
-router.delete('/offers/:id', deleteOffer);
+router.get('/offers', authorize('admin', 'superadmin'), getOffers);
+router.post('/offers', authorize('admin', 'superadmin'), createOffer);
+router.put('/offers/:id', authorize('admin', 'superadmin'), updateOffer);
+router.delete('/offers/:id', authorize('admin', 'superadmin'), deleteOffer);
+
+// ─── REGISTRATION ─────────────────────────────────────────
+router.post('/customers/register', authorize('admin', 'superadmin'), createCustomerAccount);
+router.post('/partners/register', authorize('admin', 'superadmin'), createPartnerAccount);
 
 // ─── DATA EXPORT ───────────────────────────────────────────
-router.get('/export/bookings', exportBookings);
+router.get('/export/bookings', authorize('admin', 'superadmin'), exportBookings);
 
 // ─── ANALYTICS ────────────────────────────────────────────
-router.get('/analytics', getAnalytics);
+router.get('/analytics', authorize('admin', 'superadmin'), getAnalytics);
 
-// ─── FEEDBACK ANALYTICS ───────────────────────────────────
-router.get('/feedback-analytics', getFeedbackAnalytics);
+// ─── FEEDBACK ─────────────────────────────────────────────
+router.get('/feedback', authorize('admin', 'superadmin'), getAllFeedback);
+router.get('/feedback-analytics', authorize('admin', 'superadmin'), getFeedbackAnalytics);
 
 // ─── ADVANCED SEARCH ───────────────────────────────────────
-router.get('/search', advancedSearch);
+router.get('/search', authorize('admin', 'superadmin'), advancedSearch);
 
 // ─── NOTIFICATION LOGS ────────────────────────────────────
-router.get('/notification-logs', getNotificationLogs);
+router.get('/notification-logs', authorize('admin', 'superadmin'), getNotificationLogs);
 
 // ─── LOCATION INTELLIGENCE (Steps 6-14) ───────────────────
-router.get('/location-analytics',     getLocationAnalytics);
-router.get('/orders-by-location',     getOrdersByLocation);
-router.get('/orders/:id/location',    getOrderLocationDetail);
+router.get('/location-analytics',     authorize('admin', 'superadmin'), getLocationAnalytics);
+router.get('/orders-by-location',     authorize('admin', 'superadmin'), getOrdersByLocation);
+router.get('/orders/:id/location',    authorize('admin', 'superadmin'), getOrderLocationDetail);
 router.get('/nearby-partners',        authorize('admin', 'superadmin'), getNearbyPartners);
+
+// ─── AUDIT LOGS ──────────────────────────────────────────
+router.get('/audit-logs',           authorize('admin', 'superadmin'), getAuditLogs);
+router.get('/audit-logs/:id',       authorize('admin', 'superadmin'), getAuditLogDetails);
+router.get('/my-audit-logs',        protect, getMyAuditLogs);
 
 module.exports = router;

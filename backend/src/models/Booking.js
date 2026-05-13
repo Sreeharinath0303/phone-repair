@@ -57,6 +57,9 @@ const bookingSchema = new mongoose.Schema({
     note: { type: String },
     date: { type: Date, default: Date.now }
   }],
+  // Step 3: Tracking Page OTP Security
+  trackingOtp: { type: String, select: false },
+  trackingOtpExpiry: { type: Date, select: false },
   // Step 7: Rejected Quote Tracking
   rejectionReason: { type: String, default: null },
   followUpStatus:  { type: String, enum: ['Not Applicable', 'Follow-Up Pending', 'Followed Up', 'Reopened Quotes', 'Cancelled Cases'], default: 'Not Applicable' },
@@ -72,7 +75,17 @@ const bookingSchema = new mongoose.Schema({
   longitude:      { type: Number, default: null },
   ipCity:         { type: String, default: null },  // IP-based approximate city
   locationSource: { type: String, enum: ['gps', 'ip', 'manual', null], default: null },
+  // Step 7: Feedback Status Control
+  customerFeedbackStatus: { type: String, enum: ['Feedback Pending', 'Feedback Submitted'], default: 'Feedback Pending' },
+  partnerFeedbackStatus:  { type: String, enum: ['Feedback Pending', 'Feedback Submitted'], default: 'Feedback Pending' },
 }, { timestamps: true });
+
+// Step 17: Performance Optimization Indexes
+bookingSchema.index({ referenceNumber: 1 });
+bookingSchema.index({ customerName: 'text', customerEmail: 'text', customerPhone: 'text' });
+bookingSchema.index({ status: 1, quotationStatus: 1, assignedTechnician: 1 });
+bookingSchema.index({ city: 1, state: 1, pincode: 1 });
+bookingSchema.index({ createdAt: -1 });
 
 // Auto-generate reference number before saving
 bookingSchema.pre('save', async function (next) {

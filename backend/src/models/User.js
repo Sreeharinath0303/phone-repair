@@ -3,10 +3,25 @@ const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
   // Basic Info
-  name:     { type: String, required: true },
-  email:    { type: String, required: true, unique: true, lowercase: true },
-  password: { type: String, required: true, select: false },
-  phone:    { type: String, required: true, unique: true },
+  name:     { type: String, default: 'Customer' },
+  email:    { 
+    type: String, 
+    unique: true, 
+    sparse: true, 
+    lowercase: true,
+    match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please fill a valid email address']
+  },
+  password: { 
+    type: String, 
+    select: false,
+    match: [/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, 'Password must be at least 8 characters long, and include at least one uppercase letter, one lowercase letter, one number and one special character']
+  },
+  phone:    { 
+    type: String, 
+    unique: true, 
+    sparse: true,
+    match: [/^[0-9]{10}$/, 'Please fill a valid 10-digit mobile number']
+  },
 
   // Authentication
   role:     { type: String, enum: ['customer'], default: 'customer' },
@@ -40,6 +55,7 @@ const userSchema = new mongoose.Schema({
   loginAttempts: { type: Number, default: 0 },
   isLocked: { type: Boolean, default: false },
   lockedUntil: { type: Date },
+  mustResetPassword: { type: Boolean, default: false },
 
   // Preferences
   enableEmailNotifications: { type: Boolean, default: true },
@@ -56,6 +72,10 @@ const userSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
+
+// Step 17: Performance Optimization Indexes
+userSchema.index({ name: 'text', email: 1, phone: 1 });
+userSchema.index({ city: 1, state: 1, pincode: 1 });
 
 // Hash password before save
 userSchema.pre('save', async function (next) {

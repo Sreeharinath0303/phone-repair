@@ -1,67 +1,79 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+const { getEmailTemplate } = require('./emailTemplates');
 
-const sendEmail = async (options) => {
-  // Create transporter
-  // For production, use actual SMTP settings
-  // In development, you can use Mailtrap or similar
-  const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
-    port: process.env.EMAIL_PORT || 2525,
-    auth: {
-      user: process.env.EMAIL_USER || '',
-      pass: process.env.EMAIL_PASS || '',
-    },
-  });
+const sendEmail = async (options, retryCount = 0) => {
+  const MAX_RETRIES = 2;
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+  const fromName = process.env.FROM_NAME || 'RepairVafe';
+
+  let { email, subject, message, html, type, data } = options;
+
+  // Step 9: Template Selection Logic
+  if (type) {
+    const templateData = await getEmailTemplate(type, data || {});
+    subject = templateData.subject;
+    html = templateData.html;
+  }
 
   const mailOptions = {
-    from: `RepairVafe <${process.env.FROM_EMAIL || 'noreply@repairvafe.com'}>`,
-    to: options.email,
-    subject: options.subject,
-    text: options.message,
-    html: options.html,
+    from: `${fromName} <${fromEmail}>`,
+    to: email,
+    subject: subject,
+    text: message || 'Please view this email in an HTML compatible viewer.',
+    html: html,
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`Email sent to ${options.email}`);
+    const { data: resData, error } = await resend.emails.send(mailOptions);
+
+    if (error) throw new Error(error.message);
+
+    console.log(`Email sent via Resend to ${email}. ID: ${resData.id}`);
     
-    // Step 17: Create Notification Logs and Audit History natively
+    // Step 11: Create Email Logs
     try {
        const NotificationLog = require('../models/NotificationLog');
        await NotificationLog.create({
-          eventName: options.subject.split(':')[0] || 'GENERAL_EMAIL',
-          recipient: options.email,
+          eventName: subject.split('|')[0].trim(),
+          eventType: type || 'TRANSACTIONAL',
+          recipient: email,
           channel: 'EMAIL',
-          deliveryStatus: 'SENT'
+          deliveryStatus: 'SENT',
+          providerId: resData.id
        });
     } catch(logErr) { console.error('Silent log ingestion bypassed'); }
 
   } catch (error) {
-    console.error('Email sending failed:', error.message);
+    console.error(`Email attempt ${retryCount + 1} failed:`, error.message);
     
-    // Step 17: Failed State Log
+    // Step 12: Create Retry Mechanism
+    if (retryCount < MAX_RETRIES) {
+      const delay = Math.pow(2, retryCount) * 1000;
+      console.log(`Retrying in ${delay}ms...`);
+      await new Promise(res => setTimeout(res, delay));
+      return sendEmail(options, retryCount + 1);
+    }
+
+    // Final Failure Log
     try {
        const NotificationLog = require('../models/NotificationLog');
        await NotificationLog.create({
-          eventName: options.subject.split(':')[0] || 'GENERAL_EMAIL',
-          recipient: options.email,
+          eventName: subject || 'GENERAL_EMAIL',
+          eventType: type || 'TRANSACTIONAL',
+          recipient: email,
           channel: 'EMAIL',
           deliveryStatus: 'FAILED',
           errorMessage: error.message
        });
     } catch(logErr) { console.error('Silent failure log ingestion bypassed'); }
-    // In dev, we still want to log the OTP
+
     if (process.env.NODE_ENV === 'development') {
-      console.log('--- DEVELOPMENT MODE: Email Content ---');
-      console.log(`To: ${options.email}`);
-      console.log(`Subject: ${options.subject}`);
-      console.log(`Message: ${options.message}`);
-      console.log('---------------------------------------');
+      console.log('--- DEVELOPMENT MODE: Final Email Failure ---');
+      console.log(`To: ${email} | Subject: ${subject}`);
     }
-    // Don't throw if we are in dev so it doesn't break the flow
-    if (process.env.NODE_ENV !== 'development') {
-      throw error;
-    }
+
+    if (process.env.NODE_ENV !== 'development') throw error;
   }
 };
 

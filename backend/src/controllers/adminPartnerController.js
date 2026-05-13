@@ -1,5 +1,5 @@
-const { Technician } = require('../models/Technician');
-const { Booking } = require('../models/Booking');
+const Technician = require('../models/Technician');
+const Booking = require('../models/Booking');
 
 // @desc  Get all partners
 // @route GET /api/admin/partners

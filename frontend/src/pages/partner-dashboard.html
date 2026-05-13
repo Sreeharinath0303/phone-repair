@@ -24,8 +24,9 @@
       <a href="#" class="sidebar-link active" onclick="showSection('dashboard', this)">🏠 Dashboard</a>
       <a href="#" class="sidebar-link" onclick="showSection('assigned', this)">📥 Assigned Orders</a>
       <a href="#" class="sidebar-link" onclick="showSection('ongoing', this)">🔧 Ongoing Jobs</a>
-      <a href="#" class="sidebar-link" onclick="showSection('completed', this)">✅ Completed Jobs</a>
-      <a href="#" class="sidebar-link" onclick="showSection('profile', this)">👤 Profile Settings</a>
+       <a href="#" class="sidebar-link" onclick="showSection('completed', this)">✅ Completed Jobs</a>
+       <a href="#" class="sidebar-link" onclick="showSection('feedback', this)">⭐ Job Feedback</a>
+       <a href="#" class="sidebar-link" onclick="showSection('profile', this)">👤 Profile Settings</a>
     </nav>
     <div class="sidebar-footer">
        <button class="action-btn" onclick="logout()" style="width:100%; text-align:left">Logout 🚪</button>
@@ -145,6 +146,25 @@
         </div>
       </div>
 
+      <div id="feedbackSection" class="auth-hidden">
+        <h2 class="section-title">Job Feedback History</h2>
+        <div class="table-card">
+           <table class="data-table">
+              <thead>
+                 <tr>
+                    <th>Date</th>
+                    <th>Order ID</th>
+                    <th>Quality Score</th>
+                    <th>Customer Coop</th>
+                    <th>Device Cond.</th>
+                    <th>Part Notes</th>
+                 </tr>
+              </thead>
+              <tbody id="feedbackBody"></tbody>
+           </table>
+        </div>
+      </div>
+
       <!-- Step 10: Profile Settings Section -->
       <div id="profileSection" class="auth-hidden">
         <h2 class="section-title">Profile Settings</h2>
@@ -153,11 +173,22 @@
               <div class="form-group"><label class="form-label">Name</label><input type="text" id="profName" class="form-input" required></div>
               <div class="form-group"><label class="form-label">Email</label><input type="email" id="profEmail" class="form-input" disabled style="opacity:0.7"></div>
               <div class="form-group"><label class="form-label">Phone</label><input type="text" id="profPhone" class="form-input" required></div>
-              <div class="form-group"><label class="form-label">Address</label><input type="text" id="profAddr" class="form-input"></div>
-              <div class="form-group"><label class="form-label">City</label><input type="text" id="profCity" class="form-input"></div>
-              <div class="form-group" style="margin-top:20px"><label class="form-label">New Password (leave blank to keep current)</label><input type="password" id="profPass" class="form-input"></div>
-              <button type="submit" class="btn btn-customer" style="margin-top:20px; width:100%">Save Changes</button>
+              <div class="form-group"><label class="form-label">Specialization</label><input type="text" id="profSpec" class="form-input"></div>
+              <div class="form-group"><label class="form-label">Service Areas</label><input type="text" id="profAreas" class="form-input"></div>
+              <button type="submit" class="btn btn-primary" style="margin-top:20px; width:100%">Update Profile</button>
            </form>
+           
+           <!-- Step 14: Own Password Management -->
+           <div style="margin-top:40px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.05);">
+             <h3 style="margin-bottom:15px; color:var(--clr-primary)">🔒 Security & Password</h3>
+             <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+               <div class="form-group"><label class="form-label">Current Password</label><input type="password" id="profOldPass" class="form-input"></div>
+               <div></div>
+               <div class="form-group"><label class="form-label">New Password</label><input type="password" id="profNewPass" class="form-input" placeholder="Min 8 chars, 1 uppercase, 1 special"></div>
+               <div class="form-group"><label class="form-label">Confirm New Password</label><input type="password" id="profConfirmPass" class="form-input"></div>
+             </div>
+             <button class="btn btn-outline" style="margin-top:20px; width:100%" onclick="handlePasswordUpdate(event)">Change Password</button>
+           </div>
         </div>
       </div>
 
@@ -206,11 +237,22 @@
            <p style="font-size:0.8rem; color:var(--clr-text-muted)">Amount authorized by admin for this service completion.</p>
         </div>
 
+        <!-- Step 13 & 14: Location Info (Partner view — city/state/pincode only, no GPS) -->
+        <div style="padding:15px; background:rgba(99,102,241,0.07); border:1px solid rgba(99,102,241,0.2); border-radius:10px; margin-bottom:20px">
+          <h4 style="color:#6366f1; margin-bottom:12px">📍 Job Location</h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem;">
+            <div><span style="color:var(--clr-text-faint)">Address:</span><br><span id="mLocAddr" style="color:#fff"></span></div>
+            <div><span style="color:var(--clr-text-faint)">City:</span><br><span id="mLocCity" style="color:#fff;font-weight:600"></span></div>
+            <div><span style="color:var(--clr-text-faint)">State:</span><br><span id="mLocState" style="color:#fff"></span></div>
+            <div><span style="color:var(--clr-text-faint)">Pincode:</span><br><span id="mLocPin" style="color:#fff;font-weight:600"></span></div>
+          </div>
+        </div>
+
+
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
            <div class="form-group" style="padding:15px; border:1px solid rgba(255,255,255,0.1); border-radius:10px">
              <label class="form-label" style="color:var(--clr-primary)">1. Update Progress Status</label>
              <select id="modalStatusSelect" class="form-input" style="margin-bottom:15px">
-                <!-- Custom Exact Strings Requested -->
                 <option value="Assigned">Assigned</option>
                 <option value="Pickup Scheduled">Pickup Scheduled</option>
                 <option value="Picked Up">Picked Up</option>
@@ -227,19 +269,44 @@
            <div class="form-group" style="padding:15px; border:1px solid rgba(255,255,255,0.1); border-radius:10px; display:flex; flex-direction:column;">
              <label class="form-label" style="color:var(--clr-primary)">2. Service Remarks & Feedback</label>
              <div id="mRemarksList" style="flex:1; max-height:100px; overflow-y:auto; margin-bottom:10px; font-size:0.8rem; color:rgba(255,255,255,0.7); background:rgba(0,0,0,0.2); padding:10px; border-radius:5px; border:1px solid rgba(255,255,255,0.02)">
-               <!-- Populated by JS -->
              </div>
              <textarea id="modalRemark" class="form-input" style="height:60px; margin-bottom:15px" placeholder="Add observation, note, or completed service feedback..."></textarea>
              <button class="btn btn-customer" style="width:100%" onclick="submitActionUpdate('remark')">Submit Note / Feedback</button>
            </div>
         </div>
 
-        <!-- Step 9: Job History Module -->
         <div style="margin-top:20px; padding:15px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.05)">
            <h4 style="color:var(--clr-primary); margin-bottom:15px">📜 Job History Track</h4>
            <div class="timeline" id="mTimeline" style="display:flex; flex-direction:column; gap:12px; max-height:200px; overflow-y:auto; padding-right:10px;">
-              <!-- Populated by JS -->
            </div>
+        </div>
+
+        <!-- Step 4 & 6: Partner Feedback Form -->
+        <div id="partnerFeedbackSection" style="margin-top:20px; padding:20px; background:linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(16, 185, 129, 0.05)); border-radius:12px; border:1px solid rgba(255,255,255,0.05); display:none;">
+           <h3 style="color:#10b981; margin-bottom:15px;">🔧 Post-Job Partner Feedback</h3>
+           <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
+              <div class="form-group">
+                 <label class="form-label">Order Quality (1-5)</label>
+                 <input type="number" id="pfOrderQuality" class="form-input" min="1" max="5" value="5">
+              </div>
+              <div class="form-group">
+                 <label class="form-label">Customer Cooperation</label>
+                 <input type="number" id="pfCustCoop" class="form-input" min="1" max="5" value="5">
+              </div>
+              <div class="form-group">
+                 <label class="form-label">Admin Coordination</label>
+                 <input type="number" id="pfAdminCoord" class="form-input" min="1" max="5" value="5">
+              </div>
+              <div class="form-group">
+                 <label class="form-label">Device Condition</label>
+                 <input type="text" id="pfDeviceCond" class="form-input" placeholder="e.g. Good, Scratched, Opened">
+              </div>
+           </div>
+           <div class="form-group">
+              <label class="form-label">Spare / Parts Issue Notes</label>
+              <textarea id="pfPartsNotes" class="form-input" style="height:60px" placeholder="Any issues with parts or logistics?"></textarea>
+           </div>
+           <button class="btn btn-customer" style="width:100%; background:#10b981; border:none;" onclick="submitPartnerFeedback()">✅ Submit Professional Feedback</button>
         </div>
       </div>
     </div>
@@ -248,8 +315,9 @@
      <div class="toast-container" id="toastContainer"></div>
 
   <script>
-    const API = 'http://localhost:5000/api';
-    const token = localStorage.getItem('rv_partner_token');
+    const API = (['localhost', '127.0.0.1', ''].includes(window.location.hostname))
+      ? 'http://localhost:5000/api' : '/api';
+    const token = localStorage.getItem('rv_partner_token') || localStorage.getItem('rv_tech_token');
     let allOrders = [];
 
     if (!token) window.location.href = 'partner-login.html';
@@ -265,8 +333,8 @@
         document.getElementById('profName').value = u.name || '';
         document.getElementById('profEmail').value = u.email || '';
         document.getElementById('profPhone').value = u.phone || '';
-        document.getElementById('profAddr').value = u.address || '';
-        document.getElementById('profCity').value = u.city || '';
+        document.getElementById('profSpec').value = u.specialization || '';
+        document.getElementById('profAreas').value = u.serviceAreas || '';
       }
 
       // Stats
@@ -286,19 +354,53 @@
       const payload = {
         name: document.getElementById('profName').value,
         phone: document.getElementById('profPhone').value,
-        address: document.getElementById('profAddr').value,
-        city: document.getElementById('profCity').value,
+        specialization: document.getElementById('profSpec').value,
+        serviceAreas: document.getElementById('profAreas').value,
       };
-      const pass = document.getElementById('profPass').value;
-      if (pass) payload.password = pass;
 
       const res = await callApi('/technician-auth/profile', { method: 'PUT', body: JSON.stringify(payload) });
+      if (res.success) { showToast('Profile updated!', 'success'); loadDashboard(); }
+      else { showToast(res.message || 'Error updating profile', 'error'); }
+    }
+
+    async function handlePasswordUpdate(e) {
+      e.preventDefault();
+      const oldPassword = document.getElementById('profOldPass').value;
+      const newPassword = document.getElementById('profNewPass').value;
+      const confirmPass = document.getElementById('profConfirmPass').value;
+
+      if (!oldPassword || !newPassword) return showToast('Fill all fields', 'error');
+      if (newPassword !== confirmPass) return showToast('New passwords do not match', 'error');
+      if (newPassword.length < 8) return showToast('Password must be min 8 chars', 'error');
+
+      const res = await callApi('/technician-auth/update-password', { method: 'PUT', body: JSON.stringify({ oldPassword, newPassword }) });
       if (res.success) {
-        showToast('Profile updated!', 'success');
-        document.getElementById('profPass').value = '';
+        showToast('Password updated successfully!', 'success');
+        document.getElementById('profOldPass').value = '';
+        document.getElementById('profNewPass').value = '';
+        document.getElementById('profConfirmPass').value = '';
       } else {
-        showToast(res.message, 'error');
+        showToast(res.message || 'Password update failed', 'error');
       }
+    }
+
+    async function submitPartnerFeedback() {
+       const payload = {
+          bookingId: currentJobId,
+          orderQuality: parseInt(document.getElementById('pfOrderQuality').value),
+          customerCooperation: parseInt(document.getElementById('pfCustCoop').value),
+          adminCoordination: parseInt(document.getElementById('pfAdminCoord').value),
+          deviceCondition: document.getElementById('pfDeviceCond').value,
+          partsNotes: document.getElementById('pfPartsNotes').value
+       };
+       
+       const res = await callApi('/feedback/partner', { method: 'POST', body: JSON.stringify(payload) });
+       if (res.success) {
+          showToast('Professional feedback submitted successfully!', 'success');
+          document.getElementById('partnerFeedbackSection').style.display = 'none';
+       } else {
+          showToast(res.message || 'Error submitting feedback', 'error');
+       }
     }
 
     function renderStats(d) {
@@ -317,10 +419,38 @@
       document.getElementById('assignedSection').classList.toggle('auth-hidden', sec !== 'assigned');
       document.getElementById('ongoingSection').classList.toggle('auth-hidden', sec !== 'ongoing');
       document.getElementById('completedSection').classList.toggle('auth-hidden', sec !== 'completed');
+      document.getElementById('feedbackSection').classList.toggle('auth-hidden', sec !== 'feedback');
       document.getElementById('profileSection').classList.toggle('auth-hidden', sec !== 'profile');
       
       document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
       if (btn) btn.classList.add('active');
+
+      if (sec === 'feedback') loadFeedbackData();
+    }
+
+    async function loadFeedbackData() {
+       const res = await callApi('/feedback/my');
+       const tbody = document.getElementById('feedbackBody');
+       if (res.success && res.data.length > 0) {
+          tbody.innerHTML = res.data.map(f => `
+             <tr>
+                <td style="font-size:0.8rem">${new Date(f.createdAt).toLocaleDateString()}</td>
+                <td><strong style="color:var(--clr-primary)">${f.orderId}</strong></td>
+                <td>
+                   <div style="color:#f59e0b">
+                      ${'⭐'.repeat(f.orderQuality || 0)}
+                      <span style="font-weight:bold; color:#fff; margin-left:5px">${f.orderQuality || 0}.0</span>
+                   </div>
+                   <div style="font-size:0.7rem; color:var(--clr-text-faint)">Coop: ${f.customerCooperation}/5</div>
+                </td>
+                <td>${f.customerCooperation}/5</td>
+                <td><span style="font-size:0.8rem">${f.deviceCondition || '-'}</span></td>
+                <td style="max-width:250px; font-size:0.8rem; color:rgba(255,255,255,0.7)">${f.partsNotes || '-'}</td>
+             </tr>
+          `).join('');
+       } else {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px">No professional feedback recorded yet.</td></tr>';
+       }
     }
 
     function renderOrders() {
@@ -501,6 +631,13 @@
       document.getElementById('mCustAddr').textContent = b.address || 'N/A';
       document.getElementById('mServiceLoc').textContent = `${b.city || 'N/A'}, ${b.pincode || 'N/A'} (${b.state || ''})`;
 
+      // Step 13 & 14: Location fields (partner sees address/city/state/pin only)
+      document.getElementById('mLocAddr').textContent = b.address || '—';
+      document.getElementById('mLocCity').textContent = b.city || '—';
+      document.getElementById('mLocState').textContent = b.state || '—';
+      document.getElementById('mLocPin').textContent = b.pincode || '—';
+
+
       // Step 5: Device Details
       document.getElementById('mDeviceType').textContent = (b.deviceCategory || 'Unknown').toUpperCase();
       document.getElementById('mDeviceBrand').textContent = b.deviceBrand || 'N/A';
@@ -510,9 +647,18 @@
       // Step 6 & 7: Repair Category and Service Mode Syntax translation
       document.getElementById('mRepairType').textContent = Array.isArray(b.repairTypes) ? b.repairTypes.join(', ') : (b.repairTypes || 'Standard Repair');
       
-      const stMap = { dropoff: 'Walk-in Service', pickup: 'Pickup Service', walkin: 'Walk-in Service' };
-      document.getElementById('mServiceMode').textContent = stMap[b.serviceType] || 'Onsite Visit';
-      document.getElementById('mPayout').textContent = b.partnerPayout || '0';
+       const stMap = { dropoff: 'Walk-in Service', pickup: 'Pickup Service', walkin: 'Walk-in Service' };
+       document.getElementById('mServiceMode').textContent = stMap[b.serviceType] || 'Onsite Visit';
+       document.getElementById('mPayout').textContent = b.partnerPayout || '0';
+
+       // Step 2 & 6: Feedback Visibility
+       const fbSection = document.getElementById('partnerFeedbackSection');
+       const completedStatuses = ['Completed', 'Delivered', 'Closed', 'Job Closed', 'Repair Completed'];
+       if (completedStatuses.includes(b.status)) {
+          fbSection.style.display = 'block';
+       } else {
+          fbSection.style.display = 'none';
+       }
       
       // Step 8: Current Status Tracking assignment
       const select = document.getElementById('modalStatusSelect');

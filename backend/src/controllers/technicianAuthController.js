@@ -23,6 +23,10 @@ exports.login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials or account inactive' });
     }
 
+    if (tech.isLocked && (!tech.lockedUntil || tech.lockedUntil > new Date())) {
+      return res.status(403).json({ success: false, message: 'Account is locked. Please contact support.' });
+    }
+
     // Passwords for technicians are set by admin and hashed.
     const isMatch = await bcrypt.compare(password, tech.password);
     if (!isMatch) {
@@ -34,12 +38,14 @@ exports.login = async (req, res) => {
       expiresIn: process.env.JWT_EXPIRES_IN || '30d'
     });
 
+    const mustReset = tech.mustResetPassword;
     tech.password = undefined;
 
     res.json({
       success: true,
-      message: 'Login successful',
+      message: mustReset ? 'Login successful. Please reset your password.' : 'Login successful',
       token,
+      mustResetPassword: mustReset,
       data: tech
     });
   } catch (err) {
@@ -79,6 +85,29 @@ exports.updateProfile = async (req, res) => {
 
     await tech.save();
     res.json({ success: true, data: tech, message: 'Profile updated successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc  Change technician password
+// @route PUT /api/technician-auth/update-password
+// @access Private (Technician)
+exports.updatePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const tech = await Technician.findById(req.user.id).select('+password');
+    
+    if (!tech) return res.status(404).json({ success: false, message: 'Technician not found' });
+
+    const isMatch = await bcrypt.compare(oldPassword, tech.password);
+    if (!isMatch) return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+
+    tech.password = newPassword;
+    tech.mustResetPassword = false; // Clear flag if they changed it themselves
+    await tech.save();
+
+    res.json({ success: true, message: 'Password updated successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

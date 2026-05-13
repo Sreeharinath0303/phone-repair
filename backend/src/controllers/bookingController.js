@@ -1,7 +1,7 @@
 const Booking = require('../models/Booking');
 const { Lead, LEAD_STAGES } = require('../models/Lead');
 const User = require('../models/User');
-const { Technician } = require('../models/Technician');
+const Technician = require('../models/Technician');
 const Feedback = require('../models/Feedback');
 const mongoose = require('mongoose');
 
@@ -10,19 +10,49 @@ const mongoose = require('mongoose');
 // @access Public
 exports.createBooking = async (req, res) => {
   try {
-    const { deviceCategory, deviceBrand, deviceModel, repairTypes, issueDescription,
-            customerName, customerPhone, customerEmail, serviceType, address, city, state, pincode,
-            preferredDate, preferredTimeSlot, leadId,
-            latitude, longitude, ipCity, locationSource } = req.body;
+    const body = req.body || {};
+    const deviceCategory = body.deviceCategory || body.deviceType;
+    const deviceBrand = body.deviceBrand || body.brand;
+    const deviceModel = body.deviceModel || body.model;
+    const repairTypes = Array.isArray(body.repairTypes)
+      ? body.repairTypes
+      : body.repairTypes
+        ? [body.repairTypes]
+        : body.issueType
+          ? [body.issueType]
+          : body.issue
+            ? [body.issue]
+            : [];
+    const issueDescription = body.issueDescription || body.description || '';
+    const customerName = body.customerName || body.name || '';
+    const customerPhone = body.customerPhone || body.phone || '';
+    const customerEmail = (body.customerEmail || body.email || '').trim();
+    const serviceTypeRaw = (body.serviceType || body.service || 'pickup').toString().toLowerCase();
+    const normalizedServiceType = ['pickup', 'dropoff', 'walkin'].includes(serviceTypeRaw)
+      ? serviceTypeRaw
+      : serviceTypeRaw.includes('walk')
+        ? 'walkin'
+        : serviceTypeRaw.includes('store') || serviceTypeRaw.includes('drop')
+          ? 'dropoff'
+          : 'pickup';
+    const address = body.address || '';
+    const city = body.city || '';
+    const state = body.state || '';
+    const pincode = body.pincode || '';
+    const preferredDate = body.preferredDate || body.scheduledDate;
+    const preferredTimeSlot = body.preferredTimeSlot || body.scheduledTime;
+    const leadId = body.leadId;
+    const latitude = body.latitude;
+    const longitude = body.longitude;
+    const ipCity = body.ipCity;
+    const locationSource = body.locationSource;
 
     const requiredFields = [
-      { key: 'deviceCategory', value: deviceCategory },
-      { key: 'deviceBrand', value: deviceBrand },
-      { key: 'deviceModel', value: deviceModel },
+      { key: 'deviceType', value: deviceCategory },
+      { key: 'brand', value: deviceBrand },
+      { key: 'model', value: deviceModel },
       { key: 'customerName', value: customerName },
       { key: 'customerPhone', value: customerPhone },
-      { key: 'customerEmail', value: customerEmail },
-      { key: 'serviceType', value: serviceType },
       { key: 'address', value: address },
       { key: 'city', value: city },
       { key: 'state', value: state },
@@ -37,20 +67,34 @@ exports.createBooking = async (req, res) => {
     if (!Array.isArray(repairTypes) || repairTypes.length === 0) {
       return res.status(400).json({ success: false, message: 'Select at least one repair type.' });
     }
-    if (!/^\+?[0-9]{10,15}$/.test(String(customerPhone).replace(/\s+/g, ''))) {
+    const normalizedPhone = String(customerPhone).replace(/\s+/g, '');
+    if (!/^\+?[0-9]{10,15}$/.test(normalizedPhone)) {
       return res.status(400).json({ success: false, message: 'Invalid mobile number format.' });
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(customerEmail).trim())) {
+    if (customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
       return res.status(400).json({ success: false, message: 'Invalid email format.' });
     }
     if (!/^[0-9]{6}$/.test(String(pincode).trim())) {
       return res.status(400).json({ success: false, message: 'Pincode must be 6 digits.' });
     }
 
+    const safeEmail = customerEmail || `no-reply+${normalizedPhone}@repairvafe.local`;
     const bookingData = {
-      deviceCategory, deviceBrand, deviceModel, repairTypes, issueDescription,
-      customerName, customerPhone, customerEmail, serviceType, address, city, state, pincode,
-      preferredDate, preferredTimeSlot,
+      deviceCategory,
+      deviceBrand,
+      deviceModel,
+      repairTypes,
+      issueDescription,
+      customerName,
+      customerPhone: normalizedPhone,
+      customerEmail: safeEmail,
+      serviceType: normalizedServiceType,
+      address,
+      city,
+      state,
+      pincode,
+      preferredDate,
+      preferredTimeSlot,
       // Location intelligence
       latitude:       latitude   || null,
       longitude:      longitude  || null,
@@ -59,9 +103,49 @@ exports.createBooking = async (req, res) => {
       timeline: [{ stage: 'Booking Received', note: 'Repair request submitted by customer.' }]
     };
 
+    let assignedUserId = null;
+
     if (req.user) {
       bookingData.customerId = req.user._id;
       bookingData.customerEmail = req.user.email; // Ensure it matches the login email
+      assignedUserId = req.user._id;
+    } else {
+      // Step 8 & 9: Auto Account Creation Logic
+      let user = await User.findOne({ $or: [{ email: customerEmail.toLowerCase() }, { phone: customerPhone }] });
+      
+      let autoPassword = null;
+      if (!user) {
+        // Generate secure 8-character password
+        autoPassword = Math.random().toString(36).slice(-8);
+        user = await User.create({
+          name: customerName,
+          email: customerEmail.toLowerCase(),
+          phone: customerPhone,
+          password: autoPassword,
+          address, city, state, pincode,
+          isVerified: true // Auto-created accounts from valid booking flows are pre-verified
+        });
+      }
+      
+      bookingData.customerId = user._id;
+      assignedUserId = user._id;
+      
+      // Step 10: Share Credentials Securely
+      if (autoPassword) {
+        try {
+          const sendEmail = require('../utils/sendEmail');
+          console.log(`[SMS WEBHOOK DISPATCH] -> Texting +91${customerPhone}: "Welcome to RepairVafe! Your temporary password is: ${autoPassword}"`);
+          if (customerEmail) {
+            await sendEmail({
+              email: customerEmail,
+              subject: 'Welcome to RepairVafe! Your Account Details',
+              message: `Hello ${customerName},\n\nWe have automatically created an account for you so you can easily track your bookings and approve quotes.\n\nLogin Email: ${customerEmail}\nTemporary Password: ${autoPassword}\n\nPlease login and change your password as soon as possible.`
+            });
+          }
+        } catch(e) {
+           console.error('Failed to send auto-generated credentials', e.message);
+        }
+      }
     }
 
     const booking = await Booking.create(bookingData);
@@ -93,28 +177,47 @@ exports.createBooking = async (req, res) => {
       }
     }
 
-    // Step 3 & 4: Event Trigger Engine - Booking Submitted Alert
+    // Step 13: Notification Integration
     try {
         const sendEmail = require('../utils/sendEmail');
         
-        // 1. Notify Customer (SMS/WhatsApp Mock + Email)
-        console.log(`[SMS WEBHOOK DISPATCH] -> Texting +91${customerPhone}: "RepairVafe: Your booking ${booking.referenceNumber} is confirmed!"`);
-        await sendEmail({
-           email: customerEmail,
-           subject: `Booking Confirmed: #${booking.referenceNumber}`,
-           message: `Hello ${customerName},\n\nWe have successfully received your repair booking for your ${deviceBrand} ${deviceModel}.\n\nYour Service Date: ${preferredDate} (${preferredTimeSlot})\nReference ID: ${booking.referenceNumber}\n\nOur team is reviewing the hardware needs and will push an Estimate shortly.\n\nThank you for choosing RepairVafe!`
-        });
+        // 1. Notify Customer if email is present
+        if (customerEmail) {
+          await sendEmail({
+             email: customerEmail,
+             type: 'booking',
+             data: { 
+               customerName, 
+               brand: deviceBrand, 
+               model: deviceModel, 
+               orderId: booking.referenceNumber,
+               serviceDate: preferredDate,
+               timeSlot: preferredTimeSlot
+             }
+          });
+        }
 
-        // 2. Admin Alert Trigger (New Order Received)
+        // 2. Admin Alert Trigger (Internal Notification)
         const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
         await sendEmail({
            email: adminEmail,
-           subject: `🚨 [EVENT] New Booking Submitted: #${booking.referenceNumber}`,
-           message: `An event was triggered: BOOKING SUBMITTED.\n\nCustomer: ${customerName}\nDevice: ${deviceBrand} ${deviceModel}\nService Mode: ${serviceType.toUpperCase()}\n\nPlease review and generate the Service Quote within the Admin Dashboard.`
+           subject: `🚨 New Booking: #${booking.referenceNumber}`,
+           message: `New booking received from ${customerName} for ${deviceBrand} ${deviceModel}.`
         });
     } catch(triggerErr) {
         console.error('Booking Submitted Trigger Error:', triggerErr.message);
     }
+
+    // Step 2: Log Activity
+    const { logActivity } = require('../utils/logger');
+    await logActivity({
+      action: 'BOOKING_CREATED',
+      entityType: 'Booking',
+      entityId: booking._id,
+      req,
+      description: `New booking created for ${deviceBrand} ${deviceModel}`,
+      updated: booking
+    });
 
     res.status(201).json({ success: true, data: booking, message: 'Booking submitted successfully!' });
   } catch (err) {
@@ -127,7 +230,7 @@ exports.createBooking = async (req, res) => {
 // @access Private (Admin)
 exports.getAllBookings = async (req, res) => {
   try {
-    const { status, search, location, state, city, brand, model, repairType, page = 1, limit = 20 } = req.query;
+    const { status, search, location, state, city, brand, model, repairType, quoteStatus, assignedStatus, serviceMode, startDate, endDate, feedbackRating, sortBy, sortOrder, page = 1, limit = 20 } = req.query;
     const query = {};
     
     if (status) query.status = status;
@@ -136,6 +239,42 @@ exports.getAllBookings = async (req, res) => {
     if (brand)  query.deviceBrand = { $regex: new RegExp(brand, 'i') };
     if (model)  query.deviceModel = { $regex: new RegExp(model, 'i') };
     if (repairType) query.repairTypes = { $regex: new RegExp(repairType, 'i') };
+
+    if (quoteStatus) {
+      if (quoteStatus.toLowerCase() === 'approved') query.quotationStatus = 'Approved by Customer';
+      else if (quoteStatus.toLowerCase() === 'rejected') query.quotationStatus = 'Rejected by Customer';
+      else if (quoteStatus.toLowerCase() === 'pending') query.quotationStatus = { $in: ['Pending', 'Awaiting Customer Approval'] };
+    }
+
+    if (assignedStatus) {
+      if (assignedStatus.toLowerCase() === 'assigned') query.assignedTechnician = { $ne: null };
+      else if (assignedStatus.toLowerCase() === 'unassigned') query.assignedTechnician = null;
+    }
+
+    if (serviceMode) {
+      if (serviceMode.toLowerCase() === 'pickup') query.serviceType = 'pickup';
+      else if (serviceMode.toLowerCase() === 'store visit' || serviceMode.toLowerCase() === 'dropoff' || serviceMode.toLowerCase() === 'walkin') query.serviceType = { $in: ['dropoff', 'walkin'] };
+    }
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    }
+
+    if (feedbackRating) {
+      const rating = parseInt(feedbackRating);
+      if (!isNaN(rating)) {
+        const Feedback = require('../models/Feedback');
+        const feedbacks = await Feedback.find({ overallRating: rating }).select('referenceNumber');
+        const refs = feedbacks.map(f => f.referenceNumber);
+        query.referenceNumber = { $in: refs };
+      }
+    }
 
     if (location) {
       query.$or = [
@@ -147,14 +286,27 @@ exports.getAllBookings = async (req, res) => {
     }
 
     if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      
+      // Look up matching technicians to support searching by Partner Name
+      const Technician = require('../models/Technician');
+      const matchingTechs = await Technician.find({ name: searchRegex }).select('_id');
+      const techIds = matchingTechs.map(t => t._id);
+
       const searchTerms = [
-        { referenceNumber: new RegExp(search, 'i') },
-        { customerName:    new RegExp(search, 'i') },
-        { deviceModel:     new RegExp(search, 'i') },
-        { customerPhone:   new RegExp(search, 'i') },
-        { address:         new RegExp(search, 'i') },
-        { city:            new RegExp(search, 'i') },
+        { referenceNumber: searchRegex },
+        { customerName:    searchRegex },
+        { customerEmail:   searchRegex },
+        { deviceModel:     searchRegex },
+        { customerPhone:   searchRegex },
+        { address:         searchRegex },
+        { city:            searchRegex }
       ];
+
+      if (techIds.length > 0) {
+        searchTerms.push({ assignedTechnician: { $in: techIds } });
+      }
+
       if (query.$or) {
         query.$and = [{ $or: query.$or }, { $or: searchTerms }];
         delete query.$or;
@@ -163,10 +315,17 @@ exports.getAllBookings = async (req, res) => {
       }
     }
 
+    const sortConfig = {};
+    if (sortBy) {
+       sortConfig[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    } else {
+       sortConfig.createdAt = -1; // Default
+    }
+
     const total = await Booking.countDocuments(query);
     const bookings = await Booking.find(query)
       .populate('assignedTechnician', 'name specialization')
-      .sort({ createdAt: -1 })
+      .sort(sortConfig)
       .skip((page - 1) * limit)
       .limit(Number(limit));
 
@@ -272,13 +431,27 @@ exports.updateStatus = async (req, res) => {
       }
       booking.status = status;
       
-      // Step 16: Order History and Audit Log
+      // Step 14: Order Workflow Logic & Status Logs
       const actorName = req.user ? (req.user.name || (req.user.role ? 'Admin' : 'Technician')) : 'System';
+      const updaterModel = req.user ? (req.user.constructor.modelName) : 'User'; // default to User for tracking page
+
       booking.timeline.push({ 
         stage: status, 
         note: note || `Status mapped to ${status} via ${actorName}`, 
         date: new Date() 
       });
+
+      // Create separate StatusLog record
+      try {
+        const StatusLog = require('../models/StatusLog');
+        await StatusLog.create({
+          orderId: booking._id,
+          status,
+          note: note || `Updated by ${actorName}`,
+          updatedBy: req.user ? req.user._id : null,
+          updaterModel
+        });
+      } catch (logErr) { console.error('StatusLog ingestion bypassed'); }
     }
     if (technicianId && req.user.constructor.modelName !== 'Technician') {
       // Allow only admins to re-assign via status update, tech can't reassign
@@ -303,77 +476,45 @@ exports.updateStatus = async (req, res) => {
     await booking.save();
 
     // Step 12 & 13: Create Omnibus Notification Trigger Rules (Email, SMS, WhatsApp)
+    // Step 13: Create Omnibus Notification Trigger Rules
     if (status) {
       try {
         const sendEmail = require('../utils/sendEmail');
         
-        // Step 7, 8 & 10: Role-Specific Event Context Map (Recipient Rules)
-        let subjectDetails = `Order Update: #${booking.referenceNumber} is now ${status}`;
-        let messageDetails = `Hello ${booking.customerName},\n\nYour repair order #${booking.referenceNumber} status has been updated to: ${status}.\n\nNote: ${note || 'No additional notes.'}\n\nYou can track progress via your secure dashboard.`;
-        let smsText = `RepairVafe Update: Order ${booking.referenceNumber} is now ${status}.`;
-
-        // Step 7: Pickup & Repair Event Formatting
-        if (status === 'Pickup Scheduled') {
-            subjectDetails = `Pickup Scheduled: #${booking.referenceNumber}`;
-            smsText = `RepairVafe: Your device pickup for ${booking.deviceModel} has been formally scheduled. Pack your device securely!`;
-        } else if (status === 'Picked Up' || status === 'Device Received') {
-            subjectDetails = `Device Secure: #${booking.referenceNumber}`;
-            smsText = `RepairVafe: We have your ${booking.deviceModel}! Diagnostics bounding starting shortly.`;
-        } else if (status === 'Diagnosis In Progress' || status === 'Ongoing' || status === 'Repair Ongoing') {
-            subjectDetails = `Repair Pipeline Active: #${booking.referenceNumber}`;
-            smsText = `RepairVafe: Diagnostics & Repair operations are actively underway for your device!`;
-        } else if (status === 'Repair Completed' || status === 'Completed') {
-            subjectDetails = `Repair Completed: #${booking.referenceNumber} ✅`;
-            smsText = `RepairVafe: Great news! Your ${booking.deviceModel} is fully repaired and passing quality checks.`;
-        }
-        
-        // Step 8: Delivery & Feedback Event Formatting
-        else if (status === 'Ready for Dispatch' || status === 'Ready for Return') {
-            subjectDetails = `Ready for Return: #${booking.referenceNumber}`;
-            smsText = `RepairVafe: Your device is ready! Our partner is preparing delivery vectors.`;
-        } else if (status === 'Delivered') {
-            subjectDetails = `Job Delivered! Rate your service #${booking.referenceNumber}`;
-            smsText = `RepairVafe: Your device was delivered safely! Please review our service and let us know your feedback!`;
-        }
-
-        // 1. Notify Customer (Email + SMS/WhatsApp Hooks) -> Recipient Rule 1
         await sendEmail({
           email: booking.customerEmail,
-          subject: subjectDetails,
-          message: messageDetails
+          type: 'status_update',
+          data: { 
+            name: booking.customerName, 
+            orderId: booking.referenceNumber, 
+            status, 
+            note: note || 'Your repair is progressing.' 
+          }
         });
         
-        if (booking.customerPhone) {
-           console.log(`[SMS WEBHOOK DISPATCH] -> Texting +91${booking.customerPhone}: "${smsText}"`);
-           console.log(`[WHATSAPP API DISPATCH] -> Messaging +91${booking.customerPhone}: "RepairVafe Alert: Job ${booking.referenceNumber} pushed to ${status} ✅"`);
-        }
-        
-        // 2. Notify Admin
+        // Notify Admin
         const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
         await sendEmail({
           email: adminEmail,
-          subject: `ADMIN ALERT: Order #${booking.referenceNumber} Status Changed`,
-          message: `Action Registered: The job #${booking.referenceNumber} for ${booking.customerName} has been pushed to: ${status}.\n\nInternal Action Note: ${note || 'No additional metrics'}\nTriggered by: ${req.user ? (req.user.name || 'Admin') : 'System'}`
+          subject: `ADMIN: #${booking.referenceNumber} -> ${status}`,
+          message: `Order #${booking.referenceNumber} status changed to ${status} by ${req.user ? req.user.name : 'System'}`
         });
-        
-        // 3. Notify Partner Dashboard Context (if Assigned AND action was triggered via Admin)
-        if (booking.assignedTechnician && (!req.user || req.user.role === 'admin' || req.user.role === 'superadmin')) {
-             // We dispatch an email to the technician alerting them of Administrative pipeline overrides
-             const Technician = require('../models/Technician');
-             const tech = await Technician.findById(booking.assignedTechnician);
-             if (tech) {
-                 await sendEmail({
-                    email: tech.email,
-                    subject: `PARTNER ALERT: Job #${booking.referenceNumber} Pipeline Override`,
-                    message: `Hello ${tech.name},\n\nAdministrative oversight has pushed Order #${booking.referenceNumber} to: ${status}.\n\nPlease review your active queue.`
-                 });
-             }
-        }
         
       } catch (triggerErr) {
         console.error('Omnibus Notification trigger exception: ', triggerErr.message);
       }
     }
+
+    // Step 2: Log Activity
+    const { logActivity } = require('../utils/logger');
+    await logActivity({
+      action: 'BOOKING_STATUS_UPDATED',
+      entityType: 'Booking',
+      entityId: booking._id,
+      req,
+      description: `Status changed to ${status}`,
+      updated: { status }
+    });
 
     res.json({ success: true, data: booking, message: 'Updated successfully' });
   } catch (err) {
@@ -414,7 +555,50 @@ exports.issueQuotation = async (req, res) => {
       });
     } catch (ignore) {}
 
+    // Step 19: Log Activity
+    const { logActivity } = require('../utils/logger');
+    await logActivity({
+      action: 'QUOTE_ISSUED',
+      entityType: 'Booking',
+      entityId: booking._id,
+      req,
+      description: `Quotation of ₹${quotationAmount} issued for repair`,
+      updated: { quotationAmount, quotationStatus: 'Awaiting Customer Approval' }
+    });
+
     res.json({ success: true, data: booking, message: 'Quotation issued successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc  Request OTP for Quotation Approval
+// @route POST /api/bookings/:ref/quote-otp
+exports.requestQuoteOtp = async (req, res) => {
+  try {
+    const booking = await Booking.findOne({ referenceNumber: req.params.ref.toUpperCase() });
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    
+    if (booking.quotationStatus !== 'Awaiting Customer Approval') {
+      return res.status(400).json({ success: false, message: 'No quotation awaiting approval' });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    booking.trackingOtp = otp;
+    booking.trackingOtpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    await booking.save();
+
+    console.log(`[QUOTE OTP] Sending OTP to ${booking.customerPhone}: ${otp}`);
+    try {
+      const sendEmail = require('../utils/sendEmail');
+      await sendEmail({
+        email: booking.customerEmail,
+        subject: 'RepairVafe - Quote Approval Security OTP',
+        message: `Your OTP to approve Quote for Order ${booking.referenceNumber} is: ${otp}. It will expire in 10 minutes.`
+      });
+    } catch(e) {}
+
+    res.json({ success: true, message: 'Approval OTP sent successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -425,8 +609,8 @@ exports.issueQuotation = async (req, res) => {
 // @access Public
 exports.quotationAction = async (req, res) => {
   try {
-    const { action } = req.body; // 'approve' | 'reject'
-    const booking = await Booking.findOne({ referenceNumber: req.params.ref.toUpperCase() });
+    const { action, otp } = req.body; // 'approve' | 'reject'
+    const booking = await Booking.findOne({ referenceNumber: req.params.ref.toUpperCase() }).select('+trackingOtp +trackingOtpExpiry');
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
     if (booking.quotationStatus !== 'Awaiting Customer Approval' && booking.quotationStatus !== 'Pending')
       return res.status(400).json({ success: false, message: 'Quotation already actioned' });
@@ -435,6 +619,18 @@ exports.quotationAction = async (req, res) => {
     const lead = await Lead.findOne({ bookingReference: booking.referenceNumber });
 
     if (action === 'approve') {
+      if (otp) {
+        if (!booking.trackingOtp || booking.trackingOtp !== String(otp)) {
+          return res.status(400).json({ success: false, message: 'Invalid OTP' });
+        }
+        if (booking.trackingOtpExpiry < new Date()) {
+          return res.status(400).json({ success: false, message: 'OTP has expired' });
+        }
+        // Securely clear OTP upon use
+        booking.trackingOtp = undefined;
+        booking.trackingOtpExpiry = undefined;
+      }
+
       booking.quotationStatus = 'Approved by Customer';
       // Step 9: Customer Approval Workflow execution mapping status directly
       booking.status = 'Approved by Customer'; 
@@ -498,6 +694,17 @@ exports.quotationAction = async (req, res) => {
     } catch(triggerErr) {
         console.error('Quotation Event exception safely bypassed: ', triggerErr.message);
     }
+
+    // Step 19: Log Activity
+    const { logActivity } = require('../utils/logger');
+    await logActivity({
+      action: action === 'approve' ? 'QUOTE_APPROVED' : 'QUOTE_REJECTED',
+      entityType: 'Booking',
+      entityId: booking._id,
+      req,
+      description: `Customer ${action}d the quotation of ₹${booking.quotationAmount}`,
+      updated: { quotationStatus: booking.quotationStatus, status: booking.status }
+    });
 
     res.json({ success: true, data: booking, message: `Quotation ${action}d successfully` });
   } catch (err) {

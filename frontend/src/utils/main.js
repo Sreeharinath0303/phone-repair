@@ -62,6 +62,12 @@ function setupProtectedLinkInterception() {
   });
 }
 
+function logout() {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  sessionStorage.removeItem(AUTH_TOKEN_KEY);
+  window.location.href = window.location.origin;
+}
+
 function updateHomeDynamicAuthUI() {
   const currentPage = getPageName();
   if (currentPage !== 'index.html' && window.location.pathname !== '/') return;
@@ -73,8 +79,27 @@ function updateHomeDynamicAuthUI() {
   const ctaBookBtn = document.getElementById('ctaBookBtn');
 
   if (adminNavLink) {
-    adminNavLink.textContent = loggedIn ? 'Dashboard' : 'Login';
-    adminNavLink.setAttribute('href', loggedIn ? './src/pages/admin.html' : './src/pages/login.html');
+    if (loggedIn) {
+      adminNavLink.textContent = 'Dashboard';
+      adminNavLink.setAttribute('href', './src/pages/admin.html');
+      
+      // Add a logout link directly to the navigation if authenticated
+      if (!document.getElementById('logoutLink')) {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = '#';
+        a.id = 'logoutLink';
+        a.textContent = 'Logout';
+        a.onclick = (e) => { e.preventDefault(); logout(); };
+        li.appendChild(a);
+        adminNavLink.parentElement.insertAdjacentElement('afterend', li);
+      }
+    } else {
+      adminNavLink.textContent = 'Login';
+      adminNavLink.setAttribute('href', './src/pages/login.html');
+      const lo = document.getElementById('logoutLink');
+      if (lo) lo.parentElement.remove();
+    }
   }
 
   if (!loggedIn) {

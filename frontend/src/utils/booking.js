@@ -6,27 +6,11 @@
 const API = (['localhost', '127.0.0.1', ''].includes(window.location.hostname))
   ? 'http://localhost:5000/api' : '/api';
 
-const deviceData = {
-  smartphone: {
-    brands: [{ name: 'Apple', icon: '🍎' }, { name: 'Samsung', icon: '📱' }, { name: 'OnePlus', icon: '🔴' }, { name: 'Xiaomi', icon: '🟠' }, { name: 'Google', icon: '🔵' }, { name: 'Vivo', icon: '🟣' }, { name: 'OPPO', icon: '⚫' }, { name: 'Realme', icon: '🟡' }],
-    models: { Apple: ['iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15', 'iPhone 14 Pro Max', 'iPhone 14 Pro', 'iPhone 14', 'iPhone 13 Pro', 'iPhone 13', 'iPhone 12', 'iPhone SE 3'], Samsung: ['Galaxy S24 Ultra', 'Galaxy S24+', 'Galaxy S24', 'Galaxy S23 Ultra', 'Galaxy A54', 'Galaxy A34', 'Galaxy M54'], OnePlus: ['OnePlus 12', 'OnePlus 11', 'OnePlus Nord 3', 'OnePlus Nord CE 3'], Xiaomi: ['Xiaomi 14 Ultra', 'Xiaomi 13', 'Redmi Note 13 Pro', 'Redmi Note 12', 'POCO X6 Pro'], Google: ['Pixel 8 Pro', 'Pixel 8', 'Pixel 7a', 'Pixel 7 Pro'], Vivo: ['Vivo X100 Pro', 'Vivo V30 Pro', 'Vivo Y200'], OPPO: ['OPPO Find X7', 'OPPO Reno 12 Pro', 'OPPO A98'], Realme: ['Realme GT 6', 'Realme 12 Pro+', 'Realme Narzo 70'] },
-    repairs: [{ icon: '📺', name: 'Screen Replacement', price: '₹1,500 - ₹6,000' }, { icon: '🔋', name: 'Battery Replacement', price: '₹800 - ₹2,500' }, { icon: '🔌', name: 'Charging Port Repair', price: '₹600 - ₹1,500' }, { icon: '📷', name: 'Camera Repair', price: '₹1,000 - ₹3,500' }, { icon: '🔊', name: 'Speaker/Mic Fix', price: '₹500 - ₹1,200' }, { icon: '💧', name: 'Water Damage', price: '₹1,500 - ₹4,000' }, { icon: '🔘', name: 'Button Repair', price: '₹400 - ₹900' }, { icon: '🔒', name: 'Back Cover Replace', price: '₹300 - ₹1,500' }]
-  },
-  laptop: {
-    brands: [{ name: 'Apple', icon: '🍎' }, { name: 'Dell', icon: '🔵' }, { name: 'HP', icon: '💻' }, { name: 'Lenovo', icon: '⚫' }, { name: 'ASUS', icon: '🔴' }, { name: 'Acer', icon: '🟢' }, { name: 'MSI', icon: '🔴' }],
-    models: { Apple: ['MacBook Pro 16" M3', 'MacBook Pro 14" M3', 'MacBook Air 15" M2', 'MacBook Air 13" M2'], Dell: ['XPS 15', 'XPS 13', 'Inspiron 15', 'G15 Gaming', 'Latitude 5540'], HP: ['Spectre x360', 'Envy 16', 'Pavilion 15', 'EliteBook 840'], Lenovo: ['ThinkPad X1 Carbon', 'IdeaPad 5', 'Legion 5', 'Yoga 9i'], ASUS: ['ZenBook 14', 'ROG Zephyrus G14', 'VivoBook 15'], Acer: ['Swift 5', 'Aspire 7', 'Nitro 5'], MSI: ['Stealth 16', 'Raider GE78', 'Creator Z16'] },
-    repairs: [{ icon: '📺', name: 'Screen Replacement', price: '₹3,000 - ₹12,000' }, { icon: '⌨️', name: 'Keyboard Replacement', price: '₹1,500 - ₹4,000' }, { icon: '🔋', name: 'Battery Replacement', price: '₹2,000 - ₹6,000' }, { icon: '💾', name: 'SSD/HDD Upgrade', price: '₹1,500 - ₹8,000' }, { icon: '🧩', name: 'RAM Upgrade', price: '₹1,000 - ₹5,000' }, { icon: '🌡️', name: 'Thermal Cleaning', price: '₹600 - ₹1,200' }, { icon: '🖥️', name: 'Motherboard Repair', price: '₹3,000 - ₹10,000' }, { icon: '💿', name: 'OS Installation', price: '₹500 - ₹1,000' }]
-  },
-  tablet: {
-    brands: [{ name: 'Apple', icon: '🍎' }, { name: 'Samsung', icon: '📱' }, { name: 'Lenovo', icon: '⚫' }, { name: 'Amazon', icon: '🟠' }, { name: 'Xiaomi', icon: '🟠' }],
-    models: { Apple: ['iPad Pro 13" M4', 'iPad Pro 11" M4', 'iPad Air 11" M2', 'iPad 10th Gen', 'iPad Mini 6'], Samsung: ['Galaxy Tab S9 Ultra', 'Galaxy Tab S9+', 'Galaxy Tab S9 FE', 'Galaxy Tab A9+'], Lenovo: ['Tab P12 Pro', 'Tab M10 Plus', 'Yoga Tab 13'], Amazon: ['Fire HD 10', 'Fire HD 8', 'Fire Max 11'], Xiaomi: ['Pad 6 Pro', 'Pad 6', 'Redmi Pad SE'] },
-    repairs: [{ icon: '📺', name: 'Screen Replacement', price: '₹2,000 - ₹8,000' }, { icon: '🔋', name: 'Battery Replacement', price: '₹1,500 - ₹4,000' }, { icon: '🔌', name: 'Charging Port Repair', price: '₹800 - ₹1,800' }, { icon: '📷', name: 'Camera Repair', price: '₹1,000 - ₹3,000' }, { icon: '💧', name: 'Water Damage', price: '₹2,000 - ₹5,000' }]
-  },
-  smartwatch: {
-    brands: [{ name: 'Apple', icon: '🍎' }, { name: 'Samsung', icon: '📱' }, { name: 'Fitbit', icon: '💪' }, { name: 'Garmin', icon: '🟠' }, { name: 'Noise', icon: '🔵' }],
-    models: { Apple: ['Apple Watch Series 9', 'Apple Watch Ultra 2', 'Apple Watch SE 2'], Samsung: ['Galaxy Watch 6 Classic', 'Galaxy Watch 6', 'Galaxy Watch FE'], Fitbit: ['Fitbit Sense 2', 'Fitbit Versa 4', 'Fitbit Charge 6'], Garmin: ['Fenix 7 Pro', 'Venu 3', 'Forerunner 265'], Noise: ['Noise Pulse Pro', 'Noise Icon 3', 'Noise ColorFit Ultra 3'] },
-    repairs: [{ icon: '📺', name: 'Screen Replacement', price: '₹1,500 - ₹5,000' }, { icon: '🔋', name: 'Battery Replacement', price: '₹800 - ₹2,500' }, { icon: '⌚', name: 'Band Replacement', price: '₹300 - ₹1,000' }, { icon: '💧', name: 'Water Damage', price: '₹1,200 - ₹3,500' }]
-  }
+// deviceData is now dynamically fetched from the backend.
+const dynamicData = {
+  brands: [],
+  models: [],
+  repairs: []
 };
 
 const state = {
@@ -288,29 +272,55 @@ document.querySelectorAll('.device-cat-card').forEach(card => {
   });
 });
 
-function renderBrands() {
+async function renderBrands() {
   const grid = document.getElementById('brandGrid');
   document.getElementById('brandSection').style.display = 'block';
-  grid.innerHTML = (deviceData[state.category]?.brands || []).map(brand =>
-    `<button class="brand-chip" data-brand="${brand.name}" onclick="selectBrand('${brand.name}')">${brand.icon} ${brand.name}</button>`
-  ).join('');
+  grid.innerHTML = '<div class="loading-spinner"></div>';
+  
+  try {
+    const res = await fetch(`${API}/brands?category=${state.category}&isActive=true`);
+    const data = await res.json();
+    const brands = data.data || [];
+    dynamicData.brands = brands;
+    
+    grid.innerHTML = brands.map(brand =>
+      `<button class="brand-chip" data-brand="${brand.name}" onclick="selectBrand('${brand._id}', '${brand.name}')">${brand.name}</button>`
+    ).join('') || '<p style="padding:20px;color:var(--clr-text-muted)">No active brands found for this category.</p>';
+  } catch (e) {
+    grid.innerHTML = '<p style="color:#ef4444">Error loading brands.</p>';
+  }
 }
 
-function selectBrand(brand) {
+async function selectBrand(brandId, brandName) {
   document.querySelectorAll('.brand-chip').forEach(chip => chip.classList.remove('selected'));
-  document.querySelector(`.brand-chip[data-brand="${brand}"]`)?.classList.add('selected');
-  state.brand = brand;
+  document.querySelector(`.brand-chip[data-brand="${brandName}"]`)?.classList.add('selected');
+  state.brand = brandName;
+  state.brandId = brandId;
   state.model = null;
-  const models = deviceData[state.category]?.models[brand] || [];
+  state.modelId = null;
+  
   const modelSelect = document.getElementById('modelSelect');
-  modelSelect.innerHTML = '<option value="">-- Select Model --</option>'
-    + models.map(model => `<option value="${model}">${model}</option>`).join('');
+  modelSelect.innerHTML = '<option value="">-- Loading Models... --</option>';
   document.getElementById('modelSection').style.display = 'block';
+
+  try {
+    const res = await fetch(`${API}/models?brand=${brandId}&category=${state.category}&isActive=true`);
+    const data = await res.json();
+    const models = data.data || [];
+    dynamicData.models = models;
+    
+    modelSelect.innerHTML = '<option value="">-- Select Model --</option>'
+      + models.map(model => `<option value="${model._id}" data-name="${model.name}">${model.name}</option>`).join('');
+  } catch (e) {
+    modelSelect.innerHTML = '<option value="">-- Error Loading Models --</option>';
+  }
   updateStep1Btn();
 }
 
 document.getElementById('modelSelect')?.addEventListener('change', function handleModelChange() {
-  state.model = this.value;
+  const selected = this.options[this.selectedIndex];
+  state.modelId = this.value;
+  state.model = selected.dataset.name;
   updateStep1Btn();
 });
 
@@ -319,17 +329,46 @@ function updateStep1Btn() {
   if (button) button.disabled = !(state.category && state.brand && state.model);
 }
 
-function renderRepairTypes() {
+async function renderRepairTypes() {
   const grid = document.getElementById('repairTypesGrid');
   state.repairs = [];
   if (!grid || !state.category) return;
-  grid.innerHTML = (deviceData[state.category]?.repairs || []).map((repair, index) =>
-    `<div class="repair-type-card" id="rtc${index}" onclick="toggleRepair(${index},'${repair.name}')">
-      <div class="rtc-icon">${repair.icon}</div>
-      <div class="rtc-info"><div class="rtc-name">${repair.name}</div><div class="rtc-price">${repair.price}</div></div>
-      <div class="rtc-check">✓</div>
-    </div>`
-  ).join('');
+  grid.innerHTML = '<div class="loading-spinner"></div>';
+
+  try {
+    // Fetch repair types applicable to this model OR this category
+    const res = await fetch(`${API}/repair-types?category=${state.category}&isActive=true`);
+    const res2 = await fetch(`${API}/repair-types?model=${state.modelId}&isActive=true`);
+    
+    const data1 = await res.json();
+    const data2 = await res2.json();
+    
+    // Merge and deduplicate
+    const allRepairs = [...(data1.data || []), ...(data2.data || [])];
+    const uniqueRepairs = [];
+    const ids = new Set();
+    allRepairs.forEach(r => {
+      if (!ids.has(r._id)) {
+        ids.add(r._id);
+        uniqueRepairs.push(r);
+      }
+    });
+
+    dynamicData.repairs = uniqueRepairs;
+
+    grid.innerHTML = uniqueRepairs.map((repair, index) =>
+      `<div class="repair-type-card" id="rtc${index}" onclick="toggleRepair(${index},'${repair.name}')">
+        <div class="rtc-icon">🛠️</div>
+        <div class="rtc-info">
+          <div class="rtc-name">${repair.name}</div>
+          <div class="rtc-price">Est. ${repair.basePrice > 0 ? '₹' + repair.basePrice : 'TBD'}</div>
+        </div>
+        <div class="rtc-check">✓</div>
+      </div>`
+    ).join('') || '<p style="padding:20px;color:var(--clr-text-muted)">No repair services found for this device.</p>';
+  } catch (e) {
+    grid.innerHTML = '<p style="color:#ef4444">Error loading repair services.</p>';
+  }
   updateStep2Btn();
 }
 

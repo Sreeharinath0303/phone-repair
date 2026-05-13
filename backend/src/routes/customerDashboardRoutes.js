@@ -1,16 +1,26 @@
 const router = require('express').Router();
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 const {
   getMyBookings,
+  getMyOrders,
+  getOrderByRef,
   getStats,
   approveQuote,
-  rejectQuote
+  rejectQuote,
+  updateProfile,
+  submitFeedback,
+  getMyFeedback,
+  addAddress,
+  updateAddress,
+  deleteAddress
 } = require('../controllers/customerController');
 
-// All routes require customer login
-router.use(protect);
+// All routes require customer login and customer role
+router.use(protect, authorize('customer'));
 
 router.get('/my-bookings', getMyBookings);
+router.get('/orders', getMyOrders);
+router.get('/order/:ref', getOrderByRef);
 router.get('/stats', getStats);
 router.put('/approve-quote/:id', approveQuote);
 router.put('/reject-quote/:id', rejectQuote);

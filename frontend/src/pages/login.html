@@ -307,6 +307,16 @@
         }
 
         storeAuth(data, remember);
+        
+        if (data.mustResetPassword) {
+          showToast('Security Action Required: Please reset your password to continue.', 'info');
+          document.getElementById('forgotEmail').value = email;
+          document.getElementById('resetSub').textContent = `Administrative Reset: Enter OTP and your new secure password.`;
+          switchAuthMode('reset');
+          setLoading('login', false);
+          return;
+        }
+
         showToast('Login successful. Redirecting to dashboard...', 'success');
         setTimeout(() => window.location.replace(getPostLoginRedirect(data.data.role)), 500);
       } catch (err) {

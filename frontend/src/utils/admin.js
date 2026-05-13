@@ -53,8 +53,11 @@ function showPage(pageId, linkEl) {
     feedback: 'Customer Feedback',
     'email-templates': 'Email Templates',
     logs: 'Communication Logs',
+    'audit-logs': 'Audit Logs / Activity Trail',
     'system-data': 'System Data',
     admins: 'Admin Users',
+    'all-users': 'User Directory',
+    enquiries: 'Enquiry & Support Management',
     'comm-settings': 'Communication Settings'
   };
   document.getElementById('topbarTitle').textContent = titles[pageId] || 'Admin Dashboard';
@@ -72,8 +75,11 @@ function showPage(pageId, linkEl) {
   if (pageId === 'feedback')        loadFeedback();
   if (pageId === 'email-templates') loadEmailTemplates();
   if (pageId === 'logs')            loadLogs();
+  if (pageId === 'audit-logs')      loadAuditLogs();
   if (pageId === 'system-data')     loadSystemData();
   if (pageId === 'admins')          loadAllAdmins();
+  if (pageId === 'all-users')       loadAllUsers();
+  if (pageId === 'enquiries')       loadEnquiries();
   if (pageId === 'comm-settings')   loadCommunicationSettings();
 
   document.getElementById('sidebar').classList.remove('open');
@@ -176,7 +182,11 @@ async function saveCommunicationSettings() {
 async function loadLeads() {
   const tbody = document.getElementById('leadsTableBody');
   tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px">Loading...</td></tr>';
-  const data = await api('/admin/incomplete-leads');
+  
+  const search = document.getElementById('leadsSearch')?.value || '';
+  const qs = new URLSearchParams({ search }).toString();
+  
+  const data = await api(`/admin/incomplete-leads?${qs}`);
   const leads = data?.data || [];
   document.getElementById('leadsCount').textContent = `${leads.length} leads`;
   
@@ -213,6 +223,89 @@ async function loadBookings() {
 }
 
 // ── Order Management ──────────────────────────────────────────
+let currentSortBy = 'createdAt';
+let currentSortOrder = 'desc';
+
+window.toggleSort = function(field) {
+  if (currentSortBy === field) {
+    currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+  } else {
+    currentSortBy = field;
+    currentSortOrder = 'asc'; // default when switching to a new column
+  }
+  
+  // Update header arrows
+  const headers = ['referenceNumber', 'customerName', 'deviceBrand', 'city', 'status', 'assignedTechnician', 'createdAt'];
+  headers.forEach(h => {
+    const el = document.getElementById('sort_' + h);
+    if (el) el.textContent = h === currentSortBy ? (currentSortOrder === 'asc' ? '▲' : '▼') : '';
+  });
+  
+// Step 19: Performance Workflow (Debounce to prevent API spam on rapid typing)
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
+window.debouncedLoadOrders = debounce(() => loadOrders(), 350);
+window.debouncedLoadLeads = debounce(() => loadLeads(), 350);
+window.debouncedLoadLocationAnalytics = debounce(() => loadLocationAnalytics(), 350);
+window.debouncedLoadCustomers = debounce(() => loadCustomers(), 350);
+window.debouncedLoadTechnicians = debounce(() => loadTechnicians(), 350);
+window.debouncedLoadSystemData = debounce(() => loadSystemData(), 350);
+window.debouncedLoadEnquiries = debounce(() => loadEnquiries(), 350);
+window.debouncedLoadLogs = debounce(() => loadLogs(), 350);
+window.debouncedLoadAuditLogs = debounce(() => loadAuditLogs(), 350);
+
+window.resetFilters = function() {
+  const filterIds = [
+    'ordersSearch', 'orderStatusFilter', 'orderCityFilter', 'orderStateFilter', 
+    'orderPincodeFilter', 'orderBrandFilter', 'orderModelFilter', 'orderRepairTypeFilter', 
+    'orderQuoteStatusFilter', 'orderAssignedStatusFilter', 'orderStartDateFilter', 
+    'orderEndDateFilter', 'orderServiceModeFilter', 'orderFeedbackFilter'
+  ];
+  filterIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  
+  currentSortBy = 'createdAt';
+  currentSortOrder = 'desc';
+  const headers = ['referenceNumber', 'customerName', 'deviceBrand', 'city', 'status', 'assignedTechnician', 'createdAt'];
+  headers.forEach(h => {
+    const el = document.getElementById('sort_' + h);
+    if (el) el.textContent = h === 'createdAt' ? '▼' : '';
+  });
+  
+  loadOrders();
+};
+
+window.applyPresetFilter = function(preset) {
+  resetFilters(); // Start fresh
+  
+  if (preset === 'pending_quotes') {
+    document.getElementById('orderQuoteStatusFilter').value = 'Pending';
+  } else if (preset === 'assigned_partner') {
+    document.getElementById('orderAssignedStatusFilter').value = 'Assigned';
+  } else if (preset === 'incomplete_leads') {
+    // Navigate to Leads tab and filter
+    document.querySelector('.sidebar-nav a:nth-child(2)').click();
+    setTimeout(() => {
+       document.getElementById('leadsSearch').value = 'New';
+       loadLeads();
+    }, 100);
+    return;
+  } else if (preset === 'completed_iphone') {
+    document.getElementById('orderStatusFilter').value = 'Completed';
+    document.getElementById('orderBrandFilter').value = 'Apple';
+  }
+  
+  loadOrders();
+};
+
 async function loadOrders() {
   const tbody = document.getElementById('ordersTableBody');
   tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px">Loading...</td></tr>';
@@ -221,8 +314,24 @@ async function loadOrders() {
   const city    = document.getElementById('orderCityFilter')?.value || '';
   const state   = document.getElementById('orderStateFilter')?.value || '';
   const pincode = document.getElementById('orderPincodeFilter')?.value || '';
+  
+  const brand          = document.getElementById('orderBrandFilter')?.value || '';
+  const model          = document.getElementById('orderModelFilter')?.value || '';
+  const repairType     = document.getElementById('orderRepairTypeFilter')?.value || '';
+  const quoteStatus    = document.getElementById('orderQuoteStatusFilter')?.value || '';
+  const assignedStatus = document.getElementById('orderAssignedStatusFilter')?.value || '';
+  
+  const startDate      = document.getElementById('orderStartDateFilter')?.value || '';
+  const endDate        = document.getElementById('orderEndDateFilter')?.value || '';
+  const serviceMode    = document.getElementById('orderServiceModeFilter')?.value || '';
+  const feedbackRating = document.getElementById('orderFeedbackFilter')?.value || '';
 
-  const qs = new URLSearchParams({ status, search, city, state, pincode }).toString();
+  const qs = new URLSearchParams({ 
+    status, search, city, state, pincode, 
+    brand, model, repairType, quoteStatus, assignedStatus,
+    startDate, endDate, serviceMode, feedbackRating,
+    sortBy: currentSortBy, sortOrder: currentSortOrder
+  }).toString();
   const data = await api(`/bookings?${qs}`);
   allOrders = data?.data || [];
   document.getElementById('ordersCount').textContent = `${allOrders.length} orders`;
@@ -237,7 +346,7 @@ async function loadOrders() {
       <td style="font-size:0.8rem;">${srcIcon(o.locationSource)} ${o.city || '—'}${o.state ? ', ' + o.state : ''}<br><span class="td-muted">${o.pincode || ''}</span></td>
       <td>${getBadge(o.status)}</td>
       <td>${o.assignedTechnician?.name || '—'}</td>
-      <td style="font-weight:700">${formatCurrency(o.finalAmount || o.quotationAmount || 0)}</td>
+      <td>${new Date(o.createdAt).toLocaleDateString()}</td>
       <td><button class="action-btn" onclick="openRepairModal('${o._id}')">Details</button></td>
     </tr>
   `).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px">No orders found</td></tr>';
@@ -267,7 +376,11 @@ async function loadQuotations() {
 async function loadCustomers() {
   const grid = document.getElementById('customersGrid');
   grid.innerHTML = '<div style="padding:20px;text-align:center">Loading...</div>';
-  const data = await api('/admin/customers');
+  
+  const search = document.getElementById('customersSearch')?.value || '';
+  const qs = new URLSearchParams({ search }).toString();
+  
+  const data = await api(`/admin/customers?${qs}`);
   const custs = data?.data || [];
 
   grid.innerHTML = `
@@ -284,7 +397,8 @@ async function loadCustomers() {
               <td><span class="badge ${c.isActive ? 'badge-completed' : 'badge-rejected'}">${c.isActive ? 'Active' : 'Inactive'}</span></td>
               <td>
                 <div class="td-actions">
-                  <button class="action-btn" onclick="editCustomer('${c._id}')">Edit</button>
+                  <button class="action-btn" onclick="editCustomer('${c._id}')">Profile</button>
+                  <button class="action-btn" onclick="openAccountSecurityModal('${c._id}', 'customer', '${c.name}', ${c.isLocked || false}, ${c.isActive || true})">🔐 Security</button>
                   <button class="action-btn" onclick="viewCustomerHistory('${c.email}')">History</button>
                 </div>
               </td>
@@ -300,7 +414,11 @@ async function loadCustomers() {
 async function loadTechnicians() {
   const grid = document.getElementById('techGrid');
   grid.innerHTML = '<div style="padding:20px;text-align:center">Loading partners...</div>';
-  const data = await api('/admin/partners');
+  
+  const search = document.getElementById('techniciansSearch')?.value || '';
+  const qs = new URLSearchParams({ search }).toString();
+  
+  const data = await api(`/admin/partners?${qs}`);
   const partners = data?.data || [];
 
   grid.innerHTML = `
@@ -318,6 +436,7 @@ async function loadTechnicians() {
               <td>
                 <div class="td-actions">
                   <button class="action-btn" onclick="editPartner('${p._id}')">Profile</button>
+                  <button class="action-btn" onclick="openAccountSecurityModal('${p._id}', 'partner', '${p.name}', ${p.isLocked || false}, ${p.isActive || true})">🔐 Security</button>
                   <button class="action-btn" onclick="openPayoutModal('${p._id}', ${p.payoutBalance})">Payout</button>
                 </div>
               </td>
@@ -341,9 +460,59 @@ async function loadAllAdmins() {
       <td>${a.email}</td>
       <td><span class="badge" style="background:rgba(255,255,255,0.05)">${a.role.toUpperCase()}</span></td>
       <td><span class="badge ${a.isActive ? 'badge-completed' : 'badge-rejected'}">${a.isActive ? 'Active' : 'Inactive'}</span></td>
-      <td><button class="action-btn" onclick="resetAdminPassword('${a._id}')">Reset Pass</button></td>
+      <td>
+        <div class="td-actions">
+          <button class="action-btn" onclick="openAccountSecurityModal('${a._id}', 'admin', '${a.name}', ${a.isLocked || false}, ${a.isActive || true})">🔐 Security</button>
+        </div>
+      </td>
     </tr>
   `).join('');
+}
+
+// ── Unified Directory (Step 15 & 16) ──────────────────────────
+let _allUsersDebounce = null;
+function debouncedLoadAllUsers() {
+  clearTimeout(_allUsersDebounce);
+  _allUsersDebounce = setTimeout(loadAllUsers, 400);
+}
+
+async function loadAllUsers() {
+  const tbody = document.getElementById('allUsersTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px">Searching Directory...</td></tr>';
+
+  const search = document.getElementById('userDirSearch')?.value || '';
+  const role   = document.getElementById('userDirRoleFilter')?.value || '';
+  const status = document.getElementById('userDirStatusFilter')?.value || '';
+  
+  const qs = new URLSearchParams({ search, role, status }).toString();
+  const data = await api(`/admin/accounts?${qs}`);
+  const users = data?.data || [];
+
+  tbody.innerHTML = users.map(u => {
+    let statusHtml = '';
+    if (u.isLocked) statusHtml = '<span class="badge badge-rejected">Locked</span>';
+    else if (!u.isActive) statusHtml = '<span class="badge" style="background:rgba(255,255,255,0.05)">Inactive</span>';
+    else statusHtml = '<span class="badge badge-completed">Active</span>';
+
+    return `
+      <tr>
+        <td>
+          <div style="font-weight:700">${u.name}</div>
+          <div class="td-muted" style="font-size:0.72rem">${u._id}</div>
+        </td>
+        <td>${u.email}<br><span class="td-muted">${u.phone || ''}</span></td>
+        <td><span class="badge" style="text-transform:capitalize; background:rgba(255,255,255,0.05)">${u.role || u.type}</span></td>
+        <td>${statusHtml}</td>
+        <td>${u.lastLogin ? formatDate(u.lastLogin) : 'Never'}</td>
+        <td>
+          <div class="td-actions">
+            <button class="action-btn" onclick="openAccountSecurityModal('${u._id}', '${u.type}', '${u.name}', ${u.isLocked || false}, ${u.isActive || true})">🔐 Security</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('') || '<tr><td colspan="6" style="text-align:center;padding:20px">No users match filters</td></tr>';
 }
 
 async function showAddAdminModal() {
@@ -415,44 +584,98 @@ function renderBarChart(id, data) {
 async function loadSystemData() {
   const header = document.getElementById('dataTableHeader');
   const tbody  = document.getElementById('dataTableBody');
-  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px">Loading...</td></tr>';
+  const countEl = document.getElementById('sysRecordCount');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px"><div class="loading-spinner"></div> Loading system data...</td></tr>';
 
-  const data = await api(`/admin/${currentDataTab}`);
+  const search = document.getElementById('sysSearch')?.value || '';
+  const status = document.getElementById('sysStatusFilter')?.value || '';
+  const brand = document.getElementById('sysBrandFilter')?.value || '';
+  
+  // Tab-specific filter visibility
+  document.getElementById('sysBrandFilterWrap').style.display = (currentDataTab === 'models' || currentDataTab === 'repair-types') ? 'block' : 'none';
+  if (currentDataTab === 'models' && !document.getElementById('sysBrandFilter').options.length > 1) loadBrandFilterOptions();
+
+  const data = await api(`/admin/${currentDataTab}?search=${search}&isActive=${status}&brand=${brand}`);
   const items = data?.data || [];
+  if (countEl) countEl.textContent = `${items.length} records`;
 
   if (currentDataTab === 'repair-types') {
-    header.innerHTML = '<tr><th>Name</th><th>Base Price</th><th>Payout</th><th>Status</th><th>Actions</th></tr>';
-    tbody.innerHTML = items.map(i => `
-      <tr><td>${i.name}</td><td>${formatCurrency(i.basePrice)}</td><td>${formatCurrency(i.basePayout)}</td>
-      <td><span class="badge ${i.isActive ? 'badge-completed' : 'badge-rejected'}">${i.isActive ? 'Active' : 'Inactive'}</span></td>
-      <td><button class="action-btn" onclick="editSystemItem('${i._id}')">Edit</button></td></tr>
-    `).join('');
+    header.innerHTML = '<tr><th>Name</th><th>Linked To</th><th>Price / Payout</th><th>Status</th><th>Actions</th></tr>';
+    tbody.innerHTML = items.map(i => {
+      const models = (i.applicableModels || []).map(m => m.name).join(', ');
+      const linked = models ? `<div style="font-size:0.8rem;color:var(--clr-text-muted)">${models}</div>` : `<span style="text-transform:capitalize">${i.category || 'general'}</span>`;
+      
+      return `
+      <tr>
+        <td style="font-weight:600">${i.name}</td>
+        <td>${linked}</td>
+        <td>${formatCurrency(i.basePrice)} / ${formatCurrency(i.basePayout)}</td>
+        <td><span class="badge ${i.isActive ? 'badge-completed' : 'badge-rejected'}">${i.isActive ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <div class="td-actions">
+            <button class="action-btn" onclick="editSystemItem('${i._id}')">Edit</button>
+            <button class="action-btn" onclick="toggleSystemStatus('${i._id}', ${i.isActive})">${i.isActive ? 'Deactivate' : 'Activate'}</button>
+            <button class="action-btn delete-btn" style="color:#ef4444" onclick="deleteSystemItem('${i._id}')">Delete</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="5" style="text-align:center;padding:40px">No repair types found.</td></tr>';
   } else if (currentDataTab === 'brands') {
-    header.innerHTML = '<tr><th>Brand</th><th>Category</th><th>Status</th><th>Actions</th></tr>';
+    header.innerHTML = '<tr><th>Brand Name</th><th>Category</th><th>Status</th><th>Actions</th></tr>';
     tbody.innerHTML = items.map(i => `
-      <tr><td>${i.name}</td><td>${i.category}</td>
-      <td><span class="badge ${i.isActive ? 'badge-completed' : 'badge-rejected'}">${i.isActive ? 'Active' : 'Inactive'}</span></td>
-      <td><button class="action-btn" onclick="editSystemItem('${i._id}')">Edit</button></td></tr>
-    `).join('');
+      <tr>
+        <td style="font-weight:600">${i.name}</td>
+        <td style="text-transform:capitalize">${i.category}</td>
+        <td><span class="badge ${i.isActive ? 'badge-completed' : 'badge-rejected'}">${i.isActive ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <div class="td-actions">
+            <button class="action-btn" onclick="editSystemItem('${i._id}')">Edit</button>
+            <button class="action-btn" onclick="toggleSystemStatus('${i._id}', ${i.isActive})">${i.isActive ? 'Deactivate' : 'Activate'}</button>
+            <button class="action-btn delete-btn" style="color:#ef4444" onclick="deleteSystemItem('${i._id}')">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="4" style="text-align:center;padding:40px">No brands found.</td></tr>';
   } else if (currentDataTab === 'models') {
-    header.innerHTML = '<tr><th>Model</th><th>Brand</th><th>Category</th><th>Actions</th></tr>';
+    header.innerHTML = '<tr><th>Model Name</th><th>Brand</th><th>Category</th><th>Status</th><th>Actions</th></tr>';
     tbody.innerHTML = items.map(i => `
-      <tr><td>${i.name}</td><td>${i.brand?.name || '—'}</td><td>${i.category}</td>
-      <td><button class="action-btn" onclick="editSystemItem('${i._id}')">Edit</button></td></tr>
-    `).join('');
+      <tr>
+        <td style="font-weight:600">${i.name}</td>
+        <td>${i.brand?.name || '—'}</td>
+        <td style="text-transform:capitalize">${i.category}</td>
+        <td><span class="badge ${i.isActive ? 'badge-completed' : 'badge-rejected'}">${i.isActive ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <div class="td-actions">
+            <button class="action-btn" onclick="editSystemItem('${i._id}')">Edit</button>
+            <button class="action-btn" onclick="toggleSystemStatus('${i._id}', ${i.isActive})">${i.isActive ? 'Deactivate' : 'Activate'}</button>
+            <button class="action-btn delete-btn" style="color:#ef4444" onclick="deleteSystemItem('${i._id}')">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="5" style="text-align:center;padding:40px">No models found.</td></tr>';
   } else if (currentDataTab === 'offers') {
     header.innerHTML = '<tr><th>Code</th><th>Discount</th><th>Uses</th><th>Status</th><th>Actions</th></tr>';
     tbody.innerHTML = items.map(i => `
-      <tr><td style="color:var(--clr-primary); font-weight:700">${i.code}</td><td>${i.discountValue}${i.discountType === 'percentage' ? '%' : '₹'}</td>
-      <td>${i.usedCount} / ${i.maxUses || '∞'}</td><td><span class="badge ${i.isActive ? 'badge-completed' : 'badge-rejected'}">${i.isActive ? 'Active' : 'Inactive'}</span></td>
-      <td><button class="action-btn" onclick="editSystemItem('${i._id}')">Edit</button></td></tr>
-    `).join('');
+      <tr>
+        <td style="color:var(--clr-primary); font-weight:700">${i.code}</td>
+        <td>${i.discountValue}${i.discountType === 'percentage' ? '%' : '₹'}</td>
+        <td>${i.usedCount} / ${i.maxUses || '∞'}</td>
+        <td><span class="badge ${i.isActive ? 'badge-completed' : 'badge-rejected'}">${i.isActive ? 'Active' : 'Inactive'}</span></td>
+        <td>
+          <div class="td-actions">
+            <button class="action-btn" onclick="editSystemItem('${i._id}')">Edit</button>
+            <button class="action-btn" onclick="toggleSystemStatus('${i._id}', ${i.isActive})">${i.isActive ? 'Deactivate' : 'Activate'}</button>
+            <button class="action-btn delete-btn" style="color:#ef4444" onclick="deleteSystemItem('${i._id}')">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="5" style="text-align:center;padding:40px">No offers found.</td></tr>';
   }
 }
 
 function switchDataTab(tab, btn) {
   currentDataTab = tab;
-  document.querySelectorAll('.tab-btns .btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tabs-wrap .btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   loadSystemData();
 }
@@ -788,11 +1011,1008 @@ async function findNearbyPartners() {
   `;
 }
 
+// ── Lead Modal ────────────────────────────────────────────────
+async function openLeadModal(id) {
+  const data = await api(`/admin/incomplete-leads`);
+  const lead = (data?.data || []).find(l => l._id === id);
+  if (!lead) return showToast('Lead not found', 'error');
+  document.getElementById('modalTitle').textContent = `Lead: ${lead.customerName}`;
+  document.getElementById('modalBody').innerHTML = `
+    <div class="modal-detail-grid">
+      <div><label class="form-label">Name</label><div>${lead.customerName}</div></div>
+      <div><label class="form-label">Phone</label><div>${lead.mobileNumber}</div></div>
+      <div><label class="form-label">Email</label><div>${lead.email || '—'}</div></div>
+      <div><label class="form-label">Device</label><div>${lead.deviceBrand || ''} ${lead.deviceModel || ''}</div></div>
+      <div><label class="form-label">City / State</label><div>${lead.city || '—'}, ${lead.state || '—'}</div></div>
+      <div><label class="form-label">Stage</label><div>${getBadge(lead.stage || 'New')}</div></div>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="btn btn-primary" style="width:100%" onclick="convertLead('${lead._id}')">Convert to Booking</button>
+    </div>`;
+  document.getElementById('modalStatusActions').innerHTML = '';
+  document.getElementById('repairModal').style.display = 'flex';
+}
+
+async function convertLead(leadId) {
+  const res = await api('/admin/convert-lead', { method: 'POST', body: JSON.stringify({ leadId }) });
+  if (res?.success) { showToast('Lead converted to booking!', 'success'); closeModal(); loadLeads(); }
+  else showToast(res?.message || 'Conversion failed', 'error');
+}
+
+// ── Feedback ──────────────────────────────────────────────────
+async function loadFeedback() {
+  const fbList = document.getElementById('adminFeedbackList');
+  const fbStats = document.getElementById('fbStatsRow');
+  if (fbList) fbList.innerHTML = '<div style="padding:20px;text-align:center">Loading...</div>';
+  const data = await api('/admin/feedback-analytics');
+  if (!data?.success) return;
+  const { feedbacks, stats } = data.data;
+  if (fbStats) fbStats.innerHTML = `
+    <div class="stat-card"><div class="stat-card-num">${stats.total}</div><div class="stat-card-label">Total Reviews</div></div>
+    <div class="stat-card"><div class="stat-card-num">⭐ ${stats.avgRating}</div><div class="stat-card-label">Avg Rating</div></div>
+    <div class="stat-card"><div class="stat-card-num">${stats.fiveStar}</div><div class="stat-card-label">5-Star</div></div>
+    <div class="stat-card"><div class="stat-card-num">${stats.recommendRate}%</div><div class="stat-card-label">Recommend Rate</div></div>`;
+  if (fbList) fbList.innerHTML = (feedbacks || []).map(f => `
+    <div style="padding:16px;margin-bottom:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.06);">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-weight:600">${f.customerName || '—'} <span style="color:var(--clr-text-faint);font-size:0.8rem">#${f.referenceNumber}</span></div>
+        <div style="color:#f59e0b;font-size:1.1rem">${'⭐'.repeat(f.overallRating || 0)}</div>
+      </div>
+      <div style="margin-top:8px;font-size:0.85rem;color:var(--clr-text-muted)">${f.comments || 'No comment'}</div>
+      <div style="margin-top:6px;font-size:0.75rem;color:var(--clr-text-faint)">${formatDate(f.createdAt)}</div>
+    </div>`).join('') || '<div style="padding:20px;text-align:center;color:var(--clr-text-faint)">No feedback yet</div>';
+}
+
+// ── Email Templates ───────────────────────────────────────────
+async function loadEmailTemplates() {
+  const tbody = document.getElementById('templatesTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px">Loading...</td></tr>';
+  const data = await api('/admin/email-templates');
+  const templates = data?.data || [];
+  tbody.innerHTML = templates.map(t => `
+    <tr>
+      <td style="font-weight:600">${t.name}</td>
+      <td><span style="font-size:0.75rem;text-transform:uppercase">${t.type}</span></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.subject}</td>
+      <td><span class="badge ${t.isActive ? 'badge-completed' : 'badge-rejected'}">${t.isActive ? 'Active' : 'Inactive'}</span></td>
+      <td><div class="td-actions">
+        <button class="action-btn" onclick="editTemplate('${t._id}','${encodeURIComponent(t.subject)}','${encodeURIComponent(t.body || '')}')">Edit</button>
+        <button class="action-btn" onclick="deleteTemplate('${t._id}')">Delete</button>
+      </div></td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;padding:20px">No templates</td></tr>';
+}
+
+function showAddTemplateModal() {
+  document.getElementById('formModalTitle').textContent = 'New Email Template';
+  document.getElementById('formModalBody').innerHTML = `
+    <div class="form-group"><label>Name</label><input type="text" id="tmplName" class="form-input" placeholder="e.g. Booking Confirmation"></div>
+    <div class="form-group"><label>Type</label>
+      <select id="tmplType" class="form-select">
+        <option value="booking_confirmation">Booking Confirmation</option>
+        <option value="quote_sent">Quote Sent</option>
+        <option value="status_update">Status Update</option>
+        <option value="follow_up">Follow Up</option>
+        <option value="custom">Custom</option>
+      </select></div>
+    <div class="form-group"><label>Subject</label><input type="text" id="tmplSubject" class="form-input"></div>
+    <div class="form-group"><label>Body</label><textarea id="tmplBody" class="form-textarea" rows="5" placeholder="Use {{customerName}}, {{referenceNumber}}, {{deviceModel}} as placeholders"></textarea></div>`;
+  document.getElementById('formModalSubmit').onclick = saveTemplate;
+  document.getElementById('formModal').style.display = 'flex';
+}
+
+async function saveTemplate() {
+  const name = getVal('tmplName'), type = getVal('tmplType'), subject = getVal('tmplSubject'), body = getVal('tmplBody');
+  if (!name || !subject || !body) return showToast('Fill all fields', 'error');
+  const res = await api('/admin/email-templates', { method: 'POST', body: JSON.stringify({ name, type, subject, body }) });
+  if (res?.success) { showToast('Template created', 'success'); closeFormModal(); loadEmailTemplates(); }
+  else showToast(res?.message || 'Error', 'error');
+}
+
+async function editTemplate(id, encSubject, encBody) {
+  document.getElementById('formModalTitle').textContent = 'Edit Template';
+  document.getElementById('formModalBody').innerHTML = `
+    <div class="form-group"><label>Subject</label><input type="text" id="tmplSubject" class="form-input" value="${decodeURIComponent(encSubject)}"></div>
+    <div class="form-group"><label>Body</label><textarea id="tmplBody" class="form-textarea" rows="5">${decodeURIComponent(encBody)}</textarea></div>
+    <div class="form-group"><label><input type="checkbox" id="tmplActive" checked> Active</label></div>`;
+  document.getElementById('formModalSubmit').onclick = async () => {
+    const res = await api(`/admin/email-templates/${id}`, { method: 'PUT', body: JSON.stringify({ subject: getVal('tmplSubject'), body: getVal('tmplBody'), isActive: getCheck('tmplActive') }) });
+    if (res?.success) { showToast('Updated', 'success'); closeFormModal(); loadEmailTemplates(); }
+  };
+  document.getElementById('formModal').style.display = 'flex';
+}
+
+async function deleteTemplate(id) {
+  if (!confirm('Deactivate this template?')) return;
+  const res = await api(`/admin/email-templates/${id}`, { method: 'DELETE' });
+  if (res?.success) { showToast('Deactivated', 'success'); loadEmailTemplates(); }
+}
+
+// ── Customer CRUD ─────────────────────────────────────────────
+function showAddCustomerModal() {
+  document.getElementById('formModalTitle').textContent = 'Add Customer';
+  document.getElementById('formModalBody').innerHTML = `
+    <div class="form-group"><label>Name</label><input type="text" id="custFormName" class="form-input"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="custFormEmail" class="form-input"></div>
+    <div class="form-group"><label>Phone</label><input type="tel" id="custFormPhone" class="form-input"></div>
+    <div class="form-group"><label>City</label><input type="text" id="custFormCity" class="form-input"></div>
+    <div class="form-group"><label>State</label><input type="text" id="custFormState" class="form-input"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="custFormPass" class="form-input"></div>`;
+  document.getElementById('formModalSubmit').onclick = async () => {
+    const payload = { name: getVal('custFormName'), email: getVal('custFormEmail'), phone: getVal('custFormPhone'), city: getVal('custFormCity'), state: getVal('custFormState'), password: getVal('custFormPass') };
+    if (!payload.name || !payload.email) return showToast('Name and Email required', 'error');
+    const res = await api('/admin/customers', { method: 'POST', body: JSON.stringify(payload) });
+    if (res?.success) { showToast('Customer created', 'success'); closeFormModal(); loadCustomers(); }
+    else showToast(res?.message || 'Error', 'error');
+  };
+  document.getElementById('formModal').style.display = 'flex';
+}
+
+async function editCustomer(id) {
+  const data = await api('/admin/customers');
+  const c = (data?.data || []).find(x => x._id === id);
+  if (!c) return;
+  document.getElementById('formModalTitle').textContent = 'Edit Customer';
+  document.getElementById('formModalBody').innerHTML = `
+    <div class="form-group"><label>Name</label><input type="text" id="custEditName" class="form-input" value="${c.name || ''}"></div>
+    <div class="form-group"><label>Phone</label><input type="tel" id="custEditPhone" class="form-input" value="${c.phone || ''}"></div>
+    <div class="form-group"><label>City</label><input type="text" id="custEditCity" class="form-input" value="${c.city || ''}"></div>
+    <div class="form-group"><label>State</label><input type="text" id="custEditState" class="form-input" value="${c.state || ''}"></div>
+    <div class="form-group"><label><input type="checkbox" id="custEditActive" ${c.isActive ? 'checked' : ''}> Active</label></div>`;
+  document.getElementById('formModalSubmit').onclick = async () => {
+    const res = await api(`/admin/customers/${id}`, { method: 'PUT', body: JSON.stringify({ name: getVal('custEditName'), phone: getVal('custEditPhone'), city: getVal('custEditCity'), state: getVal('custEditState'), isActive: getCheck('custEditActive') }) });
+    if (res?.success) { showToast('Updated', 'success'); closeFormModal(); loadCustomers(); }
+  };
+  document.getElementById('formModal').style.display = 'flex';
+}
+
+async function viewCustomerHistory(email) {
+  const data = await api(`/admin/customers/${email}/history`);
+  const history = data?.data || [];
+  document.getElementById('modalTitle').textContent = `Booking History: ${email}`;
+  document.getElementById('modalBody').innerHTML = history.length
+    ? `<div class="data-table-wrap" style="max-height:350px;overflow-y:auto"><table class="data-table"><thead><tr><th>Ref</th><th>Device</th><th>Status</th><th>Amount</th><th>Date</th></tr></thead><tbody>
+      ${history.map(b => `<tr><td>${b.referenceNumber}</td><td>${b.deviceBrand} ${b.deviceModel}</td><td>${getBadge(b.status)}</td><td>${formatCurrency(b.quotationAmount || 0)}</td><td>${formatDate(b.createdAt)}</td></tr>`).join('')}
+    </tbody></table></div>`
+    : '<div style="padding:20px;text-align:center;color:var(--clr-text-faint)">No bookings found for this customer</div>';
+  document.getElementById('modalStatusActions').innerHTML = '';
+  document.getElementById('repairModal').style.display = 'flex';
+}
+
+// ── Partner CRUD ──────────────────────────────────────────────
+function showAddPartnerModal() {
+  document.getElementById('formModalTitle').textContent = 'Add Partner';
+  document.getElementById('formModalBody').innerHTML = `
+    <div class="form-group"><label>Name</label><input type="text" id="prtName" class="form-input"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="prtEmail" class="form-input"></div>
+    <div class="form-group"><label>Phone</label><input type="tel" id="prtPhone" class="form-input"></div>
+    <div class="form-group"><label>Specialization</label><input type="text" id="prtSpec" class="form-input" placeholder="e.g. Smartphones, Laptops"></div>
+    <div class="form-group"><label>Service Areas (comma separated)</label><input type="text" id="prtAreas" class="form-input" placeholder="Chennai, Bangalore"></div>
+    <div class="form-group"><label>City</label><input type="text" id="prtCity" class="form-input"></div>
+    <div class="form-group"><label>State</label><input type="text" id="prtState" class="form-input"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="prtPass" class="form-input"></div>`;
+  document.getElementById('formModalSubmit').onclick = async () => {
+    const payload = { name: getVal('prtName'), email: getVal('prtEmail'), phone: getVal('prtPhone'), specialization: getVal('prtSpec'), serviceAreas: getVal('prtAreas'), city: getVal('prtCity'), state: getVal('prtState'), password: getVal('prtPass') };
+    if (!payload.name || !payload.email || !payload.phone || !payload.password) return showToast('Fill required fields', 'error');
+    const res = await api('/admin/partners', { method: 'POST', body: JSON.stringify(payload) });
+    if (res?.success) { showToast('Partner created', 'success'); closeFormModal(); loadTechnicians(); }
+    else showToast(res?.message || 'Error', 'error');
+  };
+  document.getElementById('formModal').style.display = 'flex';
+}
+
+async function editPartner(id) {
+  const data = await api('/admin/partners');
+  const p = (data?.data || []).find(x => x._id === id);
+  if (!p) return;
+  document.getElementById('formModalTitle').textContent = 'Edit Partner';
+  document.getElementById('formModalBody').innerHTML = `
+    <div class="form-group"><label>Name</label><input type="text" id="prtEditName" class="form-input" value="${p.name || ''}"></div>
+    <div class="form-group"><label>Phone</label><input type="tel" id="prtEditPhone" class="form-input" value="${p.phone || ''}"></div>
+    <div class="form-group"><label>Specialization</label><input type="text" id="prtEditSpec" class="form-input" value="${p.specialization || ''}"></div>
+    <div class="form-group"><label>Service Areas</label><input type="text" id="prtEditAreas" class="form-input" value="${(p.serviceAreas || []).join(', ')}"></div>
+    <div class="form-group"><label>City</label><input type="text" id="prtEditCity" class="form-input" value="${p.city || ''}"></div>
+    <div class="form-group"><label>State</label><input type="text" id="prtEditState" class="form-input" value="${p.state || ''}"></div>
+    <div class="form-group"><label><input type="checkbox" id="prtEditActive" ${p.isActive ? 'checked' : ''}> Active</label></div>`;
+  document.getElementById('formModalSubmit').onclick = async () => {
+    const res = await api(`/admin/partners/${id}`, { method: 'PUT', body: JSON.stringify({ name: getVal('prtEditName'), phone: getVal('prtEditPhone'), specialization: getVal('prtEditSpec'), serviceAreas: getVal('prtEditAreas'), city: getVal('prtEditCity'), state: getVal('prtEditState'), isActive: getCheck('prtEditActive') }) });
+    if (res?.success) { showToast('Updated', 'success'); closeFormModal(); loadTechnicians(); }
+  };
+  document.getElementById('formModal').style.display = 'flex';
+}
+
+async function openPayoutModal(partnerId, currentBal) {
+  document.getElementById('formModalTitle').textContent = 'Manage Payout';
+  document.getElementById('formModalBody').innerHTML = `
+    <div style="margin-bottom:12px;font-size:0.9rem;color:var(--clr-text-muted)">Current Balance: <strong>${formatCurrency(currentBal || 0)}</strong></div>
+    <div class="form-group"><label>Amount (₹)</label><input type="number" id="payoutAmt" class="form-input" placeholder="Enter amount"></div>
+    <div class="form-group"><label>Action</label>
+      <select id="payoutAction" class="form-select">
+        <option value="add">Add (Work Done)</option>
+        <option value="subtract">Subtract (Paid Out)</option>
+      </select></div>
+    <div class="form-group"><label>Note (optional)</label><input type="text" id="payoutNote" class="form-input"></div>`;
+  document.getElementById('formModalSubmit').onclick = async () => {
+    const res = await api(`/admin/partners/${partnerId}/payout`, { method: 'POST', body: JSON.stringify({ amount: getVal('payoutAmt'), action: getVal('payoutAction'), note: getVal('payoutNote') }) });
+    if (res?.success) { showToast('Payout updated', 'success'); closeFormModal(); loadTechnicians(); }
+    else showToast(res?.message || 'Error', 'error');
+  };
+  document.getElementById('formModal').style.display = 'flex';
+}
+
+// ── System Data CRUD ──────────────────────────────────────────
+async function showAddSystemItemModal() {
+  document.getElementById('formModalTitle').textContent = `Add New ${currentDataTab.slice(0, -1).replace('-', ' ')}`;
+  let fields = '';
+  
+  if (currentDataTab === 'repair-types') {
+    const modelsData = await api('/admin/models');
+    const models = modelsData?.data || [];
+    fields = `
+      <div class="form-group"><label>Name</label><input type="text" id="sysName" class="form-input" placeholder="e.g. Screen Replacement"></div>
+      <div class="form-group"><label>Category</label>
+        <select id="sysCat" class="form-select">
+          <option value="general">General (All)</option>
+          <option value="smartphone">Smartphone</option>
+          <option value="laptop">Laptop</option>
+          <option value="tablet">Tablet</option>
+          <option value="smartwatch">Smartwatch</option>
+        </select></div>
+      <div class="form-group"><label>Specific Models (optional)</label>
+        <select id="sysModels" class="form-select" multiple style="height:100px">
+          ${models.map(m => `<option value="${m._id}">${m.brand?.name || ''} ${m.name}</option>`).join('')}
+        </select>
+        <small style="color:var(--clr-text-faint)">Hold Ctrl to select multiple</small>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Base Price (₹)</label><input type="number" id="sysPrice" class="form-input"></div>
+        <div class="form-group"><label>Base Payout (₹)</label><input type="number" id="sysPayout" class="form-input"></div>
+      </div>
+      <div class="form-group"><label>Description</label><textarea id="sysDesc" class="form-input" style="height:60px"></textarea></div>`;
+  } else if (currentDataTab === 'brands') {
+    fields = `
+      <div class="form-group"><label>Brand Name</label><input type="text" id="sysName" class="form-input" placeholder="e.g. Apple"></div>
+      <div class="form-group"><label>Category</label>
+        <select id="sysCat" class="form-select">
+          <option value="smartphone">Smartphone</option><option value="laptop">Laptop</option>
+          <option value="tablet">Tablet</option><option value="smartwatch">Smartwatch</option>
+        </select></div>`;
+  } else if (currentDataTab === 'models') {
+    const brandsData = await api('/admin/brands');
+    const brands = brandsData?.data || [];
+    fields = `
+      <div class="form-group"><label>Model Name</label><input type="text" id="sysName" class="form-input" placeholder="e.g. iPhone 15 Pro"></div>
+      <div class="form-group"><label>Brand</label>
+        <select id="sysBrand" class="form-select">
+          <option value="">-- Select Brand --</option>
+          ${brands.map(b => `<option value="${b._id}">${b.name}</option>`).join('')}
+        </select></div>
+      <div class="form-group"><label>Category</label>
+        <select id="sysCat" class="form-select">
+          <option value="smartphone">Smartphone</option><option value="laptop">Laptop</option>
+          <option value="tablet">Tablet</option><option value="smartwatch">Smartwatch</option>
+        </select></div>`;
+  } else if (currentDataTab === 'offers') {
+    fields = `
+      <div class="form-group"><label>Offer Code</label><input type="text" id="sysCode" class="form-input" placeholder="e.g. REPAIR10"></div>
+      <div class="form-group"><label>Discount Type</label>
+        <select id="sysDiscType" class="form-select"><option value="percentage">Percentage</option><option value="fixed">Fixed Amount</option></select></div>
+      <div class="form-group"><label>Discount Value</label><input type="number" id="sysDiscVal" class="form-input"></div>
+      <div class="form-group"><label>Start Date</label><input type="date" id="sysStart" class="form-input"></div>
+      <div class="form-group"><label>End Date</label><input type="date" id="sysEnd" class="form-input"></div>`;
+  }
+
+  document.getElementById('formModalBody').innerHTML = fields;
+  document.getElementById('formModalSubmit').onclick = async () => {
+    let payload = {}, endpoint = `/admin/${currentDataTab}`;
+    if (currentDataTab === 'repair-types') {
+      const modelsSelect = document.getElementById('sysModels');
+      const selectedModels = Array.from(modelsSelect.selectedOptions).map(o => o.value);
+      payload = { 
+        name: getVal('sysName'), 
+        category: getVal('sysCat'),
+        applicableModels: selectedModels,
+        basePrice: getVal('sysPrice'), 
+        basePayout: getVal('sysPayout'), 
+        description: getVal('sysDesc') 
+      };
+    } else if (currentDataTab === 'brands') payload = { name: getVal('sysName'), category: getVal('sysCat') };
+    else if (currentDataTab === 'models') payload = { name: getVal('sysName'), brand: getVal('sysBrand'), category: getVal('sysCat') };
+    else if (currentDataTab === 'offers') payload = { code: getVal('sysCode'), discountType: getVal('sysDiscType'), discountValue: getVal('sysDiscVal'), startDate: getVal('sysStart'), endDate: getVal('sysEnd') };
+    
+    const res = await api(endpoint, { method: 'POST', body: JSON.stringify(payload) });
+    if (res?.success) { showToast('Item created successfully', 'success'); closeFormModal(); loadSystemData(); }
+    else showToast(res?.message || 'Error creating item', 'error');
+  };
+  document.getElementById('formModal').style.display = 'flex';
+}
+
+async function editSystemItem(id) {
+  const data = await api(`/admin/${currentDataTab}`);
+  const item = (data?.data || []).find(x => x._id === id);
+  if (!item) return;
+
+  document.getElementById('formModalTitle').textContent = `Edit ${currentDataTab.slice(0, -1).replace('-', ' ')}`;
+  let fields = '';
+  
+  if (currentDataTab === 'repair-types') {
+    const modelsData = await api('/admin/models');
+    const models = modelsData?.data || [];
+    const appModels = (item.applicableModels || []).map(m => typeof m === 'object' ? m._id : m);
+    
+    fields = `
+      <div class="form-group"><label>Name</label><input type="text" id="sysName" class="form-input" value="${item.name}"></div>
+      <div class="form-group"><label>Category</label>
+        <select id="sysCat" class="form-select">
+          <option value="general" ${item.category === 'general' ? 'selected' : ''}>General (All)</option>
+          <option value="smartphone" ${item.category === 'smartphone' ? 'selected' : ''}>Smartphone</option>
+          <option value="laptop" ${item.category === 'laptop' ? 'selected' : ''}>Laptop</option>
+          <option value="tablet" ${item.category === 'tablet' ? 'selected' : ''}>Tablet</option>
+          <option value="smartwatch" ${item.category === 'smartwatch' ? 'selected' : ''}>Smartwatch</option>
+        </select></div>
+      <div class="form-group"><label>Specific Models (optional)</label>
+        <select id="sysModels" class="form-select" multiple style="height:100px">
+          ${models.map(m => `<option value="${m._id}" ${appModels.includes(m._id) ? 'selected' : ''}>${m.brand?.name || ''} ${m.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Base Price (₹)</label><input type="number" id="sysPrice" class="form-input" value="${item.basePrice}"></div>
+        <div class="form-group"><label>Base Payout (₹)</label><input type="number" id="sysPayout" class="form-input" value="${item.basePayout}"></div>
+      </div>
+      <div class="form-group"><label>Description</label><textarea id="sysDesc" class="form-input" style="height:60px">${item.description || ''}</textarea></div>`;
+  } else if (currentDataTab === 'brands') {
+    fields = `
+      <div class="form-group"><label>Brand Name</label><input type="text" id="sysName" class="form-input" value="${item.name}"></div>
+      <div class="form-group"><label>Category</label>
+        <select id="sysCat" class="form-select">
+          <option value="smartphone" ${item.category === 'smartphone' ? 'selected' : ''}>Smartphone</option>
+          <option value="laptop" ${item.category === 'laptop' ? 'selected' : ''}>Laptop</option>
+          <option value="tablet" ${item.category === 'tablet' ? 'selected' : ''}>Tablet</option>
+          <option value="smartwatch" ${item.category === 'smartwatch' ? 'selected' : ''}>Smartwatch</option>
+        </select></div>`;
+  } else if (currentDataTab === 'models') {
+    const brandsData = await api('/admin/brands');
+    const brands = brandsData?.data || [];
+    fields = `
+      <div class="form-group"><label>Model Name</label><input type="text" id="sysName" class="form-input" value="${item.name}"></div>
+      <div class="form-group"><label>Brand</label>
+        <select id="sysBrand" class="form-select">
+          ${brands.map(b => `<option value="${b._id}" ${item.brand?._id === b._id ? 'selected' : ''}>${b.name}</option>`).join('')}
+        </select></div>
+      <div class="form-group"><label>Category</label>
+        <select id="sysCat" class="form-select">
+          <option value="smartphone" ${item.category === 'smartphone' ? 'selected' : ''}>Smartphone</option>
+          <option value="laptop" ${item.category === 'laptop' ? 'selected' : ''}>Laptop</option>
+          <option value="tablet" ${item.category === 'tablet' ? 'selected' : ''}>Tablet</option>
+          <option value="smartwatch" ${item.category === 'smartwatch' ? 'selected' : ''}>Smartwatch</option>
+        </select></div>`;
+  }
+
+  document.getElementById('formModalBody').innerHTML = fields;
+  document.getElementById('formModalSubmit').onclick = async () => {
+    let payload = {};
+    if (currentDataTab === 'repair-types') {
+      const modelsSelect = document.getElementById('sysModels');
+      const selectedModels = Array.from(modelsSelect.selectedOptions).map(o => o.value);
+      payload = { 
+        name: getVal('sysName'), 
+        category: getVal('sysCat'),
+        applicableModels: selectedModels,
+        basePrice: getVal('sysPrice'), 
+        basePayout: getVal('sysPayout'), 
+        description: getVal('sysDesc') 
+      };
+    } else if (currentDataTab === 'brands') payload = { name: getVal('sysName'), category: getVal('sysCat') };
+    else if (currentDataTab === 'models') payload = { name: getVal('sysName'), brand: getVal('sysBrand'), category: getVal('sysCat') };
+    
+    const res = await api(`/admin/${currentDataTab}/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+    if (res?.success) { showToast('Updated successfully', 'success'); closeFormModal(); loadSystemData(); }
+    else showToast(res?.message || 'Error updating item', 'error');
+  };
+  document.getElementById('formModal').style.display = 'flex';
+}
+
+// ── Enquiries Management ─────────────────────────────────────
+let currentEnquiryTab = 'contact';
+
+function switchEnquiryTab(tab, btn) {
+  currentEnquiryTab = tab;
+  document.querySelectorAll('#pageEnquiries .t-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadEnquiries();
+}
+
+async function loadEnquiries() {
+  const tbody = document.getElementById('enquiryTableBody');
+  const header = document.getElementById('enquiryTableHeader');
+  const search = document.getElementById('enquirySearch')?.value || '';
+  const status = document.getElementById('enquiryStatusFilter')?.value || '';
+  const start = document.getElementById('enquiryStartDate')?.value || '';
+  const end = document.getElementById('enquiryEndDate')?.value || '';
+  if (!tbody) return;
+
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px">Loading enquiries...</td></tr>';
+
+  const res = await api(`/enquiries/admin?type=${currentEnquiryTab}&search=${search}&status=${status}&startDate=${start}&endDate=${end}`);
+  const items = res?.data || [];
+  document.getElementById('enquiryRecordCount').textContent = `${items.length} records`;
+
+  header.innerHTML = `<tr>
+    <th>Name / Contact</th>
+    <th>Type</th>
+    <th>Date</th>
+    ${currentEnquiryTab === 'support' ? '<th>Order Ref</th>' : ''}
+    <th>Status</th>
+    <th>Actions</th>
+  </tr>`;
+
+  tbody.innerHTML = items.map(i => `
+    <tr>
+      <td>
+        <div style="font-weight:600">${i.name}</div>
+        <div style="font-size:0.8rem;color:var(--clr-text-muted)">${i.email} | ${i.phone}</div>
+      </td>
+      <td style="text-transform:capitalize">${i.type}</td>
+      <td>${new Date(i.createdAt).toLocaleDateString()}</td>
+      ${currentEnquiryTab === 'support' ? `<td>${i.orderReference || i.orderId?.referenceNumber || '—'}</td>` : ''}
+      <td><span class="badge badge-${i.status}">${i.status.replace('_', ' ')}</span></td>
+      <td>
+        <div class="td-actions">
+          <button class="action-btn" onclick="viewEnquiryDetail('${i._id}')">View</button>
+          <button class="action-btn" onclick="updateEnquiryStatus('${i._id}')">Status</button>
+        </div>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" style="text-align:center;padding:40px">No enquiries found.</td></tr>';
+}
+
+// ── Email Template Management ──────────────────────────────
+async function loadEmailTemplates() {
+  const tbody = document.getElementById('templateTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px">Loading templates...</td></tr>';
+
+  const res = await api('/admin/email-templates');
+  const items = res?.data || [];
+  document.getElementById('templateRecordCount').textContent = `${items.length} templates`;
+
+  tbody.innerHTML = items.map(i => `
+    <tr>
+      <td><div style="font-weight:600">${i.name}</div></td>
+      <td style="text-transform:capitalize">${i.type}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.subject}</td>
+      <td><span class="badge badge-${i.isActive ? 'active' : 'inactive'}">${i.isActive ? 'Active' : 'Inactive'}</span></td>
+      <td>
+        <div class="td-actions">
+          <button class="action-btn" onclick="openTemplateModal('${i._id}')">Edit</button>
+          <button class="action-btn" onclick="deleteTemplate('${i._id}')">Delete</button>
+        </div>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" style="text-align:center;padding:40px">No templates found.</td></tr>';
+}
+
+async function openTemplateModal(id = null) {
+  let template = { name: '', subject: '', header: '', body: '', footer: '', ctaText: '', ctaLink: '', type: 'booking' };
+  
+  if (id) {
+    const res = await api('/admin/email-templates');
+    template = res.data.find(x => x._id === id);
+  }
+
+  document.getElementById('formModalTitle').textContent = id ? 'Edit Email Template' : 'Create New Email Template';
+  
+  const formHtml = `
+    <div class="form-row">
+      <div class="form-group">
+        <label>Template Name</label>
+        <input type="text" id="tmName" class="form-input" value="${template.name}" ${id ? 'disabled' : ''} placeholder="e.g. Booking Confirmation">
+      </div>
+      <div class="form-group">
+        <label>Event Type</label>
+        <select id="tmType" class="form-select" ${id ? 'disabled' : ''}>
+          <option value="booking" ${template.type === 'booking' ? 'selected' : ''}>Booking</option>
+          <option value="quotation" ${template.type === 'quotation' ? 'selected' : ''}>Quotation</option>
+          <option value="status_update" ${template.type === 'status_update' ? 'selected' : ''}>Status Update</option>
+          <option value="otp" ${template.type === 'otp' ? 'selected' : ''}>OTP</option>
+          <option value="password_reset" ${template.type === 'password_reset' ? 'selected' : ''}>Password Reset</option>
+          <option value="partner_assigned" ${template.type === 'partner_assigned' ? 'selected' : ''}>Partner Assigned</option>
+          <option value="feedback_request" ${template.type === 'feedback_request' ? 'selected' : ''}>Feedback Request</option>
+          <option value="marketing" ${template.type === 'marketing' ? 'selected' : ''}>Marketing</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Email Subject</label>
+      <input type="text" id="tmSubject" class="form-input" value="${template.subject}" placeholder="Use {{customerName}} for variables">
+    </div>
+    <div class="form-group">
+      <label>Header Text (Optional)</label>
+      <input type="text" id="tmHeader" class="form-input" value="${template.header || ''}">
+    </div>
+    <div class="form-group">
+      <label>Body Content</label>
+      <textarea id="tmBody" class="form-textarea" style="height:150px" placeholder="HTML or Plain text. Use {{orderId}}, {{brand}}, etc.">${template.body}</textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>CTA Button Text</label>
+        <input type="text" id="tmCtaText" class="form-input" value="${template.ctaText || ''}">
+      </div>
+      <div class="form-group">
+        <label>CTA Button Link</label>
+        <input type="text" id="tmCtaLink" class="form-input" value="${template.ctaLink || ''}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Footer Text (Optional)</label>
+      <input type="text" id="tmFooter" class="form-input" value="${template.footer || ''}">
+    </div>
+  `;
+
+  document.getElementById('formModalBody').innerHTML = formHtml;
+  document.getElementById('formModalSubmit').textContent = id ? 'Update Template' : 'Create Template';
+  document.getElementById('formModalSubmit').onclick = async () => {
+    const data = {
+      name: document.getElementById('tmName').value,
+      type: document.getElementById('tmType').value,
+      subject: document.getElementById('tmSubject').value,
+      header: document.getElementById('tmHeader').value,
+      body: document.getElementById('tmBody').value,
+      ctaText: document.getElementById('tmCtaText').value,
+      ctaLink: document.getElementById('tmCtaLink').value,
+      footer: document.getElementById('tmFooter').value
+    };
+
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `/admin/email-templates/${id}` : '/admin/email-templates';
+    
+    const res = await api(url, { method, body: JSON.stringify(data) });
+    if (res?.success) {
+      showToast(id ? 'Template updated' : 'Template created', 'success');
+      closeFormModal();
+      loadEmailTemplates();
+    }
+  };
+
+  document.getElementById('formModal').style.display = 'flex';
+}
+
+async function deleteTemplate(id) {
+  if (!confirm('Are you sure you want to delete this template?')) return;
+  const res = await api(`/admin/email-templates/${id}`, { method: 'DELETE' });
+  if (res?.success) {
+    showToast('Template deleted', 'success');
+    loadEmailTemplates();
+  }
+}
+
+// ── Communication Logs Management ──────────────────────────
+async function loadLogs() {
+  const tbody = document.getElementById('logsTableBody');
+  if (!tbody) return;
+
+  const eventType = document.getElementById('logTypeFilter')?.value || '';
+  const status = document.getElementById('logStatusFilter')?.value || '';
+  const date = document.getElementById('logDateFilter')?.value || '';
+  const search = document.getElementById('logSearch')?.value || '';
+
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px">Loading logs...</td></tr>';
+
+  const res = await api(`/admin/notification-logs?eventType=${eventType}&deliveryStatus=${status}&date=${date}&recipient=${search}`);
+  const items = res?.data || [];
+  document.getElementById('logRecordCount').textContent = `${items.length} logs`;
+
+  tbody.innerHTML = items.map(i => `
+    <tr>
+      <td><div style="font-weight:600">${i.recipient}</div></td>
+      <td>
+        <div style="text-transform:capitalize">${i.eventName}</div>
+        <div style="font-size:0.7rem;color:var(--clr-text-faint)">${i.eventType || 'SYSTEM'}</div>
+      </td>
+      <td><div style="font-size:0.85rem;max-width:200px;overflow:hidden;text-overflow:ellipsis">${i.subject || '—'}</div></td>
+      <td>${i.channel}</td>
+      <td>${new Date(i.sentAt).toLocaleString()}</td>
+      <td>
+        <span class="badge badge-${i.deliveryStatus === 'SENT' ? 'active' : 'inactive'}">
+          ${i.deliveryStatus}
+        </span>
+        ${i.errorMessage ? `<div style="font-size:0.7rem;color:var(--clr-danger);margin-top:4px">${i.errorMessage}</div>` : ''}
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" style="text-align:center;padding:40px">No logs found matching filters.</td></tr>';
+}
+
+// ── Audit Logs Management ───────────────────────────
+async function loadAuditLogs() {
+  const tbody = document.getElementById('auditLogsTableBody');
+  if (!tbody) return;
+
+  const action = document.getElementById('auditActionFilter')?.value || '';
+  const role = document.getElementById('auditRoleFilter')?.value || '';
+  const date = document.getElementById('auditDateFilter')?.value || '';
+  const search = document.getElementById('auditSearch')?.value || '';
+
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px">Loading audit trail...</td></tr>';
+
+  const res = await api(`/admin/audit-logs?action=${action}&role=${role}&startDate=${date}&orderId=${search}`);
+  const items = res?.data || [];
+  document.getElementById('auditRecordCount').textContent = `${items.length} logs`;
+
+  tbody.innerHTML = items.map(i => `
+    <tr onclick="showAuditDetail('${i._id}')" style="cursor:pointer">
+      <td><span class="badge badge-info" style="font-size:0.7rem">${i.action}</span></td>
+      <td>
+        <div style="font-weight:600">${i.performedBy?.name || 'System'}</div>
+        <div style="font-size:0.75rem;color:var(--clr-text-faint)">${i.performedBy?.email || 'automated@system'}</div>
+      </td>
+      <td><div style="text-transform:capitalize">${i.performerRole || 'System'}</div></td>
+      <td>${new Date(i.createdAt).toLocaleString()}</td>
+      <td>
+        <div style="font-weight:500">${i.entityType}</div>
+        <div style="font-size:0.75rem;color:var(--clr-accent)">${i.entityId}</div>
+      </td>
+      <td><div style="font-size:0.85rem;max-width:250px;overflow:hidden;text-overflow:ellipsis">${i.description || '—'}</div></td>
+    </tr>
+  `).join('') || '<tr><td colspan="6" style="text-align:center;padding:40px">No activity logs found matching filters.</td></tr>';
+}
+
+async function showAuditDetail(id) {
+  const res = await api(`/admin/audit-logs/${id}`);
+  if (!res?.success) return;
+  const log = res.data;
+  
+  const content = `
+    <div style="text-align:left; font-family:monospace; font-size:0.9rem;">
+      <p><strong>Action:</strong> ${log.action}</p>
+      <p><strong>Performer:</strong> ${log.performedBy?.name || 'System'} (${log.performerRole})</p>
+      <p><strong>Entity:</strong> ${log.entityType} [${log.entityId}]</p>
+      <p><strong>Time:</strong> ${new Date(log.createdAt).toLocaleString()}</p>
+      <p><strong>IP:</strong> ${log.ipAddress || 'Internal'}</p>
+      <hr style="margin:10px 0; border:0; border-top:1px solid #eee;">
+      <p><strong>Description:</strong> ${log.description || 'N/A'}</p>
+      <p><strong>Previous State:</strong> <pre style="background:#f9f9f9; padding:8px; border-radius:4px;">${JSON.stringify(log.previousValue, null, 2)}</pre></p>
+      <p><strong>New State:</strong> <pre style="background:#f1f7ff; padding:8px; border-radius:4px;">${JSON.stringify(log.updatedValue, null, 2)}</pre></p>
+    </div>
+  `;
+  
+  // Custom modal or simple styled alert
+  const modal = document.createElement('div');
+  modal.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:10000; padding:20px;";
+  modal.innerHTML = `
+    <div style="background:white; padding:30px; border-radius:12px; max-width:600px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+      <h3 style="margin-top:0;">Activity Detail</h3>
+      ${content}
+      <button onclick="this.parentElement.parentElement.remove()" class="btn btn-primary" style="margin-top:20px; width:100%;">Close</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function testEmailTemplate(id) {
+  const email = prompt('Enter recipient email for test:');
+  if (!email) return;
+  
+  const res = await api('/admin/send-test-email', {
+    method: 'POST',
+    body: JSON.stringify({ templateId: id, testEmail: email })
+  });
+  if (res?.success) showToast('Test email sent!', 'success');
+}
+
+async function previewTemplate(id) {
+  const res = await api(`/admin/email-templates`);
+  const template = res.data.find(x => x._id === id);
+  if (!template) return;
+
+  // Use a temporary data object for preview variables
+  const mockData = {
+    customerName: 'John Doe',
+    orderId: 'RV-TEST-12345',
+    brand: 'Apple',
+    model: 'iPhone 15 Pro',
+    price: '4,999',
+    service: 'Screen Replacement',
+    otp: '123456',
+    status: 'In Progress',
+    partnerName: 'RepairPro Delhi',
+    trackUrl: '#',
+    resetUrl: '#',
+    feedbackUrl: '#'
+  };
+
+  // We'll call a preview endpoint or just mimic logic
+  // Better: I'll add a preview route to backend
+  const previewRes = await api('/admin/preview-template', {
+    method: 'POST',
+    body: JSON.stringify({ templateId: id, mockData })
+  });
+  
+  if (previewRes?.success) {
+    const win = window.open('', '_blank');
+    win.document.write(previewRes.html);
+    win.document.close();
+  }
+}
+
+async function viewEnquiryDetail(id) {
+  const res = await api(`/enquiries/admin?id=${id}`); // Helper to get single
+  // Wait, my getAll returns all. I'll just find in list or add single route.
+  // I'll assume my API can handle single if I filter by search=id (not ideal but works for now)
+  // Better: I'll fetch all and find
+  const all = await api(`/enquiries/admin`);
+  const item = all.data.find(x => x._id === id);
+  if (!item) return;
+
+  document.getElementById('formModalTitle').textContent = `Enquiry Detail - ${item.type.toUpperCase()}`;
+  let detailHtml = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+      <div><label style="color:var(--clr-text-faint);font-size:0.8rem">From</label><div style="font-weight:600">${item.name}</div></div>
+      <div><label style="color:var(--clr-text-faint);font-size:0.8rem">Date</label><div>${new Date(item.createdAt).toLocaleString()}</div></div>
+      <div><label style="color:var(--clr-text-faint);font-size:0.8rem">Email</label><div>${item.email}</div></div>
+      <div><label style="color:var(--clr-text-faint);font-size:0.8rem">Phone</label><div>${item.phone}</div></div>
+    </div>`;
+
+  if (item.type === 'contact') detailHtml += `<div class="form-group"><label>Message</label><p style="background:rgba(0,0,0,0.2);padding:10px;border-radius:8px">${item.message}</p></div>`;
+  else if (item.type === 'sales') detailHtml += `
+    <div class="form-group"><label>Company</label><div>${item.company || '—'}</div></div>
+    <div class="form-group"><label>Requirement</label><p style="background:rgba(0,0,0,0.2);padding:10px;border-radius:8px">${item.requirementDetails}</p></div>`;
+  else if (item.type === 'support') detailHtml += `
+    <div class="form-group"><label>Issue Type</label><div style="text-transform:capitalize">${item.issueType}</div></div>
+    <div class="form-group"><label>Order Ref</label><div>${item.orderReference || '—'}</div></div>
+    <div class="form-group"><label>Description</label><p style="background:rgba(0,0,0,0.2);padding:10px;border-radius:8px">${item.description}</p></div>`;
+  else if (item.type === 'promotional') detailHtml += `
+    <div class="form-group"><label>Interest</label><div style="text-transform:capitalize">${item.interest}</div></div>
+    <div class="form-group"><label>Campaign Source</label><div>${item.campaignSource}</div></div>`;
+
+  detailHtml += `
+    <hr style="border:0;border-top:1px solid rgba(255,255,255,0.05);margin:20px 0">
+    <div class="enquiry-history" style="max-height:200px;overflow-y:auto;margin-bottom:20px">
+      <h4 style="margin-bottom:10px;font-size:0.9rem">Reply History</h4>
+      ${(item.responses || []).map(r => `
+        <div style="background:rgba(255,255,255,0.05);padding:10px;border-radius:8px;margin-bottom:8px;font-size:0.85rem">
+          <div style="color:var(--clr-text-faint);font-size:0.7rem;margin-bottom:4px">Replied on ${new Date(r.sentAt).toLocaleString()}</div>
+          <div>${r.message}</div>
+        </div>
+      `).join('') || '<p style="color:var(--clr-text-faint);font-size:0.8rem">No replies sent yet.</p>'}
+    </div>
+    <div class="form-group"><label>Direct Reply (Sends Email)</label><textarea id="enqReply" class="form-textarea" placeholder="Type your response to the customer..." style="height:80px"></textarea></div>
+    <div class="form-group"><label>Internal Admin Notes</label><textarea id="enqAdminNotes" class="form-textarea" placeholder="Add internal notes...">${item.adminNotes || ''}</textarea></div>
+  `;
+
+  document.getElementById('formModalBody').innerHTML = detailHtml;
+  document.getElementById('formModalSubmit').textContent = 'Send Reply & Save';
+  document.getElementById('formModalSubmit').onclick = async () => {
+    const reply = document.getElementById('enqReply').value;
+    const notes = document.getElementById('enqAdminNotes').value;
+    const updateRes = await api(`/enquiries/admin/${id}`, { 
+      method: 'PUT', 
+      body: JSON.stringify({ replyMessage: reply, adminNotes: notes }) 
+    });
+    if (updateRes?.success) { showToast('Reply sent and notes saved', 'success'); closeFormModal(); loadEnquiries(); }
+  };
+  document.getElementById('formModal').style.display = 'flex';
+}
+
+async function updateEnquiryStatus(id) {
+  const status = prompt('Enter new status (new, in_progress, resolved, closed):');
+  if (!status || !['new', 'in_progress', 'resolved', 'closed'].includes(status)) return;
+
+  const res = await api(`/enquiries/admin/${id}`, { method: 'PUT', body: JSON.stringify({ status }) });
+  if (res?.success) {
+    showToast(`Status updated to ${status}`, 'success');
+    loadEnquiries();
+  }
+}
+
+async function toggleSystemStatus(id, currentStatus) {
+  const res = await api(`/admin/${currentDataTab}/${id}`, { 
+    method: 'PUT', 
+    body: JSON.stringify({ isActive: !currentStatus }) 
+  });
+  if (res?.success) {
+    showToast(`Item ${!currentStatus ? 'activated' : 'deactivated'}`, 'success');
+    loadSystemData();
+  }
+}
+
+async function deleteSystemItem(id) {
+  if (!confirm('Are you sure you want to PERMANENTLY delete this item?')) return;
+  const res = await api(`/admin/${currentDataTab}/${id}`, { method: 'DELETE' });
+  if (res?.success) {
+    showToast('Item deleted successfully', 'success');
+    loadSystemData();
+  } else {
+    showToast(res?.message || 'Error deleting item', 'error');
+  }
+}
+
+async function loadBrandFilterOptions() {
+  const res = await api('/admin/brands');
+  const brands = res?.data || [];
+  const select = document.getElementById('sysBrandFilter');
+  if (!select) return;
+  select.innerHTML = '<option value="">All Brands</option>' + 
+    brands.map(b => `<option value="${b._id}">${b.name}</option>`).join('');
+}
+
+// ── Export & Auth ─────────────────────────────────────────────
+async function exportData(format = 'csv') {
+  const token = localStorage.getItem('rv_token') || sessionStorage.getItem('rv_token');
+  const url = `${API}/admin/export/bookings?format=${format}`;
+  const a = document.createElement('a');
+  a.href = url + `&token=${token}`;
+  a.download = `bookings.${format}`;
+  a.click();
+}
+
+// ── Account Security Module (Steps 1-6) ─────────────────────
+function openAccountSecurityModal(id, type, name, isLocked, isActive) {
+  const modal = document.getElementById('formModal');
+  document.getElementById('formModalTitle').textContent = `Security Control: ${name}`;
+  document.getElementById('formModalBody').innerHTML = `
+    <div style="display:grid; gap:15px;">
+      <div style="padding:15px; background:rgba(255,255,255,0.03); border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+        <h4 style="margin-bottom:10px; color:var(--clr-primary)">Credential Management</h4>
+        <div class="form-group">
+          <label>Set New Password</label>
+          <div style="display:flex; gap:8px;">
+            <input type="password" id="secNewPass" class="form-input" placeholder="Min 8 chars">
+            <button class="btn btn-outline" onclick="adminUpdatePassword('${id}', '${type}')">Update</button>
+          </div>
+        </div>
+        <button class="btn btn-outline" style="width:100%; margin-top:10px;" onclick="adminUpdateAccountStatus('${id}', '${type}', 'forceReset')">⚠️ Force Password Reset on Next Login</button>
+      </div>
+
+      <div style="padding:15px; background:rgba(255,255,255,0.03); border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+        <h4 style="margin-bottom:10px; color:var(--clr-primary)">Access Control</h4>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+          <button class="btn ${isActive ? 'btn-outline' : 'btn-primary'}" onclick="adminUpdateAccountStatus('${id}', '${type}', '${isActive ? 'deactivate' : 'activate'}')">
+            ${isActive ? '⛔ Deactivate Account' : '✅ Activate Account'}
+          </button>
+          <button class="btn ${isLocked ? 'btn-primary' : 'btn-outline'}" onclick="adminUpdateAccountStatus('${id}', '${type}', '${isLocked ? 'unlock' : 'lock'}')">
+            ${isLocked ? '🔓 Unlock Account' : '🔒 Lock Account'}
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('formModalFooter').style.display = 'none'; // Use internal buttons
+  modal.style.display = 'flex';
+}
+
+async function adminUpdatePassword(id, type) {
+  const newPassword = document.getElementById('secNewPass').value;
+  if (!newPassword || newPassword.length < 8) return showToast('Password must be at least 8 characters', 'error');
+  
+  const res = await api('/admin/accounts/manage-password', {
+    method: 'POST',
+    body: JSON.stringify({ id, type, newPassword })
+  });
+  
+  if (res?.success) {
+    showToast('Password updated successfully', 'success');
+    closeFormModal();
+  }
+}
+
+async function adminUpdateAccountStatus(id, type, action) {
+  const confirmMsg = {
+    deactivate: 'Are you sure you want to DEACTIVATE this account? The user will not be able to log in.',
+    lock: 'Are you sure you want to LOCK this account due to suspicious activity?',
+    forceReset: 'Force this user to change their password immediately upon their next login?'
+  };
+  
+  if (confirmMsg[action] && !confirm(confirmMsg[action])) return;
+
+  const res = await api('/admin/accounts/update-status', {
+    method: 'POST',
+    body: JSON.stringify({ id, type, action })
+  });
+
+  if (res?.success) {
+    showToast(`Account successfully ${action}ed`, 'success');
+    closeFormModal();
+    if (type === 'customer') loadCustomers(); else loadTechnicians();
+  }
+}
+
+// Ensure form footer is restored when modal closes
+const originalCloseFormModal = closeFormModal;
+closeFormModal = function() {
+  document.getElementById('formModalFooter').style.display = 'flex';
+  originalCloseFormModal();
+};
+
+function logout() {
+  localStorage.clear();
+  sessionStorage.clear();
+  window.location.replace('login.html');
+}
+
+// ── Feedback Intelligence (Steps 8-11) ──────────────────────
+async function loadFeedback() {
+  const type = document.getElementById('fbType').value;
+  const rating = document.getElementById('fbMinRating').value;
+  const search = document.getElementById('fbSearch').value;
+
+  const stats = await api(`/feedback/stats`);
+  if (stats?.success) renderFeedbackStats(stats.data);
+
+  const res = await api(`/feedback?type=${type}&rating=${rating}&search=${search}`);
+  if (res?.success) {
+    const tbody = document.getElementById('fbTableBody');
+    tbody.innerHTML = res.data.map(f => `
+      <tr>
+        <td style="font-size:0.8rem">${new Date(f.createdAt).toLocaleDateString()}</td>
+        <td><strong style="color:var(--clr-primary)">${f.orderId}</strong></td>
+        <td>
+          <div style="font-weight:600">${f.fromName}</div>
+          <div style="font-size:0.7rem; color:var(--clr-text-faint)">ID: ${f.fromId}</div>
+        </td>
+        <td><span class="badge" style="background:${f.type === 'customer' ? 'rgba(99,102,241,0.1)' : 'rgba(16,185,129,0.1)'}; color:${f.type === 'customer' ? '#6366f1' : '#10b981'}; font-size:0.7rem; padding:2px 8px; border-radius:10px">${f.type.toUpperCase()}</span></td>
+        <td>
+          <div style="color:#f59e0b">
+            ${'⭐'.repeat(f.rating || f.orderQuality || 0)}
+            <span style="font-weight:bold; color:#fff; margin-left:5px">${f.rating || f.orderQuality || 0}.0</span>
+          </div>
+          ${f.type === 'customer' ? `<div style="font-size:0.7rem; color:var(--clr-text-faint)">Quality: ${f.serviceQuality}/5</div>` : `<div style="font-size:0.7rem; color:var(--clr-text-faint)">Admin Coord: ${f.adminCoordination}/5</div>`}
+        </td>
+        <td style="max-width:300px">
+          <div style="font-size:0.85rem; color:rgba(255,255,255,0.8); line-height:1.4">${f.review || f.partsNotes || 'No written comments.'}</div>
+          ${f.deviceCondition ? `<div style="font-size:0.7rem; color:#10b981; margin-top:4px">Cond: ${f.deviceCondition}</div>` : ''}
+        </td>
+        <td>
+           <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem" onclick="viewOrderDetails('${f.booking?._id || f.booking}')">View Order</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+}
+
+function renderFeedbackStats(s) {
+  setEl('fbStatAvg', s.overallAvg);
+  setEl('fbStatCust', s.totalCustomer);
+  setEl('fbStatPart', s.totalPartner);
+  
+  const satis = s.customerAvg ? Math.round((s.customerAvg / 5) * 100) : 0;
+  setEl('fbStatSatis', satis + '%');
+
+  document.getElementById('fbQuickStats').innerHTML = `
+    <div style="background:rgba(255,255,255,0.05); padding:4px 12px; border-radius:20px; font-size:0.8rem">
+      🔧 Quality: <span style="color:#10b981">${s.qualityAvg || 0}</span>
+    </div>
+    <div style="background:rgba(255,255,255,0.05); padding:4px 12px; border-radius:20px; font-size:0.8rem">
+      🤝 Behavior: <span style="color:#6366f1">${s.behaviorAvg || 0}</span>
+    </div>
+  `;
+}
+
+async function viewOrderDetails(id) {
+   if (!id) return showToast('Order record not found', 'error');
+   showPage('orders');
+   // wait for orders to load then highlight? 
+   // for now just switch page
+}
+
 // ── Initialize ────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   showPage('dashboard', document.querySelector('[data-page="dashboard"]'));
-  
-  // Sidebar Toggle
   document.getElementById('sidebarToggle')?.addEventListener('click', () => document.getElementById('sidebar').classList.toggle('open'));
   document.getElementById('sidebarClose')?.addEventListener('click', () => document.getElementById('sidebar').classList.remove('open'));
+
+  // Step 17: Secure Session Handling (Auto Logout after 15m inactivity)
+  let idleTime = 0;
+  const idleInterval = setInterval(() => {
+    idleTime++;
+    if (idleTime >= 15) { // 15 minutes
+      showToast('Session expired due to inactivity.', 'info');
+      setTimeout(logout, 2000);
+    }
+  }, 60000);
+
+  document.addEventListener('mousemove', () => idleTime = 0);
+  document.addEventListener('keypress', () => idleTime = 0);
 });
+

@@ -2,7 +2,20 @@ const Technician = require('../models/Technician');
 
 exports.getAllTechnicians = async (req, res) => {
   try {
-    const technicians = await Technician.find({ isActive: true }).sort({ name: 1 });
+    const { search } = req.query;
+    let filter = {}; // Not forcing isActive: true to allow admin to see inactive ones if needed
+    
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { businessName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
+        { specialization: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const technicians = await Technician.find(filter).sort({ name: 1 });
     res.json({ success: true, data: technicians });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
