@@ -26,7 +26,6 @@ router.put('/approve-quote/:id', approveQuote);
 router.put('/reject-quote/:id', rejectQuote);
 
 // Profile and Feedback
-const { updateProfile, submitFeedback, getMyFeedback, addAddress, updateAddress, deleteAddress } = require('../controllers/customerController');
 router.put('/profile', updateProfile);
 router.post('/feedback', submitFeedback);
 router.get('/my-feedback', getMyFeedback);

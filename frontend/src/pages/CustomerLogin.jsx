@@ -229,7 +229,7 @@ export const CustomerLogin = () => {
               </div>
             )}
 
-            <form onSubmit={handleVerifyOtp} className="space-y-4">
+            <form onSubmit={otpStepMobile ? handleVerifyMobileOtp : handleVerifyOtp} className="space-y-4">
               <input
                 type="text"
                 required
@@ -620,7 +620,7 @@ export const CustomerLogin = () => {
               <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between text-xs text-gray-600">
                 <div className="flex items-center gap-1.5">
                   <Smartphone size={12} />
-                  <span>Mobile OTP login coming soon</span>
+                  <span>Mobile OTP login active</span>
                 </div>
                 <Link to="/book" className="text-blue-400 hover:underline">Book without login →</Link>
               </div>
