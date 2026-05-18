@@ -26,12 +26,12 @@ export const Login = () => {
 
       if (data.success) {
         localStorage.setItem('rv_token', data.token);
-        localStorage.setItem('rv_role', data.user.role);
-        localStorage.setItem('rv_user', JSON.stringify(data.user));
+        localStorage.setItem('rv_role', data.data.role);
+        localStorage.setItem('rv_user', JSON.stringify(data.data));
 
-        if (data.user.role === 'admin' || data.user.role === 'superadmin') {
+        if (data.data.role === 'admin' || data.data.role === 'superadmin') {
           navigate('/admin');
-        } else if (data.user.role === 'partner') {
+        } else if (data.data.role === 'partner') {
           navigate('/partner');
         } else {
           navigate('/dashboard');

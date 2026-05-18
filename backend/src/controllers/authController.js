@@ -39,7 +39,9 @@ exports.login = async (req, res) => {
     }
 
     // Verify Password against whatever model was hit (all use bcrypt/matchPassword logic)
-    const isMatch = await account.matchPassword ? await account.matchPassword(password) : await require('bcryptjs').compare(password, account.password);
+    const isMatch = (typeof account.matchPassword === 'function') 
+      ? await account.matchPassword(password) 
+      : await require('bcryptjs').compare(password, account.password);
     
     if (!isMatch) {
       // Step 11: Track failed attempts
@@ -159,6 +161,15 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
     }
 
+    // Password strength validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 8 characters long, and include at least one uppercase letter, one lowercase letter, one number and one special character' 
+      });
+    }
+
     admin.password = newPassword;
     admin.clearOTP();
     // Step 9: Add Security Events (Password Reset Webhooks)
@@ -200,8 +211,12 @@ exports.register = async (req, res) => {
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Name, email and password are required' });
     }
-    if (String(password).length < 8) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 8 characters long, and include at least one uppercase letter, one lowercase letter, one number and one special character' 
+      });
     }
     const existing = await Admin.findOne({ email: email.toLowerCase() });
     if (existing) return res.status(400).json({ success: false, message: 'Admin already exists' });
