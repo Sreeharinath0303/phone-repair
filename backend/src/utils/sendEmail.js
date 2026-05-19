@@ -1,10 +1,30 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 const { getEmailTemplate } = require('./emailTemplates');
 
 const sendEmail = async (options, retryCount = 0) => {
   const MAX_RETRIES = 2;
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const fromEmail = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+  
+  const emailUser = process.env.EMAIL_USER;
+  const emailPass = process.env.EMAIL_PASS;
+  
+  if (!emailUser || !emailPass) {
+    console.error('\n❌ [SMTP ERROR]: EMAIL_USER or EMAIL_PASS is missing in your .env file!');
+    console.error('❌ Cannot send OTP to real email addresses without valid SMTP credentials.');
+    throw new Error('SMTP credentials missing. Please configure EMAIL_USER and EMAIL_PASS in backend/.env');
+  }
+
+  // Set up Nodemailer Transporter
+  const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: process.env.EMAIL_PORT || 587,
+    secure: process.env.EMAIL_PORT == 465, // true for 465, false for other ports
+    auth: {
+      user: emailUser,
+      pass: emailPass,
+    },
+  });
+
+  const fromEmail = process.env.EMAIL_FROM || emailUser || 'onboarding@repairvafe.com';
   const fromName = process.env.FROM_NAME || 'RepairVafe';
 
   let { email, subject, message, html, type, data } = options;
@@ -17,21 +37,18 @@ const sendEmail = async (options, retryCount = 0) => {
   }
 
   const mailOptions = {
-    from: `${fromName} <${fromEmail}>`,
+    from: `"${fromName}" <${fromEmail}>`,
     to: email,
     subject: subject,
     text: message || 'Please view this email in an HTML compatible viewer.',
-    html: html,
+    html: html || message, // Fallback to raw message if no HTML template
   };
 
   try {
-    const { data: resData, error } = await resend.emails.send(mailOptions);
-
-    if (error) throw new Error(error.message);
-
-    console.log(`Email sent via Resend to ${email}. ID: ${resData.id}`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`Email sent successfully via Nodemailer to ${email}. MessageId: ${info.messageId}`);
     
-    // Step 11: Create Email Logs
+    // Create Email Logs
     try {
        const NotificationLog = require('../models/NotificationLog');
        await NotificationLog.create({
@@ -40,14 +57,14 @@ const sendEmail = async (options, retryCount = 0) => {
           recipient: email,
           channel: 'EMAIL',
           deliveryStatus: 'SENT',
-          providerId: resData.id
+          providerId: info.messageId
        });
     } catch(logErr) { console.error('Silent log ingestion bypassed'); }
 
   } catch (error) {
     console.error(`Email attempt ${retryCount + 1} failed:`, error.message);
     
-    // Step 12: Create Retry Mechanism
+    // Create Retry Mechanism
     if (retryCount < MAX_RETRIES) {
       const delay = Math.pow(2, retryCount) * 1000;
       console.log(`Retrying in ${delay}ms...`);
@@ -76,5 +93,7 @@ const sendEmail = async (options, retryCount = 0) => {
     if (process.env.NODE_ENV !== 'development') throw error;
   }
 };
+
+module.exports = sendEmail;
 
 module.exports = sendEmail;

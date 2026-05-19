@@ -3,14 +3,14 @@ const {
   createBooking, getAllBookings, getBookingByRef, updateStatus,
   issueQuotation, quotationAction, requestQuoteOtp, getDashboardStats, deleteBooking
 } = require('../controllers/bookingController');
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, optionalAuth } = require('../middleware/auth');
 
 const adminOnly = authorize('superadmin', 'admin', 'sales', 'services');
 const adminOrPartner = authorize('superadmin', 'admin', 'sales', 'services', 'Technician');
 
 router.get('/stats',             protect, adminOnly, getDashboardStats);
 router.get('/',                  protect, adminOnly, getAllBookings);
-router.post('/',                          createBooking);
+router.post('/',                  optionalAuth,   createBooking);
 router.get('/:ref',                       getBookingByRef);
 router.post('/:ref/quote-otp',            requestQuoteOtp);
 router.put('/:ref/quote-action',          quotationAction);

@@ -374,7 +374,7 @@ exports.deleteAdmin = async (req, res) => {
 exports.getIncompleteLeads = async (req, res) => {
   try {
     const { search, city, state, status } = req.query;
-    let filter = { bookingCompleted: false };
+    let filter = {}; // Return all leads (both active and converted) so history is visible
 
     if (search) {
       filter.$or = [
@@ -493,14 +493,18 @@ exports.assignOrderToTechnician = async (req, res) => {
 exports.setServiceQuote = async (req, res) => {
   try {
     const { bookingId, quotationAmount, description, repairSummary, termsAndConditions } = req.body;
-    if (!bookingId || !quotationAmount) {
+    const amountNum = Number(quotationAmount);
+    if (!bookingId || !Number.isFinite(amountNum) || amountNum <= 0) {
       return res.status(400).json({ success: false, message: 'bookingId and quotationAmount required' });
     }
 
     const booking = await Booking.findById(bookingId);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (booking.quotationStatus === 'Approved by Customer') {
+      return res.status(400).json({ success: false, message: 'Cannot change quote after customer approval. Create a new order or reset workflow.' });
+    }
 
-    booking.quotationAmount = quotationAmount;
+    booking.quotationAmount = amountNum;
     booking.technicianNote = description;
     // Step 2 & 3: Mapping Estimate Details
     booking.repairSummary = repairSummary || '';
@@ -1374,6 +1378,8 @@ exports.getAnalytics = async (req, res) => {
       { $limit: 8 }
     ]);
 
+    const activeOrders = assignedOrders + ongoingRepairs;
+
     res.json({
       success: true,
       data: {
@@ -1386,6 +1392,8 @@ exports.getAnalytics = async (req, res) => {
         ongoingRepairs,
         completedRepairs,
         cancelledOrders,
+        activeOrders,
+        totalRevenue: grossRevenue,
         feedbackPending,
         partnerWise: partnerWisePopulated,
         stateWise,

@@ -44,6 +44,8 @@ const bookingSchema = new mongoose.Schema({
     date: { type: Date, default: Date.now }
   }],
   // Financials
+  // Approximate estimate shown immediately after booking submission (system-calculated).
+  approxAmount: { type: Number, default: 0 },
   quotationAmount: { type: Number, default: 0 },
   partnerPayout:   { type: Number, default: 0 }, // Amount assigned by Admin to the partner
   quotationStatus: { type: String, enum: ['Pending', 'Quote Prepared', 'Offer Sent', 'Awaiting Customer Approval', 'Approved by Customer', 'Rejected by Customer', 'Not Issued', 'Approved', 'Rejected'], default: 'Not Issued' },
@@ -81,7 +83,6 @@ const bookingSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Step 17: Performance Optimization Indexes
-bookingSchema.index({ referenceNumber: 1 });
 bookingSchema.index({ customerName: 'text', customerEmail: 'text', customerPhone: 'text' });
 bookingSchema.index({ status: 1, quotationStatus: 1, assignedTechnician: 1 });
 bookingSchema.index({ city: 1, state: 1, pincode: 1 });

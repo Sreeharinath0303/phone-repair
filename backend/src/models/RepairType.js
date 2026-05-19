@@ -9,4 +9,4 @@ const repairTypeSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
-module.exports = mongoose.model('RepairType', repairTypeSchema);
+module.exports = mongoose.models.RepairType || mongoose.model('RepairType', repairTypeSchema);

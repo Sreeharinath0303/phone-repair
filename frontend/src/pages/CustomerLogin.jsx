@@ -113,9 +113,9 @@ export const CustomerLogin = () => {
       const data = await res.json();
 
       if (data.success) {
-        setRegEmail(email);
-        setOtpStep(true);
-        setSuccess('Account created! Enter the OTP sent to your email.');
+        setTab('Email Login');
+        setPassword('');
+        setSuccess('Registration successful! Please sign in with your new account.');
       } else {
         setError(data.message || 'Registration failed. Please try again.');
       }
@@ -586,14 +586,14 @@ export const CustomerLogin = () => {
                         required
                         value={password}
                         onChange={e => setPassword(e.target.value)}
-                        placeholder="Min 8 chars, upper, lower, number, symbol"
+                        placeholder="Min 6 characters"
                         className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-12 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
                       />
                       <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors">
                         {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
-                    <p className="text-[11px] text-gray-600 mt-1.5">Must include uppercase, lowercase, number & special character</p>
+                    <p className="text-[11px] text-gray-600 mt-1.5">Must be at least 6 characters long</p>
                   </div>
 
                   <button

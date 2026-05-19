@@ -5,6 +5,7 @@ const {
   getMyOrders,
   getOrderByRef,
   getStats,
+  getInvoiceHtml,
   approveQuote,
   rejectQuote,
   updateProfile,
@@ -22,6 +23,7 @@ router.get('/my-bookings', getMyBookings);
 router.get('/orders', getMyOrders);
 router.get('/order/:ref', getOrderByRef);
 router.get('/stats', getStats);
+router.get('/invoice/:id/html', getInvoiceHtml);
 router.put('/approve-quote/:id', approveQuote);
 router.put('/reject-quote/:id', rejectQuote);
 

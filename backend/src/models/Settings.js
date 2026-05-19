@@ -81,10 +81,10 @@ const offerSchema = new mongoose.Schema({
 });
 
 module.exports = {
-  RepairType: mongoose.model('RepairType', repairTypeSchema),
-  Brand: mongoose.model('Brand', brandSchema),
-  Model: mongoose.model('Model', modelSchema),
-  EmailTemplate: mongoose.model('EmailTemplate', emailTemplateSchema),
-  CommunicationSettings: mongoose.model('CommunicationSettings', communicationSettingsSchema),
-  Offer: mongoose.model('Offer', offerSchema)
+  RepairType: mongoose.models.RepairType || mongoose.model('RepairType', repairTypeSchema),
+  Brand: mongoose.models.Brand || mongoose.model('Brand', brandSchema),
+  Model: mongoose.models.Model || mongoose.model('Model', modelSchema),
+  EmailTemplate: mongoose.models.EmailTemplate || mongoose.model('EmailTemplate', emailTemplateSchema),
+  CommunicationSettings: mongoose.models.CommunicationSettings || mongoose.model('CommunicationSettings', communicationSettingsSchema),
+  Offer: mongoose.models.Offer || mongoose.model('Offer', offerSchema)
 };

@@ -38,45 +38,46 @@ exports.login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Verify Password against whatever model was hit (all use bcrypt/matchPassword logic)
-    const isMatch = (typeof account.matchPassword === 'function') 
-      ? await account.matchPassword(password) 
+    // Check account status BEFORE verifying password (avoid timing attacks & ordering bugs)
+    if (account.isActive === false) {
+      return res.status(403).json({ success: false, message: 'Account is deactivated. Please contact support.' });
+    }
+
+    // Check lock status (only block if still within lock window)
+    if (account.isLocked && account.lockedUntil && account.lockedUntil > new Date()) {
+      const mins = Math.ceil((account.lockedUntil - new Date()) / 60000);
+      return res.status(403).json({ success: false, message: `Account is temporarily locked. Try again in ${mins} minute(s).` });
+    } else if (account.isLocked && (!account.lockedUntil || account.lockedUntil <= new Date())) {
+      // Lock period has expired - auto-unlock
+      account.isLocked = false;
+      account.lockedUntil = undefined;
+      account.loginAttempts = 0;
+    }
+
+    // Verify Password
+    const isMatch = (typeof account.matchPassword === 'function')
+      ? await account.matchPassword(password)
       : await require('bcryptjs').compare(password, account.password);
-    
+
     if (!isMatch) {
-      // Step 11: Track failed attempts
       account.loginAttempts = (account.loginAttempts || 0) + 1;
       if (account.loginAttempts >= 5) {
         account.isLocked = true;
-        account.lockedUntil = new Date(Date.now() + 30 * 60 * 1000); // Lock for 30 mins
+        account.lockedUntil = new Date(Date.now() + 30 * 60 * 1000);
       }
       await account.save();
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Success - Reset attempts
+    // ✅ Login success — reset tracking fields & update lastLogin in one save
     account.loginAttempts = 0;
     account.isLocked = false;
     account.lockedUntil = undefined;
+    account.lastLogin = new Date();
     await account.save();
 
-    if (account.isActive === false) {
-      return res.status(403).json({ success: false, message: 'Account is deactivated' });
-    }
-
-    if (account.isLocked && (!account.lockedUntil || account.lockedUntil > new Date())) {
-      return res.status(403).json({ success: false, message: 'Account is locked. Please contact support.' });
-    }
-
     const token = signToken(account._id);
-    
-    // Handle model-specific login touches
-    if (role === 'admin') {
-      account.lastLogin = new Date();
-      await account.save();
-    }
-
-    const mustReset = account.mustResetPassword;
+    const mustReset = account.mustResetPassword || false;
     res.json({
       success: true,
       token,

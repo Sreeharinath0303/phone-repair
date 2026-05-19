@@ -164,10 +164,36 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <script>
-    const API = 'http://localhost:5000/api/customer-auth';
+    const API_BASE = (['localhost', '127.0.0.1', ''].includes(window.location.hostname))
+      ? 'http://localhost:5000/api'
+      : '/api';
+    const API = `${API_BASE}/customer-auth`;
     let currentMode = 'login'; // 'login' or 'signup'
     let currentMethod = 'mobile'; // 'mobile' or 'email'
     let activeIdentity = ''; // Stores mobile or email temporarily
+
+    async function storeSession(token) {
+      if (!token) return;
+      localStorage.setItem('rv_token', token);
+      localStorage.setItem('rv_role', 'customer');
+      // Backward compatibility for older HTML dashboard code
+      localStorage.setItem('rv_user_token', token);
+
+      try {
+        const meRes = await fetch(`${API}/me`, { headers: { Authorization: `Bearer ${token}` } });
+        const meData = await meRes.json();
+        if (meData?.success && meData.data) localStorage.setItem('rv_user', JSON.stringify(meData.data));
+      } catch {
+        // no-op
+      }
+    }
+
+    function redirectAfterAuth() {
+      const qs = new URLSearchParams(window.location.search);
+      const redirect = qs.get('redirect');
+      if (redirect) return (window.location.href = redirect);
+      window.location.href = 'customer-dashboard.html';
+    }
 
     // Core UI switchers
     function setMode(mode) {
@@ -242,9 +268,9 @@
       const otp = document.getElementById('mobileOtpCode').value.trim();
       const res = await callApi('/verify-mobile-otp', { phone: activeIdentity, otp });
       if (res.success) {
-        localStorage.setItem('rv_user_token', res.token);
+        await storeSession(res.token);
         showToast('Authentication Successful!', 'success');
-        setTimeout(() => window.location.href = 'customer-dashboard.html', 800);
+        setTimeout(() => redirectAfterAuth(), 800);
       }
     }
 
@@ -256,7 +282,7 @@
       const res = await callApi('/login', { email, password: pass });
       
       if (res.success) {
-        localStorage.setItem('rv_user_token', res.token);
+        await storeSession(res.token);
         if (res.mustResetPassword) {
             showToast('Security Alert: Administrative password reset required.', 'info');
             activeIdentity = email;
@@ -268,7 +294,7 @@
             // We set currentMode to login so they can go back if they want, but reset is shown
         } else {
             showToast('Login Successful!', 'success');
-            setTimeout(() => window.location.href = 'customer-dashboard.html', 800);
+            setTimeout(() => redirectAfterAuth(), 800);
         }
       } else if (res.unverified) {
         activeIdentity = email;
@@ -299,9 +325,9 @@
       const otp = document.getElementById('emailOtpCode').value.trim();
       const res = await callApi('/verify-registration', { email: activeIdentity, otp });
       if (res.success) {
-        localStorage.setItem('rv_user_token', res.token);
+        await storeSession(res.token);
         showToast('Email Verified & Account Ready!', 'success');
-        setTimeout(() => window.location.href = 'customer-dashboard.html', 800);
+        setTimeout(() => redirectAfterAuth(), 800);
       }
     }
 

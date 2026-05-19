@@ -38,7 +38,8 @@ const technicianSchema = new mongoose.Schema({
 
 // Step 17: Performance Optimization Indexes
 technicianSchema.index({ name: 'text', email: 1, phone: 1 });
-technicianSchema.index({ city: 1, state: 1, serviceAreas: 1, specialization: 1, supportedBrands: 1 });
+technicianSchema.index({ city: 1, state: 1, serviceAreas: 1, specialization: 1 });
+technicianSchema.index({ supportedBrands: 1 });
 
 // Hash password
 technicianSchema.pre('save', async function (next) {

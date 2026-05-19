@@ -6,11 +6,13 @@ import {
 } from 'lucide-react';
 
 const STAGE_COLOR = {
-  'new': 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  'contacted': 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  'quoted': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  'converted': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  'lost': 'bg-red-500/10 text-red-400 border-red-500/20'
+  'Lead Created': 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  'Incomplete booking': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  'Booking Submitted': 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  'Under Review': 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+  'Follow-up sent': 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+  'Converted to order': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  'Lost / inactive': 'bg-red-500/10 text-red-400 border-red-500/20'
 };
 
 export const LeadManagement = () => {
@@ -57,7 +59,7 @@ export const LeadManagement = () => {
 
   const filtered = leads
     .filter(l => filter === 'all' || l.stage === filter)
-    .filter(l => !search || `${l.name} ${l.phone} ${l.email} ${l.city}`.toLowerCase().includes(search.toLowerCase()));
+    .filter(l => !search || `${l.customerName} ${l.mobileNumber} ${l.email} ${l.city}`.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="space-y-6">
@@ -83,8 +85,8 @@ export const LeadManagement = () => {
             className="w-full bg-[#111111] border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>
-        <div className="flex gap-2">
-          {['all', 'new', 'contacted', 'quoted', 'converted', 'lost'].map(f => (
+        <div className="flex flex-wrap gap-2">
+          {['all', 'Lead Created', 'Incomplete booking', 'Booking Submitted', 'Converted to order', 'Lost / inactive'].map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -131,17 +133,17 @@ export const LeadManagement = () => {
                     className="hover:bg-white/[0.02] transition-colors"
                   >
                     <td className="px-6 py-4">
-                      <div className="font-semibold text-white text-sm">{lead.name || '—'}</div>
+                      <div className="font-semibold text-white text-sm">{lead.customerName || '—'}</div>
                       <div className="flex items-center gap-2 mt-1">
-                        {lead.phone && <span className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={10} />{lead.phone}</span>}
+                        {lead.mobileNumber && <span className="text-[11px] text-gray-500 flex items-center gap-1"><Phone size={10} />{lead.mobileNumber}</span>}
                         {lead.email && <span className="text-[11px] text-gray-500 flex items-center gap-1"><Mail size={10} />{lead.email}</span>}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-white">{lead.brand} {lead.model}</div>
-                      <div className="text-xs text-gray-500">{lead.deviceType}</div>
+                      <div className="text-sm font-medium text-white">{lead.deviceBrand} {lead.deviceModel}</div>
+                      <div className="text-xs text-gray-500">{lead.deviceCategory}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-300">{lead.issueType || '—'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-300">{(lead.repairTypes && lead.repairTypes.length > 0) ? lead.repairTypes.join(', ') : '—'}</td>
                     <td className="px-6 py-4 text-sm text-gray-400">{lead.city || '—'}</td>
                     <td className="px-6 py-4">
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize ${STAGE_COLOR[lead.stage] || 'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}>

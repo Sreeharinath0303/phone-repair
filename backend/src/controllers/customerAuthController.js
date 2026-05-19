@@ -14,12 +14,11 @@ exports.register = async (req, res) => {
     const { name, email, password } = req.body;
     if (!email || !password) return res.status(400).json({ success: false, message: 'Email and password required' });
 
-    // Password strength validation
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(password)) {
+    // Password strength validation (relaxed to 6+ characters to reduce friction)
+    if (password.length < 6) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Password must be at least 8 characters long, and include at least one uppercase letter, one lowercase letter, one number and one special character' 
+        message: 'Password must be at least 6 characters long' 
       });
     }
 
@@ -30,26 +29,12 @@ exports.register = async (req, res) => {
       name: name || 'Customer',
       email: email.toLowerCase(),
       password,
-      isVerified: false
+      isVerified: true // Auto-verify all new accounts
     });
-
-    const otp = user.generateOTP();
-    await user.save();
-
-    // Send Verification Email
-    try {
-      await sendEmail({
-        email: user.email,
-        subject: 'Verify your RepairVafe Account',
-        message: `Your verification OTP is: ${otp}. It expires in 10 minutes.`
-      });
-    } catch (e) {
-      console.log('Verification email failed, skipping');
-    }
 
     res.status(201).json({ 
       success: true, 
-      message: 'Registration successful. OTP sent to email.', 
+      message: 'Registration successful. Please login.', 
       data: { email: user.email }
     });
   } catch (err) {
@@ -64,43 +49,51 @@ exports.login = async (req, res) => {
     if (!email || !password) return res.status(400).json({ success: false, message: 'Email and password required' });
 
     const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
-    if (!user || !(await user.matchPassword(password))) {
+    if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
+    // Check account status before verifying password
     if (!user.isActive) {
       return res.status(403).json({ success: false, message: 'Account is deactivated. Please contact support.' });
     }
 
-    if (user.isLocked && (!user.lockedUntil || user.lockedUntil > new Date())) {
-      return res.status(403).json({ success: false, message: 'Account is locked. Please contact support.' });
+    // Auto-unlock expired locks
+    if (user.isLocked && user.lockedUntil && user.lockedUntil <= new Date()) {
+      user.isLocked = false;
+      user.lockedUntil = undefined;
+      user.loginAttempts = 0;
     }
 
-    if (!user.isVerified) {
-      const otp = user.generateOTP();
-      await user.save();
-      try {
-        await sendEmail({
-          email: user.email,
-          subject: 'Verify your RepairVafe Account',
-          message: `Your verification OTP is: ${otp}. It expires in 10 minutes.`
-        });
-      } catch (e) {}
-      return res.status(403).json({ success: false, message: 'Account not verified. OTP sent to email.', unverified: true });
+    if (user.isLocked && user.lockedUntil && user.lockedUntil > new Date()) {
+      const mins = Math.ceil((user.lockedUntil - new Date()) / 60000);
+      return res.status(403).json({ success: false, message: `Account is temporarily locked. Try again in ${mins} minute(s).` });
     }
 
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    // ✅ Login success
     user.lastLogin = new Date();
     user.loginAttempts = 0;
+
+    // Ensure older accounts are marked as verified
+    if (!user.isVerified) {
+      user.isVerified = true;
+    }
+
     await user.save();
 
     const token = signToken(user._id);
-    const mustReset = user.mustResetPassword;
-    res.json({ 
-      success: true, 
-      token, 
+    const mustReset = user.mustResetPassword || false;
+    res.json({
+      success: true,
+      token,
       mustResetPassword: mustReset,
       message: mustReset ? 'Login successful. Please reset your password.' : 'Login successful',
-      data: { id: user._id, name: user.name, email: user.email, phone: user.phone } 
+      data: { id: user._id, name: user.name, email: user.email, phone: user.phone }
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

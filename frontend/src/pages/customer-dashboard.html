@@ -287,7 +287,7 @@
 
   <script>
     const API = (['localhost', '127.0.0.1', ''].includes(window.location.hostname)) ? 'http://localhost:5000/api' : '/api';
-    const token = localStorage.getItem('rv_user_token');
+    const token = localStorage.getItem('rv_token') || sessionStorage.getItem('rv_token') || localStorage.getItem('rv_user_token');
     let allBookings = [];
 
     if (!token) window.location.href = 'customer-auth.html';
@@ -336,7 +336,7 @@
           } else if (status === 'completed') {
              filtered = filtered.filter(b => ['Completed', 'Closed'].includes(b.status));
           } else if (status === 'pending') {
-             filtered = filtered.filter(b => b.quotationStatus === 'Awaiting Customer Approval' || b.quotationStatus === 'Pending');
+             filtered = filtered.filter(b => b.quotationStatus === 'Awaiting Customer Approval' && b.quotationAmount);
           }
        }
        
@@ -686,13 +686,13 @@
 
       active.forEach(b => {
         // Step 4: Pending Approvals
-        if (b.quotationStatus === 'Awaiting Customer Approval' || b.quotationStatus === 'Pending') {
+        if (b.quotationStatus === 'Awaiting Customer Approval' && b.quotationAmount) {
           const qc = document.createElement('div');
           qc.className = 'quote-card';
           qc.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px; margin-bottom:15px">
               <h3 style="margin:0; color:#10b981">Estimate Available: ${b.deviceBrand} ${b.deviceModel}</h3>
-              <div style="font-size:1.5rem; font-weight:800">₹${b.quotationAmount}</div>
+              <div style="font-size:1.5rem; font-weight:800">₹${Number(b.quotationAmount).toLocaleString('en-IN')}</div>
             </div>
             
             <div style="margin-bottom:15px">
@@ -726,15 +726,15 @@
            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem; color:var(--clr-text-muted);">
               <div><strong style="color:#fff">Repair:</strong> ${b.serviceType}</div>
               <div><strong style="color:#fff">Mode:</strong> ${b.serviceMode || 'Visit'}</div>
-              <div><strong style="color:#fff">Est. Amount:</strong> ₹${b.quotationAmount || 'Pending'}</div>
+              <div><strong style="color:#fff">Approx Amount:</strong> ₹${b.approxAmount || 'Pending review'}</div>
               <div><strong style="color:#fff">Booked:</strong> ${new Date(b.createdAt).toLocaleDateString()}</div>
            </div>
 
-           ${(b.quotationStatus === 'Awaiting Customer Approval' || b.quotationStatus === 'Pending') ? '<div style="font-size:0.8rem; color:#f59e0b; background:rgba(245, 158, 11, 0.1); padding:5px 10px; border-radius:6px; text-align:center;">Approval Pending ⚠️</div>' : ''}
+           ${(b.quotationStatus === 'Awaiting Customer Approval' && b.quotationAmount) ? '<div style="font-size:0.8rem; color:#f59e0b; background:rgba(245, 158, 11, 0.1); padding:5px 10px; border-radius:6px; text-align:center;">Quote Approval Pending ⚠️</div>' : ''}
 
            <div style="display:flex; gap:10px; margin-top:auto;">
               <button class="btn btn-customer" style="flex:1; padding:8px;" onclick="viewDetails('${b._id}')">View Details</button>
-              <button class="btn btn-outline" style="flex:1; padding:8px;" onclick="viewDetails('${b._id}')">Track Status</button>
+              ${(b.quotationStatus === 'Awaiting Customer Approval' && b.quotationAmount) ? `<button class="btn btn-outline" style="flex:1; padding:8px;" onclick="showQuote('${b._id}')">Current Quote Amount</button>` : `<button class="btn btn-outline" style="flex:1; padding:8px;" onclick="viewDetails('${b._id}')">Track Status</button>`}
            </div>
         </div>`;
       });
@@ -862,6 +862,35 @@
       window.currentRating = 0;
     }
 
+    function showQuote(id) {
+      const b = allBookings.find(x => x._id === id);
+      if (!b) return;
+      if (!(b.quotationStatus === 'Awaiting Customer Approval' && b.quotationAmount)) {
+        return showToast('Admin quote not issued yet.', 'info');
+      }
+      document.getElementById('modalTitle').textContent = `Current Quote #${b.referenceNumber}`;
+      document.getElementById('modalBody').innerHTML = `
+        <div style="padding:18px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.02); border-radius:12px;">
+          <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+            <div>
+              <div style="font-size:0.85rem; color:rgba(255,255,255,0.6); margin-bottom:6px;">${b.deviceBrand} ${b.deviceModel}</div>
+              <div style="font-size:1.6rem; font-weight:900; color:#fff;">₹${Number(b.quotationAmount).toLocaleString('en-IN')}</div>
+              <div style="margin-top:8px; font-size:0.85rem; color:rgba(255,255,255,0.65);">Status: <strong style="color:#f59e0b">Awaiting your approval</strong></div>
+            </div>
+            <div style="text-align:right; font-size:0.8rem; color:rgba(255,255,255,0.6);">
+              <div>Approx: ₹${b.approxAmount ? Number(b.approxAmount).toLocaleString('en-IN') : 'Pending review'}</div>
+              <div>Discount: ₹${Number(b.discount || 0).toLocaleString('en-IN')}</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:14px;">
+            <button class="btn btn-customer" style="flex:1; padding:10px;" onclick="handleQuote('${b._id}', 'approve')">Approve Quote</button>
+            <button class="btn btn-outline" style="flex:1; padding:10px; border-color:#ef4444; color:#ef4444;" onclick="handleQuote('${b._id}', 'reject')">Reject Quote</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('repairModal').style.display = 'flex';
+    }
+
     function setRating(r) {
       window.currentRating = r;
       const stars = document.getElementById('feedbackStars').children;
@@ -963,6 +992,10 @@
     }
 
     function logout() {
+      localStorage.removeItem('rv_token');
+      sessionStorage.removeItem('rv_token');
+      localStorage.removeItem('rv_role');
+      localStorage.removeItem('rv_user');
       localStorage.removeItem('rv_user_token');
       window.location.href = 'customer-auth.html';
     }

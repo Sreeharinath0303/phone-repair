@@ -15,16 +15,47 @@ const DEVICE_TYPES = [
   { id: 'smartwatch', label: 'Smartwatch', icon: Cpu }
 ];
 
-const BRANDS = ['Apple', 'Samsung', 'OnePlus', 'Xiaomi', 'Oppo', 'Vivo', 'Realme', 'Google', 'Other'];
+const BRANDS_MAP = {
+  smartphone: ['Apple', 'Samsung', 'OnePlus', 'Xiaomi', 'Oppo', 'Vivo', 'Realme', 'Google', 'Nothing', 'Other'],
+  tablet: ['Apple', 'Samsung', 'Lenovo', 'Xiaomi', 'Realme', 'Other'],
+  laptop: ['Apple', 'Dell', 'HP', 'Lenovo', 'Asus', 'Acer', 'MSI', 'Other'],
+  smartwatch: ['Apple', 'Samsung', 'Garmin', 'Fossil', 'Fitbit', 'Amazfit', 'Noise', 'boAt', 'Other'],
+  default: ['Select Device Type First']
+};
 
-const ISSUE_TYPES = [
-  { id: 'screen', label: 'Screen Damage', icon: Monitor, price: '₹899+' },
-  { id: 'battery', label: 'Battery Issue', icon: Battery, price: '₹499+' },
-  { id: 'camera', label: 'Camera Fault', icon: Cpu, price: '₹699+' },
-  { id: 'charging', label: 'Charging Port', icon: Wrench, price: '₹399+' },
-  { id: 'water', label: 'Water Damage', icon: Wrench, price: '₹999+' },
-  { id: 'back_glass', label: 'Back Glass', icon: Smartphone, price: '₹599+' }
-];
+const ISSUE_TYPES_MAP = {
+  smartphone: [
+    { id: 'screen', label: 'Screen Damage', icon: Monitor, price: '₹899+' },
+    { id: 'battery', label: 'Battery Issue', icon: Battery, price: '₹499+' },
+    { id: 'camera', label: 'Camera Fault', icon: Cpu, price: '₹699+' },
+    { id: 'charging', label: 'Charging Port', icon: Wrench, price: '₹399+' },
+    { id: 'water', label: 'Water Damage', icon: Wrench, price: '₹999+' },
+    { id: 'back_glass', label: 'Back Glass', icon: Smartphone, price: '₹599+' }
+  ],
+  tablet: [
+    { id: 'screen', label: 'Screen Replacement', icon: Monitor, price: '₹1499+' },
+    { id: 'battery', label: 'Battery Issue', icon: Battery, price: '₹899+' },
+    { id: 'charging', label: 'Charging Port', icon: Wrench, price: '₹499+' },
+    { id: 'water', label: 'Water Damage', icon: Wrench, price: '₹1299+' },
+    { id: 'software', label: 'Software Issue', icon: Cpu, price: '₹399+' }
+  ],
+  laptop: [
+    { id: 'screen', label: 'Screen / Display', icon: Monitor, price: '₹2499+' },
+    { id: 'battery', label: 'Battery Replacement', icon: Battery, price: '₹1999+' },
+    { id: 'keyboard', label: 'Keyboard Issue', icon: Wrench, price: '₹999+' },
+    { id: 'motherboard', label: 'Motherboard / Chip', icon: Cpu, price: '₹2999+' },
+    { id: 'software', label: 'OS / Software', icon: Monitor, price: '₹499+' },
+    { id: 'cleaning', label: 'Overheating / Cleaning', icon: Wrench, price: '₹599+' }
+  ],
+  smartwatch: [
+    { id: 'screen', label: 'Screen Damage', icon: Monitor, price: '₹799+' },
+    { id: 'battery', label: 'Battery Replacement', icon: Battery, price: '₹599+' },
+    { id: 'strap', label: 'Strap / Body', icon: Wrench, price: '₹299+' },
+    { id: 'sensor', label: 'Sensor Issue', icon: Cpu, price: '₹699+' },
+    { id: 'water', label: 'Water Damage', icon: Wrench, price: '₹899+' }
+  ],
+  default: []
+};
 
 const TIME_SLOTS = ['09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'];
 
@@ -35,15 +66,17 @@ export const BookingFlow = () => {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
+  const savedUser = JSON.parse(localStorage.getItem('rv_user') || '{}');
+
   const [form, setForm] = useState({
     deviceType: '',
     brand: '',
     model: '',
     issue: '',
     description: '',
-    name: '',
-    phone: '',
-    email: '',
+    name: savedUser.name || '',
+    phone: savedUser.phone || '',
+    email: savedUser.email || '',
     address: '',
     city: '',
     state: '',
@@ -81,7 +114,7 @@ export const BookingFlow = () => {
           deviceType: form.deviceType,
           brand: form.brand,
           model: form.model,
-          issueType: form.issue,
+          issueType: (ISSUE_TYPES_MAP[form.deviceType] || []).find(i => i.id === form.issue)?.label || form.issue,
           description: form.description,
           customerName: form.name,
           customerPhone: form.phone,
@@ -124,7 +157,7 @@ export const BookingFlow = () => {
           <p className="text-gray-400 mb-2">
             Your repair request for <span className="text-white font-semibold">{form.brand} {form.model}</span> has been received.
           </p>
-          <p className="text-gray-500 text-sm mb-8">Our technician will arrive on <span className="text-gray-300">{form.date}</span> at <span className="text-gray-300">{form.timeSlot}</span>.</p>
+          <p className="text-gray-500 text-sm mb-8">Your repair request has been sent to our Admin. They will review the issue and send you an official quote in your Customer Dashboard shortly.</p>
           <div className="flex gap-3 justify-center">
             <Link
               to="/"
@@ -187,7 +220,13 @@ export const BookingFlow = () => {
                       {DEVICE_TYPES.map(d => (
                         <button
                           key={d.id}
-                          onClick={() => update('deviceType', d.id)}
+                          onClick={() => {
+                            update('deviceType', d.id);
+                            if (form.deviceType !== d.id) {
+                              update('brand', '');
+                              update('issue', '');
+                            }
+                          }}
                           className={`flex items-center gap-3 p-4 rounded-2xl border transition-all ${form.deviceType === d.id ? 'border-blue-500 bg-blue-500/10 text-blue-400' : 'border-white/5 bg-white/[0.02] text-gray-400 hover:border-white/15'}`}
                         >
                           <d.icon size={20} />
@@ -201,10 +240,11 @@ export const BookingFlow = () => {
                     <select
                       value={form.brand}
                       onChange={e => update('brand', e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                      disabled={!form.deviceType}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors disabled:opacity-50"
                     >
                       <option value="" className="bg-[#0d1422]">Select Brand</option>
-                      {BRANDS.map(b => <option key={b} value={b} className="bg-[#0d1422]">{b}</option>)}
+                      {(BRANDS_MAP[form.deviceType] || BRANDS_MAP.default).map(b => <option key={b} value={b} className="bg-[#0d1422]">{b}</option>)}
                     </select>
                   </div>
                   <div>
@@ -225,7 +265,7 @@ export const BookingFlow = () => {
                 <div className="space-y-6">
                   <h2 className="text-xl font-bold text-white font-['Outfit']">What needs fixing?</h2>
                   <div className="grid grid-cols-2 gap-3">
-                    {ISSUE_TYPES.map(issue => (
+                    {(ISSUE_TYPES_MAP[form.deviceType] || ISSUE_TYPES_MAP.smartphone).map(issue => (
                       <button
                         key={issue.id}
                         onClick={() => update('issue', issue.id)}
@@ -236,7 +276,7 @@ export const BookingFlow = () => {
                         </div>
                         <div>
                           <div className={`text-sm font-semibold ${form.issue === issue.id ? 'text-white' : 'text-gray-300'}`}>{issue.label}</div>
-                          <div className="text-xs text-gray-500">{issue.price}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">Price set by Admin</div>
                         </div>
                       </button>
                     ))}
@@ -394,14 +434,16 @@ export const BookingFlow = () => {
                   <div className="bg-white/[0.03] border border-white/5 rounded-2xl divide-y divide-white/5">
                     {[
                       { label: 'Device', value: `${form.brand} ${form.model} (${form.deviceType})` },
-                      { label: 'Issue', value: ISSUE_TYPES.find(i => i.id === form.issue)?.label || form.issue },
+                      { label: 'Issue', value: (ISSUE_TYPES_MAP[form.deviceType] || []).find(i => i.id === form.issue)?.label || form.issue },
                       { label: 'Customer', value: `${form.name} • ${form.phone}` },
                       { label: 'Location', value: `${form.address}, ${form.city} – ${form.pincode}` },
-                      { label: 'Schedule', value: `${form.date} at ${form.timeSlot}` }
+                      { label: 'Schedule', value: `${form.date} at ${form.timeSlot}` },
+                      { label: 'Quotation', value: 'Pending Admin Quote', highlight: true },
+                      { label: 'Approx Amount', value: (ISSUE_TYPES_MAP[form.deviceType] || []).find(i => i.id === form.issue)?.price || 'To be calculated' }
                     ].map(r => (
-                      <div key={r.label} className="flex justify-between gap-3 px-5 py-3.5">
-                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{r.label}</span>
-                        <span className="text-sm text-white font-medium text-right">{r.value}</span>
+                      <div key={r.label} className={`flex justify-between gap-3 px-5 py-3.5 ${r.highlight ? 'bg-blue-500/10 border-t border-blue-500/20' : ''}`}>
+                        <span className={`text-xs font-bold uppercase tracking-wider ${r.highlight ? 'text-blue-400' : 'text-gray-500'}`}>{r.label}</span>
+                        <span className={`text-sm font-medium text-right ${r.highlight ? 'text-blue-400 font-bold' : 'text-white'}`}>{r.value}</span>
                       </div>
                     ))}
                   </div>

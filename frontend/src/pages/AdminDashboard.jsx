@@ -44,8 +44,12 @@ export const AdminDashboard = () => {
       const statsData = await statsRes.json();
       const logsData = await logsRes.json();
 
-      if (statsData.success) setStats(statsData.data);
-      if (logsData.success) setAuditLogs(logsData.data);
+      if (statsData.success && statsData.data) {
+        setStats(prev => ({ ...prev, ...statsData.data }));
+      }
+      if (logsData.success && logsData.data) {
+        setAuditLogs(logsData.data);
+      }
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
     } finally {

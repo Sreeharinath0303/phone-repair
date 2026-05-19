@@ -3,6 +3,7 @@ const { Lead, LEAD_STAGES } = require('../models/Lead');
 const User = require('../models/User');
 const Technician = require('../models/Technician');
 const Feedback = require('../models/Feedback');
+const RepairType = require('../models/RepairType');
 const mongoose = require('mongoose');
 
 // @desc  Create new booking
@@ -79,6 +80,24 @@ exports.createBooking = async (req, res) => {
     }
 
     const safeEmail = customerEmail || `no-reply+${normalizedPhone}@repairvafe.local`;
+
+    // Approximate estimate (sum of configured repair type estimated prices).
+    // This is NOT the admin-approved quotation amount; it's only a quick estimate.
+    let approxAmount = 0;
+    try {
+      const typeNames = repairTypes.map((t) => String(t || '').trim()).filter(Boolean);
+      if (typeNames.length > 0) {
+        const types = await RepairType.find({
+          isActive: true,
+          name: { $in: typeNames },
+          $or: [{ category: deviceCategory }, { category: 'general' }]
+        }).select('estimatedPrice');
+        approxAmount = (types || []).reduce((sum, t) => sum + (Number(t.estimatedPrice) || 0), 0);
+      }
+    } catch (e) {
+      approxAmount = 0;
+    }
+
     const bookingData = {
       deviceCategory,
       deviceBrand,
@@ -95,6 +114,8 @@ exports.createBooking = async (req, res) => {
       pincode,
       preferredDate,
       preferredTimeSlot,
+      approxAmount,
+      quotationStatus: 'Pending',
       // Location intelligence
       latitude:       latitude   || null,
       longitude:      longitude  || null,
@@ -174,6 +195,27 @@ exports.createBooking = async (req, res) => {
         lead.lastActivityAt = new Date();
         lead.stageHistory.push({ stage: LEAD_STAGES.BOOKING_COMPLETED, note: 'Booking linked via mobile number match' });
         await lead.save();
+      } else {
+        await Lead.create({
+          customerName,
+          mobileNumber: customerPhone,
+          normalizedMobile,
+          email: customerEmail,
+          address, city, state, pincode,
+          deviceCategory, deviceBrand, deviceModel,
+          repairTypes,
+          source: 'website',
+          stage: LEAD_STAGES.BOOKING_COMPLETED,
+          bookingCompleted: true,
+          bookingId: booking._id,
+          bookingReference: booking.referenceNumber,
+          convertedAt: new Date(),
+          lastActivityAt: new Date(),
+          stageHistory: [
+            { stage: LEAD_STAGES.NEW_LEAD, note: 'Lead generated directly from direct website booking', changedAt: new Date() },
+            { stage: LEAD_STAGES.BOOKING_COMPLETED, note: 'Customer submitted booking successfully', changedAt: new Date() }
+          ]
+        });
       }
     }
 
@@ -530,8 +572,16 @@ exports.issueQuotation = async (req, res) => {
     const { quotationAmount, discount, estimatedTime, warrantyPeriod, technicianNote, repairSummary, termsAndConditions } = req.body;
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (booking.quotationStatus === 'Approved by Customer') {
+      return res.status(400).json({ success: false, message: 'Cannot change quote after customer approval. Create a new order or reset workflow.' });
+    }
 
-    booking.quotationAmount  = quotationAmount;
+    const amountNum = Number(quotationAmount);
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      return res.status(400).json({ success: false, message: 'quotationAmount must be a positive number' });
+    }
+
+    booking.quotationAmount  = amountNum;
     booking.discount         = discount || 0;
     booking.estimatedTime    = estimatedTime;
     booking.warrantyPeriod   = warrantyPeriod || '3 Months';

@@ -39,6 +39,7 @@ const adminSchema = new mongoose.Schema({
   loginAttempts: { type: Number, default: 0 },
   isLocked: { type: Boolean, default: false },
   lockedUntil: { type: Date },
+  mustResetPassword: { type: Boolean, default: false },
   // OTP Management
   otp:      { type: String, select: false },
   otpExpiry: { type: Date, select: false },
