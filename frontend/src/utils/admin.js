@@ -1041,27 +1041,127 @@ async function convertLead(leadId) {
 
 // ── Feedback ──────────────────────────────────────────────────
 async function loadFeedback() {
-  const fbList = document.getElementById('adminFeedbackList');
-  const fbStats = document.getElementById('fbStatsRow');
-  if (fbList) fbList.innerHTML = '<div style="padding:20px;text-align:center">Loading...</div>';
-  const data = await api('/admin/feedback-analytics');
-  if (!data?.success) return;
-  const { feedbacks, stats } = data.data;
-  if (fbStats) fbStats.innerHTML = `
-    <div class="stat-card"><div class="stat-card-num">${stats.total}</div><div class="stat-card-label">Total Reviews</div></div>
-    <div class="stat-card"><div class="stat-card-num">⭐ ${stats.avgRating}</div><div class="stat-card-label">Avg Rating</div></div>
-    <div class="stat-card"><div class="stat-card-num">${stats.fiveStar}</div><div class="stat-card-label">5-Star</div></div>
-    <div class="stat-card"><div class="stat-card-num">${stats.recommendRate}%</div><div class="stat-card-label">Recommend Rate</div></div>`;
-  if (fbList) fbList.innerHTML = (feedbacks || []).map(f => `
-    <div style="padding:16px;margin-bottom:12px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.06);">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-weight:600">${f.customerName || '—'} <span style="color:var(--clr-text-faint);font-size:0.8rem">#${f.referenceNumber}</span></div>
-        <div style="color:#f59e0b;font-size:1.1rem">${'⭐'.repeat(f.overallRating || 0)}</div>
-      </div>
-      <div style="margin-top:8px;font-size:0.85rem;color:var(--clr-text-muted)">${f.comments || 'No comment'}</div>
-      <div style="margin-top:6px;font-size:0.75rem;color:var(--clr-text-faint)">${formatDate(f.createdAt)}</div>
-    </div>`).join('') || '<div style="padding:20px;text-align:center;color:var(--clr-text-faint)">No feedback yet</div>';
+  const tbody = document.getElementById('fbTableBody');
+  const searchInput = document.getElementById('fbSearch');
+  const typeSelect = document.getElementById('fbType');
+  const minRatingSelect = document.getElementById('fbMinRating');
+
+  if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px">Loading feedbacks...</td></tr>';
+  
+  const type = typeSelect?.value || '';
+  const rating = minRatingSelect?.value || '';
+  const search = searchInput?.value || '';
+  
+  const qs = new URLSearchParams({ type, rating, search }).toString();
+  const listRes = await api(`/feedback?${qs}`);
+  const feedbacks = listRes?.data || [];
+
+  const statsRes = await api('/feedback/stats');
+  const stats = statsRes?.success ? statsRes.data : {
+    overallAvg: '0.0',
+    totalCustomer: 0,
+    totalPartner: 0
+  };
+
+  setEl('fbStatAvg', stats.overallAvg || stats.customerAvg || '0.0');
+  setEl('fbStatCust', stats.totalCustomer || 0);
+  setEl('fbStatPart', stats.totalPartner || 0);
+  
+  const custFeedbacks = feedbacks.filter(f => f.type === 'customer');
+  const positive = custFeedbacks.filter(f => (f.rating || 0) >= 4).length;
+  const satisRate = custFeedbacks.length ? Math.round((positive / custFeedbacks.length) * 100) + '%' : '100%';
+  setEl('fbStatSatis', satisRate);
+
+  if (tbody) {
+    tbody.innerHTML = feedbacks.map(f => {
+      const isCust = f.type === 'customer';
+      const ratingVal = isCust ? (f.rating || 5) : (f.orderQuality || 5);
+      const stars = '★'.repeat(ratingVal) + '☆'.repeat(5 - ratingVal);
+      const stakeholder = isCust 
+        ? `<div style="font-weight:600">${f.fromName || 'Customer'}</div><div style="font-size:0.75rem;color:var(--clr-text-muted)">User</div>`
+        : `<div style="font-weight:600">${f.fromName || 'Partner'}</div><div style="font-size:0.75rem;color:var(--clr-text-muted)">Technician</div>`;
+      
+      const remarks = isCust
+        ? `<div style="font-size:0.82rem;">${f.review || 'No review comments.'}</div>
+           <div style="font-size:0.75rem;color:var(--clr-text-faint);margin-top:4px;">
+             Quality: ${f.serviceQuality || 5}/5 · Time: ${f.timeliness || 5}/5 · Behavior: ${f.technicianBehavior || 5}/5
+           </div>`
+        : `<div style="font-size:0.82rem;">${f.partsNotes || 'No notes.'}</div>
+           <div style="font-size:0.75rem;color:var(--clr-text-faint);margin-top:4px;">
+             Job Quality: ${f.orderQuality || 5}/5 · Cooperation: ${f.customerCooperation || 5}/5
+           </div>`;
+
+      return `
+        <tr>
+          <td class="td-muted">${formatDate(f.createdAt)}</td>
+          <td style="font-weight:700;color:var(--clr-primary)">${f.orderId || '—'}</td>
+          <td>${stakeholder}</td>
+          <td><span class="badge ${isCust ? 'badge-completed' : 'badge-inprogress'}">${isCust ? 'Customer' : 'Partner'}</span></td>
+          <td><span style="color:#f59e0b;font-weight:bold;font-size:1rem">${stars}</span></td>
+          <td>${remarks}</td>
+          <td><button class="action-btn" onclick="viewFeedbackDetail('${f._id}')">Details</button></td>
+        </tr>
+      `;
+    }).join('') || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--clr-text-faint)">No feedback records match current filters</td></tr>';
+  }
 }
+
+async function viewFeedbackDetail(id) {
+  const res = await api('/feedback');
+  const f = (res?.data || []).find(x => x._id === id);
+  if (!f) return;
+
+  document.getElementById('modalTitle').textContent = `Feedback Detail: Order #${f.orderId}`;
+  
+  let detailsHtml = '';
+  if (f.type === 'customer') {
+    detailsHtml = `
+      <div style="font-size:0.9rem;">
+        <p><strong>Customer Name:</strong> ${f.fromName}</p>
+        <p><strong>Submitted At:</strong> ${new Date(f.createdAt).toLocaleString()}</p>
+        <p><strong>Overall Rating:</strong> <span style="color:#f59e0b;font-size:1.1rem">${'★'.repeat(f.rating || 5)}${'☆'.repeat(5 - (f.rating || 5))}</span></p>
+        <hr style="border:0;border-top:1px solid rgba(255,255,255,0.05);margin:15px 0;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px;">
+          <div>Service Quality: <strong>${f.serviceQuality || 5} / 5</strong></div>
+          <div>Pickup Experience: <strong>${f.pickupExperience || 5} / 5</strong></div>
+          <div>Technician Behavior: <strong>${f.technicianBehavior || 5} / 5</strong></div>
+          <div>Timeliness/Speed: <strong>${f.timeliness || 5} / 5</strong></div>
+          <div>Overall Satisfaction: <strong>${f.overallSatisfaction || 5} / 5</strong></div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);padding:15px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);">
+          <strong>Review/Comments:</strong>
+          <p style="margin-top:6px;font-style:italic;color:var(--clr-text-muted);">${f.review || 'No written comment.'}</p>
+        </div>
+      </div>
+    `;
+  } else {
+    detailsHtml = `
+      <div style="font-size:0.9rem;">
+        <p><strong>Partner Name:</strong> ${f.fromName}</p>
+        <p><strong>Submitted At:</strong> ${new Date(f.createdAt).toLocaleString()}</p>
+        <hr style="border:0;border-top:1px solid rgba(255,255,255,0.05);margin:15px 0;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px;">
+          <div>Job Quality: <strong>${f.orderQuality || 5} / 5</strong></div>
+          <div>Customer Cooperation: <strong>${f.customerCooperation || 5} / 5</strong></div>
+          <div>Admin Coordination: <strong>${f.adminCoordination || 5} / 5</strong></div>
+          <div>Device Condition: <strong>${f.deviceCondition || '—'}</strong></div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);padding:15px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);">
+          <strong>Spare Parts/Remarks Notes:</strong>
+          <p style="margin-top:6px;font-style:italic;color:var(--clr-text-muted);">${f.partsNotes || 'No notes.'}</p>
+        </div>
+      </div>
+    `;
+  }
+  
+  document.getElementById('modalBody').innerHTML = detailsHtml;
+  document.getElementById('modalStatusActions').innerHTML = '';
+  document.getElementById('repairModal').style.display = 'flex';
+}
+
+window.loadFeedback = loadFeedback;
+window.viewFeedbackDetail = viewFeedbackDetail;
+
 
 // ── Email Templates ───────────────────────────────────────────
 async function loadEmailTemplates() {

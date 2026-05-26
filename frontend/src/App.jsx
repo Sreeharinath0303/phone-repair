@@ -43,11 +43,7 @@ function App() {
           } />
           
           {/* Partner Dashboard */}
-          <Route path="/partner" element={
-            <ProtectedRoute allowedRoles={['partner']}>
-              <PartnerDashboard />
-            </ProtectedRoute>
-          } />
+          <Route path="/partner" element={<PartnerDashboard />} />
           
           {/* Admin Panel (Scoped) */}
           <Route path="/admin/*" element={

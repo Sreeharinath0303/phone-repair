@@ -25,6 +25,11 @@
         <span>Repair<strong>Vafe</strong></span>
       </div>
 
+      <div class="portal-selector" style="display: flex; gap: 10px; margin-bottom: 20px; justify-content: center;">
+        <button type="button" class="portal-btn active" id="btnAdminPortal" onclick="setPortal('admin')" style="background: var(--clr-primary); border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; color: #fff; cursor: pointer; font-weight: bold; opacity: 1; transition: 0.3s; font-family: 'Outfit', sans-serif;">Admin Portal</button>
+        <button type="button" class="portal-btn" id="btnPartnerPortal" onclick="setPortal('partner')" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; color: #aaa; cursor: pointer; font-weight: bold; opacity: 0.8; transition: 0.3s; font-family: 'Outfit', sans-serif;">Partner Portal</button>
+      </div>
+
       <div class="auth-switch" role="tablist" aria-label="Auth mode">
         <button type="button" class="auth-tab active" id="tabLogin" onclick="switchAuthMode('login')">Login</button>
         <button type="button" class="auth-tab" id="tabSignup" onclick="switchAuthMode('signup')">Sign Up</button>
@@ -180,6 +185,62 @@
       : '/api';
 
     let authMode = 'login';
+    let portalMode = 'admin';
+
+    function setPortal(mode) {
+      portalMode = mode;
+      const btnAdmin = document.getElementById('btnAdminPortal');
+      const btnPartner = document.getElementById('btnPartnerPortal');
+      const title = document.getElementById('authTitle');
+      const subtitle = document.getElementById('authSubtitle');
+      const tabSignup = document.getElementById('tabSignup');
+
+      if (mode === 'admin') {
+        btnAdmin.classList.add('active');
+        btnAdmin.style.background = 'var(--clr-primary)';
+        btnAdmin.style.color = '#fff';
+        btnAdmin.style.border = 'none';
+        btnAdmin.style.opacity = '1';
+
+        btnPartner.classList.remove('active');
+        btnPartner.style.background = 'rgba(255,255,255,0.05)';
+        btnPartner.style.color = '#aaa';
+        btnPartner.style.border = '1px solid rgba(255,255,255,0.1)';
+        btnPartner.style.opacity = '0.8';
+
+        title.textContent = 'Admin Portal';
+        subtitle.textContent = 'Sign in to open your dashboard';
+        document.getElementById('demoHintTitle').textContent = 'Default Login';
+        document.getElementById('demoHintText').textContent = 'admin@repairvafe.com · Admin@1234';
+        document.getElementById('loginEmail').placeholder = 'admin@repairvafe.com';
+        document.getElementById('loginEmail').type = 'email';
+        
+        tabSignup.style.display = 'inline-block';
+      } else {
+        btnPartner.classList.add('active');
+        btnPartner.style.background = 'var(--clr-primary)';
+        btnPartner.style.color = '#fff';
+        btnPartner.style.border = 'none';
+        btnPartner.style.opacity = '1';
+
+        btnAdmin.classList.remove('active');
+        btnAdmin.style.background = 'rgba(255,255,255,0.05)';
+        btnAdmin.style.color = '#aaa';
+        btnAdmin.style.border = '1px solid rgba(255,255,255,0.1)';
+        btnAdmin.style.opacity = '0.8';
+
+        title.textContent = 'Partner Portal';
+        subtitle.textContent = 'Sign in to open your service dashboard';
+        document.getElementById('demoHintTitle').textContent = 'Partner Demo';
+        document.getElementById('demoHintText').textContent = 'sharma@repairvafe.com · Partner@123';
+        document.getElementById('loginEmail').placeholder = 'Email or Phone Number';
+        document.getElementById('loginEmail').type = 'text';
+
+        tabSignup.style.display = 'none';
+        switchAuthMode('login');
+      }
+      hideAlert();
+    }
 
     function getStoredToken() {
       return localStorage.getItem('rv_token') || sessionStorage.getItem('rv_token');
@@ -293,20 +354,49 @@
       hideAlert();
 
       try {
-        const res = await fetch(`${API}/auth/login`, {
+        const loginUrl = portalMode === 'partner' 
+          ? `${API}/technician-auth/login` 
+          : `${API}/auth/login`;
+
+        const payload = portalMode === 'partner'
+          ? { identifier: email, password }
+          : { email, password };
+
+        const res = await fetch(loginUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify(payload)
         });
         const data = await res.json();
 
         if (!res.ok || !data.success) {
-          showAlert(data.message || 'Invalid email or password');
+          showAlert(data.message || 'Invalid credentials');
           setLoading('login', false);
           return;
         }
 
-        storeAuth(data, remember);
+        // Store auth keys properly
+        const storage = remember ? localStorage : sessionStorage;
+        localStorage.removeItem('rv_token');
+        localStorage.removeItem('rv_admin');
+        localStorage.removeItem('rv_partner_token');
+        localStorage.removeItem('rv_role');
+        localStorage.removeItem('rv_user');
+        sessionStorage.removeItem('rv_token');
+        sessionStorage.removeItem('rv_admin');
+
+        storage.setItem('rv_token', data.token);
+        
+        if (portalMode === 'partner') {
+          storage.setItem('rv_partner_token', data.token);
+          storage.setItem('rv_role', 'partner');
+          storage.setItem('rv_user', JSON.stringify(data.data));
+          localStorage.setItem('rv_partner', JSON.stringify(data.data));
+        } else {
+          storage.setItem('rv_admin', JSON.stringify(data.data));
+          storage.setItem('rv_role', data.data.role);
+          storage.setItem('rv_user', JSON.stringify(data.data));
+        }
         
         if (data.mustResetPassword) {
           showToast('Security Action Required: Please reset your password to continue.', 'info');
@@ -318,7 +408,9 @@
         }
 
         showToast('Login successful. Redirecting to dashboard...', 'success');
-        setTimeout(() => window.location.replace(getPostLoginRedirect(data.data.role)), 500);
+        
+        const redirectDest = portalMode === 'partner' ? 'partner-dashboard.html' : getPostLoginRedirect(data.data.role);
+        setTimeout(() => window.location.replace(redirectDest), 500);
       } catch (err) {
         showAlert('Cannot connect to server. Make sure backend is running.');
         setLoading('login', false);
@@ -331,7 +423,11 @@
       setLoading('forgot', true);
       
       try {
-        const res = await fetch(`${API}/auth/forgot-password`, {
+        const forgotUrl = portalMode === 'partner'
+          ? `${API}/technician-auth/forgot-password`
+          : `${API}/auth/forgot-password`;
+
+        const res = await fetch(forgotUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email })
@@ -361,7 +457,11 @@
       setLoading('reset', true);
       
       try {
-        const res = await fetch(`${API}/auth/reset-password`, {
+        const resetUrl = portalMode === 'partner'
+          ? `${API}/technician-auth/reset-password`
+          : `${API}/auth/reset-password`;
+
+        const res = await fetch(resetUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, otp, newPassword })
@@ -449,8 +549,13 @@
         return;
       }
       switchAuthMode('login');
-      document.getElementById('loginEmail').value = 'admin@repairvafe.com';
-      document.getElementById('loginPassword').value = 'Admin@1234';
+      if (portalMode === 'partner') {
+        document.getElementById('loginEmail').value = 'sharma@repairvafe.com';
+        document.getElementById('loginPassword').value = 'Partner@123';
+      } else {
+        document.getElementById('loginEmail').value = 'admin@repairvafe.com';
+        document.getElementById('loginPassword').value = 'Admin@1234';
+      }
     }
 
     function showToast(msg, type = 'info') {

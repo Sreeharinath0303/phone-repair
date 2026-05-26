@@ -40,42 +40,15 @@
 
       <div class="login-header">
         <h1 id="authTitle">Welcome Back</h1>
-        <p id="authSubtitle">Select your preferred login method</p>
+        <p id="authSubtitle">Log in to track your repairs</p>
       </div>
 
-      <!-- AUTHENTICATION METHOD SWITCHER -->
-      <div class="method-switch" id="methodSwitch">
-        <button type="button" id="btnMethodMobile" class="btn-customer" onclick="setMethod('mobile')">📱 Mobile & OTP</button>
-        <button type="button" id="btnMethodEmail" class="btn-outline-customer" onclick="setMethod('email')">✉️ Email & Password</button>
-      </div>
+      <!-- AUTHENTICATION METHOD SWITCHER (Hidden - Email only mode) -->
+      <div class="method-switch" id="methodSwitch" style="display: none !important;"></div>
 
-      <!-- ================= MOBILE AUTH FLOW ================= -->
-      
-      <!-- MOBILE INPUT FORM -->
-      <form class="login-form" id="mobileForm" onsubmit="handleMobileRequest(event)">
-        <div class="form-group">
-          <label class="form-label">Mobile Number</label>
-          <div class="input-wrap">
-            <span class="input-icon">📱</span>
-            <input type="tel" class="form-input" id="mobileInput" placeholder="Enter 10-digit mobile number" required />
-          </div>
-        </div>
-        <button type="submit" class="btn btn-customer btn-full" id="mobileBtn">Send OTP</button>
-      </form>
-
-      <!-- MOBILE OTP FORM -->
-      <form class="login-form auth-hidden" id="mobileOtpForm" onsubmit="handleMobileVerify(event)">
-        <div class="login-header" style="text-align:center">
-          <div style="font-size:3rem; margin-bottom:10px">💬</div>
-          <h2>Verify Mobile</h2>
-          <p>Enter the 6-digit code sent to your phone</p>
-        </div>
-        <div class="form-group">
-          <input type="text" class="form-input" id="mobileOtpCode" placeholder="Enter 6-digit OTP" maxlength="6" style="text-align:center; font-size:1.5rem; letter-spacing:10px" required />
-        </div>
-        <button type="submit" class="btn btn-customer btn-full" id="mobileOtpBtn">Verify & Proceed</button>
-        <div style="text-align:center; margin-top:15px"><a href="#" onclick="setMethod('mobile')" style="color:var(--clr-customer)">← Change Mobile</a></div>
-      </form>
+      <!-- ================= MOBILE AUTH FLOW (HIDDEN) ================= -->
+      <form class="login-form auth-hidden" id="mobileForm" style="display:none !important;"></form>
+      <form class="login-form auth-hidden" id="mobileOtpForm" style="display:none !important;"></form>
 
       <!-- ================= EMAIL AUTH FLOW ================= -->
 
@@ -169,7 +142,7 @@
       : '/api';
     const API = `${API_BASE}/customer-auth`;
     let currentMode = 'login'; // 'login' or 'signup'
-    let currentMethod = 'mobile'; // 'mobile' or 'email'
+    let currentMethod = 'email'; // Always email (mobile OTP hidden)
     let activeIdentity = ''; // Stores mobile or email temporarily
 
     async function storeSession(token) {
@@ -390,6 +363,9 @@
       document.getElementById('toastContainer').appendChild(el);
       setTimeout(() => el.remove(), 3000);
     }
+
+    // Initialize: show email login form by default
+    renderForms();
   </script>
 </body>
 </html>

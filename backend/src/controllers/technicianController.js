@@ -81,6 +81,13 @@ exports.deleteTechnician = async (req, res) => {
 };
 
 const Booking = require('../models/Booking');
+const ALLOWED_PARTNER_STATUS_FLOW = {
+  'Assigned to Partner': 'Confirmed',
+  'Confirmed': 'Picked Up',
+  'Picked Up': 'In Repair',
+  'In Repair': 'Completed',
+  'Completed': 'Delivered'
+};
 
 // @desc  Get Partner Dashboard Stats
 // @route GET /api/technicians/dashboard-stats
@@ -114,6 +121,45 @@ exports.getAssignedOrders = async (req, res) => {
     const techId = req.user.id;
     const orders = await Booking.find({ assignedTechnician: techId }).sort({ createdAt: -1 });
     res.json({ success: true, data: orders });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc  Update assigned order status (partner scoped)
+// @route PUT /api/technicians/my-orders/:id/status
+// @access Private (Technician)
+exports.updateMyOrderStatus = async (req, res) => {
+  try {
+    const techId = req.user.id;
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ success: false, message: 'Status is required' });
+    }
+
+    const booking = await Booking.findOne({ _id: id, assignedTechnician: techId });
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Assigned order not found' });
+    }
+
+    const allowedNextStatus = ALLOWED_PARTNER_STATUS_FLOW[booking.status];
+    if (!allowedNextStatus || status !== allowedNextStatus) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status transition from '${booking.status}' to '${status}'`
+      });
+    }
+
+    booking.status = status;
+    await booking.save();
+
+    res.json({
+      success: true,
+      message: 'Order status updated successfully',
+      data: booking
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

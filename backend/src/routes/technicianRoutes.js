@@ -1,12 +1,13 @@
 const router = require('express').Router();
 const { 
   getAllTechnicians, createTechnician, updateTechnician, deleteTechnician,
-  getPartnerDashboardStats, getAssignedOrders
+  getPartnerDashboardStats, getAssignedOrders, updateMyOrderStatus
 } = require('../controllers/technicianController');
 const { protect, authorize } = require('../middleware/auth');
 
 router.get('/dashboard-stats', protect, getPartnerDashboardStats);
 router.get('/my-orders', protect, getAssignedOrders);
+router.put('/my-orders/:id/status', protect, updateMyOrderStatus);
 
 router.get('/',         protect, getAllTechnicians);
 router.post('/',        protect, authorize('admin', 'superadmin'), createTechnician);

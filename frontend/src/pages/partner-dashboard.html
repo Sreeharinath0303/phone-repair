@@ -6,18 +6,85 @@
   <title>Partner Dashboard - RepairVafe</title>
   <link rel="stylesheet" href="../styles/global.css" />
   <link rel="stylesheet" href="../styles/admin.css" />
+  <link rel="stylesheet" href="../styles/login.css" id="loginCSS" />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
+    :root { --clr-partner: #10b981; --clr-partner-hover: #059669; }
+    .btn-partner { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; }
+    .btn-partner:hover { background: linear-gradient(135deg, #059669, #047857); transform: translateY(-1px); box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3); }
+    .login-card { border-color: rgba(16, 185, 129, 0.2); }
+    .login-card:hover { box-shadow: 0 30px 70px rgba(0,0,0,0.6), 0 0 0 1px rgba(16, 185, 129, 0.2) inset; }
+    .input-wrap .form-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
+    .forgot-link, .login-footer a { color: #10b981 !important; }
+    .role-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #10b981; padding: 5px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; margin-bottom: 1.25rem; justify-content: center; }
     .customer-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); }
     .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
     .status-pending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
     .status-active { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
     .status-done { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .p-40 { padding: 28px; }
+    .table-card { background: var(--gradient-card); border: 1px solid var(--clr-border); border-radius: var(--radius-lg); overflow: hidden; }
+    .auth-hidden { display: none !important; }
+    .btn-customer { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border: none; box-shadow: 0 4px 15px rgba(99,102,241,0.3); }
+    .btn-customer:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
+    .close-btn, .modal-content .close-btn { background: none; border: none; color: var(--clr-text-muted); font-size: 1.5rem; cursor: pointer; line-height: 1; padding: 0 4px; transition: color 0.2s; }
+    .close-btn:hover { color: var(--clr-text); }
+    .modal-content { background: var(--clr-surface); border: 1px solid var(--clr-border); border-radius: var(--radius-xl); width: 100%; max-height: 90vh; overflow-y: auto; animation: slide-up 0.3s ease; }
+    .modal-content .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--clr-border); }
+    .modal-content .modal-body { padding: 24px; }
+    .sidebar .sidebar-header { display: flex; align-items: center; gap: 12px; padding: 20px; border-bottom: 1px solid var(--clr-border); font-family: var(--font-display); font-size: 1.1rem; }
+    .sidebar .sidebar-header strong { color: #10b981; }
+    .stat-label { font-size: 0.8rem; color: var(--clr-text-muted); margin-bottom: 6px; }
+    .stat-value { font-size: 1.6rem; font-weight: 800; font-family: var(--font-display); }
   </style>
 </head>
-<body class="admin-body">
-  <div class="sidebar" style="width: 240px">
-    <div class="sidebar-logo">
+<body class="login-body">
+  
+  <!-- LOGIN VIEW -->
+  <div id="loginView">
+    <div class="login-bg">
+      <div class="lb-orb lb-orb-1" style="background: radial-gradient(circle, #10b981, transparent)"></div>
+      <div class="lb-orb lb-orb-2" style="background: radial-gradient(circle, #059669, transparent)"></div>
+      <div class="lb-grid"></div>
+    </div>
+    <div class="login-wrapper">
+      <div class="login-card" id="loginCard">
+        <div class="login-logo"><div class="logo-icon" style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);">🔧</div><span>Repair<strong>Vafe</strong></span></div>
+        <div class="role-badge" style="display:flex; justify-content:center;">🛠️ Partner Portal</div>
+        <div class="login-header"><h1 id="authTitle">Welcome Back, Partner</h1><p id="authSubtitle">Sign in to access your service dashboard</p></div>
+        <div class="login-alert" id="loginAlert" style="display:none"><span class="alert-icon">⚠️</span><span id="loginAlertMsg">Something went wrong</span></div>
+
+        <form class="login-form" id="loginForm" onsubmit="handlePartnerLogin(event)">
+          <div class="form-group"><label class="form-label" for="loginId">Email or Phone</label><div class="input-wrap"><span class="input-icon">👤</span><input type="text" class="form-input" id="loginId" placeholder="Enter registered email or phone" required autocomplete="username" /></div></div>
+          <div class="form-group"><label class="form-label" for="loginPassword">Password</label><div class="input-wrap"><span class="input-icon">🔒</span><input type="password" class="form-input" id="loginPassword" placeholder="Enter password" required autocomplete="current-password" /><button type="button" class="pw-toggle" id="pwToggle" onclick="togglePassword()">👁</button></div></div>
+          <div class="login-extras"><label class="remember-wrap"><input type="checkbox" id="rememberMe" /><span>Remember me</span></label><a href="#" class="forgot-link" onclick="showForgot()">Forgot password?</a></div>
+          <button type="submit" class="btn btn-partner btn-full" id="loginBtn"><span id="loginBtnText">Sign In</span><span id="loginSpinner" class="spinner" style="display:none"></span></button>
+        </form>
+
+        <form class="login-form auth-hidden" id="forgotForm" onsubmit="handleForgotPassword(event)">
+          <div class="login-header"><h2 style="font-size:1.2rem; margin-bottom:0.5rem">Reset Password</h2><p>Contact admin to reset your password</p></div>
+          <div class="form-group"><label class="form-label">Email</label><div class="input-wrap"><span class="input-icon">✉️</span><input type="email" class="form-input" id="forgotEmail" placeholder="partner@example.com" required /></div></div>
+          <button type="submit" class="btn btn-partner btn-full" id="forgotBtn"><span id="forgotBtnText">Request Reset</span><span id="forgotSpinner" class="spinner" style="display:none"></span></button>
+          <div style="text-align:center; margin-top:10px"><a href="#" onclick="showLogin()" style="color:#10b981; text-decoration:none; font-size:0.85rem">← Back to Login</a></div>
+        </form>
+
+        <form class="login-form auth-hidden" id="resetForm" onsubmit="handleResetPassword(event)">
+          <div class="login-header"><h2 style="font-size:1.2rem; margin-bottom:0.5rem">Create New Password</h2><p id="resetSub">Enter OTP and new password</p></div>
+          <div class="form-group"><label class="form-label">OTP</label><div class="input-wrap"><span class="input-icon">🔑</span><input type="text" class="form-input" id="resetOtp" placeholder="6-digit code" maxlength="6" required /></div></div>
+          <div class="form-group"><label class="form-label">New Password</label><div class="input-wrap"><span class="input-icon">🔐</span><input type="password" class="form-input" id="resetNewPass" placeholder="Min 8 characters" minlength="8" required /></div></div>
+          <button type="submit" class="btn btn-partner btn-full" id="resetBtn"><span id="resetBtnText">Update Password</span><span id="resetSpinner" class="spinner" style="display:none"></span></button>
+          <div style="text-align:center; margin-top:10px"><a href="#" onclick="showLogin()" style="color:#10b981; text-decoration:none; font-size:0.85rem">← Back to Login</a></div>
+        </form>
+        <div class="login-footer"><a href="../../index.html">← Back to Website</a><span class="divider">·</span><span style="color:var(--clr-text-muted); font-size:0.78rem">Not enrolled? <strong style="color:#10b981">Contact Admin</strong></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD VIEW -->
+  <div id="dashboardView" style="display:none;">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-icon" style="background: linear-gradient(135deg, #10b981, #059669)">🔧</div>
       <span>Repair<strong>Partner</strong></span>
     </div>
     <nav class="sidebar-nav">
@@ -312,15 +379,117 @@
     </div>
   </div>
 
+  </div><!-- END DASHBOARD VIEW -->
+
      <div class="toast-container" id="toastContainer"></div>
 
   <script>
     const API = (['localhost', '127.0.0.1', ''].includes(window.location.hostname))
       ? 'http://localhost:5000/api' : '/api';
-    const token = localStorage.getItem('rv_partner_token') || localStorage.getItem('rv_tech_token');
+    let token = localStorage.getItem('rv_partner_token') || localStorage.getItem('rv_tech_token');
     let allOrders = [];
 
-    if (!token) window.location.href = 'partner-login.html';
+    async function initPage() {
+      if (!token) {
+        showLoginView();
+      } else {
+        const res = await fetch(`${API}/technician-auth/me`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => ({}));
+        if (res.success) {
+          showDashboardView();
+          loadDashboard();
+        } else {
+          showLoginView();
+        }
+      }
+    }
+
+    function showLoginView() {
+      document.getElementById('loginCSS').disabled = false;
+      document.body.className = 'login-body';
+      document.getElementById('loginView').style.display = 'block';
+      document.getElementById('dashboardView').style.display = 'none';
+      showLogin();
+    }
+
+    function showDashboardView() {
+      document.getElementById('loginCSS').disabled = true;
+      document.body.className = 'admin-body';
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('dashboardView').style.display = 'block';
+    }
+
+    // LOGIN LOGIC
+    function togglePassword() { const i = document.getElementById('loginPassword'); const b = document.getElementById('pwToggle'); if (i.type === 'password') { i.type = 'text'; b.textContent = '🙈'; } else { i.type = 'password'; b.textContent = '👁'; } }
+    function showLogin() { document.getElementById('loginForm').classList.remove('auth-hidden'); document.getElementById('forgotForm').classList.add('auth-hidden'); document.getElementById('resetForm').classList.add('auth-hidden'); document.getElementById('authTitle').textContent = 'Welcome Back, Partner'; document.getElementById('authSubtitle').textContent = 'Sign in to access your dashboard'; hideAlert(); }
+    function showForgot() { document.getElementById('loginForm').classList.add('auth-hidden'); document.getElementById('forgotForm').classList.remove('auth-hidden'); document.getElementById('resetForm').classList.add('auth-hidden'); document.getElementById('authTitle').textContent = 'Reset Password'; document.getElementById('authSubtitle').textContent = 'Recover access'; hideAlert(); }
+    function setLoading(p, on) { const b = document.getElementById(`${p}Btn`), t = document.getElementById(`${p}BtnText`), s = document.getElementById(`${p}Spinner`); if(t) t.style.display = on ? 'none' : 'inline'; if(s) s.style.display = on ? 'inline-block' : 'none'; if(b) b.disabled = on; }
+    function showAlert(m) { document.getElementById('loginAlertMsg').textContent = m; document.getElementById('loginAlert').style.display = 'flex'; document.getElementById('loginCard').classList.add('shake'); setTimeout(() => document.getElementById('loginCard').classList.remove('shake'), 500); }
+    function hideAlert() { document.getElementById('loginAlert').style.display = 'none'; }
+
+    async function handlePartnerLogin(e) {
+      e.preventDefault();
+      const identifier = document.getElementById('loginId').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+      if (!identifier || !password) return showAlert('Enter both credentials');
+      setLoading('login', true); hideAlert();
+      try {
+        const res = await fetch(`${API}/technician-auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
+        const data = await res.json();
+        if (!res.ok || !data.success) { showAlert(data.message || 'Invalid credentials'); setLoading('login', false); return; }
+        
+        token = data.token;
+        localStorage.setItem('rv_partner_token', token);
+        localStorage.setItem('rv_token', token);
+        localStorage.setItem('rv_role', 'partner');
+        if (data.data) {
+          localStorage.setItem('rv_partner', JSON.stringify(data.data));
+          localStorage.setItem('rv_user', JSON.stringify(data.data));
+        }
+
+        if (data.mustResetPassword) {
+          showToast('Security: Please reset admin-assigned password', 'info');
+          document.getElementById('forgotEmail').value = data.data?.email || identifier;
+          document.getElementById('loginForm').classList.add('auth-hidden'); document.getElementById('resetForm').classList.remove('auth-hidden');
+          document.getElementById('authTitle').textContent = 'Reset Required'; document.getElementById('authSubtitle').textContent = 'Set a secure password';
+          setLoading('login', false); return;
+        }
+
+        showToast('Login successful!', 'success');
+        setTimeout(() => { showDashboardView(); loadDashboard(); }, 800);
+      } catch (err) { showAlert('Connection error.'); setLoading('login', false); }
+    }
+
+    async function handleForgotPassword(e) {
+      e.preventDefault();
+      const email = document.getElementById('forgotEmail').value.trim();
+      setLoading('forgot', true);
+      try {
+        const res = await fetch(`${API}/technician-auth/forgot-password`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+        const data = await res.json();
+        setLoading('forgot', false);
+        if (data.success) {
+          showToast('OTP sent!', 'success');
+          document.getElementById('resetSub').textContent = `OTP sent to ${email}`;
+          document.getElementById('forgotForm').classList.add('auth-hidden'); document.getElementById('resetForm').classList.remove('auth-hidden');
+          document.getElementById('authTitle').textContent = 'Enter OTP';
+        } else { showAlert(data.message || 'Contact admin'); }
+      } catch (err) { showAlert('Error contacting server'); setLoading('forgot', false); }
+    }
+
+    async function handleResetPassword(e) {
+      e.preventDefault();
+      const email = document.getElementById('forgotEmail').value.trim();
+      const otp = document.getElementById('resetOtp').value.trim();
+      const newPassword = document.getElementById('resetNewPass').value.trim();
+      setLoading('reset', true);
+      try {
+        const res = await fetch(`${API}/technician-auth/reset-password`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, otp, newPassword }) });
+        const data = await res.json();
+        setLoading('reset', false);
+        if (data.success) { showToast('Password updated! Please login.', 'success'); showLogin(); } 
+        else { showAlert(data.message || 'Reset failed'); }
+      } catch (err) { showAlert('Network error'); setLoading('reset', false); }
+    }
 
     async function loadDashboard() {
       // Profile
@@ -779,10 +948,18 @@
 
     function logout() {
       localStorage.removeItem('rv_partner_token');
-      window.location.href = 'partner-login.html';
+      localStorage.removeItem('rv_token');
+      localStorage.removeItem('rv_role');
+      localStorage.removeItem('rv_user');
+      localStorage.removeItem('rv_tech_token');
+      localStorage.removeItem('rv_partner');
+      token = null;
+      document.getElementById('loginId').value = '';
+      document.getElementById('loginPassword').value = '';
+      showLoginView();
     }
 
-    window.onload = loadDashboard;
+    window.onload = initPage;
   </script>
 </body>
 </html>

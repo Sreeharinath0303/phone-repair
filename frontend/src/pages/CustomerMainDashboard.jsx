@@ -79,6 +79,18 @@ export const CustomerDashboard = () => {
   const [toast, setToast] = useState(null);
   const [stats, setStats] = useState({ total: 0, active: 0, pendingQuotes: 0 });
 
+  // Feedback State
+  const [feedbackForm, setFeedbackForm] = useState({
+    rating: 5,
+    review: '',
+    serviceQuality: 5,
+    pickupExperience: 5,
+    technicianBehavior: 5,
+    timeliness: 5,
+    overallSatisfaction: 5
+  });
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+
   // Profile Edit State
   const [profileData, setProfileData] = useState({ name: '', email: '', phone: '' });
   const [savingProfile, setSavingProfile] = useState(false);
@@ -220,6 +232,31 @@ export const CustomerDashboard = () => {
       setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch {
       showToast('Unable to generate invoice', 'error');
+    }
+  };
+
+  const handleFeedbackSubmit = async (e) => {
+    e.preventDefault();
+    setSubmittingFeedback(true);
+    try {
+      const res = await apiFetch('/feedback/customer', {
+        method: 'POST',
+        body: JSON.stringify({
+          bookingId: activeOrder._id,
+          ...feedbackForm
+        })
+      });
+      if (res?.success) {
+        showToast('Feedback submitted successfully! Thank you.', 'success');
+        activeOrder.customerFeedbackStatus = 'Feedback Submitted';
+        setOrders(orders.map(o => o._id === activeOrder._id ? { ...o, customerFeedbackStatus: 'Feedback Submitted' } : o));
+      } else {
+        showToast(res?.message || 'Failed to submit feedback', 'error');
+      }
+    } catch {
+      showToast('Server error while submitting feedback', 'error');
+    } finally {
+      setSubmittingFeedback(false);
     }
   };
 
@@ -707,6 +744,68 @@ export const CustomerDashboard = () => {
                 </button>
               )}
             </div>
+
+            {['Completed', 'Delivered'].includes(activeOrder.status) && (
+              <div className="mt-8 border-t border-white/10 pt-6">
+                <div className="text-sm font-black font-['Outfit'] mb-4 uppercase tracking-widest text-blue-400 flex items-center gap-2">
+                  <Star size={16} /> Service Feedback
+                </div>
+                {activeOrder.customerFeedbackStatus === 'Feedback Submitted' ? (
+                  <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-bold flex items-center gap-2">
+                    <Check size={18} /> Thank you! You have already submitted feedback for this order.
+                  </div>
+                ) : (
+                  <form onSubmit={handleFeedbackSubmit} className="space-y-4 bg-white/[0.02] border border-white/5 p-5 rounded-2xl">
+                    <div className="text-xs text-gray-400 mb-2">We value your opinion. Please rate your experience:</div>
+                    
+                    {[
+                      { key: 'rating', label: 'Overall Rating' },
+                      { key: 'serviceQuality', label: 'Service Quality' },
+                      { key: 'pickupExperience', label: 'Pickup Experience' },
+                      { key: 'technicianBehavior', label: 'Technician Behavior' },
+                      { key: 'timeliness', label: 'Timeliness / Speed' },
+                      { key: 'overallSatisfaction', label: 'Overall Satisfaction' }
+                    ].map(ratingItem => (
+                      <div key={ratingItem.key} className="flex items-center justify-between gap-4">
+                        <span className="text-xs font-semibold text-gray-300">{ratingItem.label}</span>
+                        <div className="flex gap-1.5">
+                          {[1, 2, 3, 4, 5].map(starNum => (
+                            <button
+                              key={starNum}
+                              type="button"
+                              onClick={() => setFeedbackForm(prev => ({ ...prev, [ratingItem.key]: starNum }))}
+                              className={`p-1 transition-all ${feedbackForm[ratingItem.key] >= starNum ? 'text-amber-400 scale-110' : 'text-gray-600 hover:text-amber-200'}`}
+                            >
+                              <Star size={16} fill={feedbackForm[ratingItem.key] >= starNum ? 'currentColor' : 'none'} />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="mt-3">
+                      <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Review / Comments</label>
+                      <textarea
+                        rows={3}
+                        value={feedbackForm.review}
+                        onChange={e => setFeedbackForm(prev => ({ ...prev, review: e.target.value }))}
+                        placeholder="Share your experience working with RepairVafe..."
+                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:border-blue-500 outline-none transition-colors"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={submittingFeedback}
+                      className="w-full mt-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition-colors inline-flex justify-center items-center gap-2 shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                    >
+                      {submittingFeedback ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                      Submit Feedback
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
           </div>
         )}
       </ModalShell>
