@@ -159,6 +159,13 @@ export const Login = () => {
               />
             </div>
 
+            {portalMode === 'partner' && (
+              <div className="flex items-start gap-2.5 text-purple-400 bg-purple-500/10 border border-purple-500/20 p-4 rounded-xl text-xs text-left">
+                <Shield className="mt-0.5 flex-shrink-0 text-purple-400" size={14} />
+                <span>Note: Partners must first be registered by the Administrator in the admin portal before attempting to sign in.</span>
+              </div>
+            )}
+
             {error && (
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -193,10 +200,10 @@ export const Login = () => {
                 <Sparkles size={14} className="text-blue-400 mt-0.5" />
                 <div className="text-left">
                   <div className="font-bold text-white uppercase tracking-wider text-[9px] mb-0.5">
-                    {portalMode === 'partner' ? 'Partner Credentials' : 'Admin Credentials'}
+                    {portalMode === 'partner' ? 'Partner Notice' : 'Admin Credentials'}
                   </div>
                   <div className="text-gray-400 text-[10px]">
-                    {portalMode === 'partner' ? 'sharma@repairvafe.com · Partner@123' : 'admin@repairvafe.com · Admin@1234'}
+                    {portalMode === 'partner' ? 'Create "sharma@repairvafe.com" as partner first!' : 'admin@repairvafe.com · Admin@1234'}
                   </div>
                 </div>
               </div>

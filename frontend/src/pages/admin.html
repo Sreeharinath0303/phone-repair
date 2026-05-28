@@ -66,19 +66,8 @@
       <a href="#" class="sidebar-link" data-page="all-users" onclick="showPage('all-users', this)">
         <span class="sl-icon">📇</span> User Directory
       </a>
-      <a href="#" class="sidebar-link" data-page="enquiries" onclick="showPage('enquiries', this)">
-        <span class="sl-icon">✉️</span> Enquiries
-      </a>
-
-      <div class="nav-section-label">Reports</div>
       <a href="#" class="sidebar-link" data-page="feedback" onclick="showPage('feedback', this)">
         <span class="sl-icon">⭐</span> Feedback
-      </a>
-      <a href="#" class="sidebar-link" data-page="reports" onclick="showPage('reports', this)">
-        <span class="sl-icon">📈</span> Analytics
-      </a>
-      <a href="#" class="sidebar-link" data-page="location" onclick="showPage('location', this)">
-        <span class="sl-icon">🗺️</span> Location Intel
       </a>
       
       <div class="nav-section-label">Configuration</div>
@@ -449,54 +438,7 @@
           <button class="btn btn-primary" onclick="showAddCustomerModal()">+ Add Customer</button>
         </div>
       </div>
-      <!-- FEEDBACK SECTION (Steps 8-11) -->
-      <div id="feedbackSection" class="auth-hidden">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px">
-           <h2 class="section-title" style="margin-bottom:0">⭐ Service Feedback Intelligence</h2>
-           <div id="fbQuickStats" style="display:flex; gap:15px">
-              <!-- Populated by JS -->
-           </div>
-        </div>
-
-        <div class="stats-grid" id="fbStatsGrid" style="margin-bottom:30px">
-           <!-- Analytics Summary (Step 10) -->
-        </div>
-
-        <div class="table-card">
-           <div style="padding:20px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; gap:15px; align-items:center; flex-wrap:wrap">
-              <input type="text" id="fbSearch" class="form-input" placeholder="Search Order ID, Name..." style="flex:1" onkeyup="loadFeedback()">
-              <select id="fbType" class="form-input" style="width:180px" onchange="loadFeedback()">
-                 <option value="">All Feedback Types</option>
-                 <option value="customer">Customer Reviews</option>
-                 <option value="partner">Partner Post-Jobs</option>
-              </select>
-              <select id="fbMinRating" class="form-input" style="width:150px" onchange="loadFeedback()">
-                 <option value="">Min Rating</option>
-                 <option value="5">5 Stars</option>
-                 <option value="4">4+ Stars</option>
-                 <option value="3">3+ Stars</option>
-                 <option value="2">2+ Stars</option>
-              </select>
-              <button class="btn btn-primary" onclick="loadFeedback()">🔍 Filter</button>
-           </div>
-           <div style="overflow-x:auto">
-              <table class="admin-table">
-                 <thead>
-                    <tr>
-                       <th>Date</th>
-                       <th>Order ID</th>
-                       <th>From</th>
-                       <th>Type</th>
-                       <th>Rating / Score</th>
-                       <th>Remarks / Reviews</th>
-                       <th>Actions</th>
-                    </tr>
-                 </thead>
-                 <tbody id="fbTableBody"></tbody>
-              </table>
-           </div>
-        </div>
-      </div></div>
+      <div class="customers-grid" id="customersGrid"></div>
     </div>
 
     <!-- === TECHNICIANS PAGE === -->

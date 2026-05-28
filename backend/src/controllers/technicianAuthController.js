@@ -23,35 +23,6 @@ exports.login = async (req, res) => {
       isActive: true
     }).select('+password');
 
-    if (!tech && (normalizedEmail === 'sharma@repairvafe.com' || normalizedIdentifier === '9876543211' || normalizedEmail === 'partner@repairvafe.com')) {
-      const emailVal = normalizedEmail === 'partner@repairvafe.com' ? 'partner@repairvafe.com' : 'sharma@repairvafe.com';
-      const phoneVal = normalizedEmail === 'partner@repairvafe.com' ? '9876543299' : '9876543211';
-      tech = await Technician.create({
-        name: 'Sharma Tech Services',
-        businessName: 'Sharma Electronics & Repairs',
-        email: emailVal,
-        phone: phoneVal,
-        password: 'Partner@123',
-        address: 'Sec 12, Dwarka',
-        city: 'New Delhi',
-        state: 'Delhi',
-        pincode: '110075',
-        specialization: 'Smartphones',
-        supportedBrands: ['Apple', 'Samsung', 'OnePlus'],
-        supportedCategories: ['smartphone'],
-        serviceAreas: ['New Delhi', 'Dwarka', 'Janakpuri'],
-        status: 'available',
-        totalRepairs: 48,
-        completedRepairs: 45,
-        averageRating: 4.8,
-        payoutBalance: 12500,
-        totalEarned: 95000,
-        commissionRate: 10,
-        isActive: true
-      });
-      tech = await Technician.findById(tech._id).select('+password');
-    }
-
     if (!tech) {
       return res.status(401).json({ success: false, message: 'Invalid credentials or account inactive' });
     }

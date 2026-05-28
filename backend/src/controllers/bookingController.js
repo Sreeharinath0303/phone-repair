@@ -38,7 +38,7 @@ exports.createBooking = async (req, res) => {
           : 'pickup';
     const address = body.address || '';
     const city = body.city || '';
-    const state = body.state || '';
+    const state = body.state || 'Delhi';
     const pincode = body.pincode || '';
     const preferredDate = body.preferredDate || body.scheduledDate;
     const preferredTimeSlot = body.preferredTimeSlot || body.scheduledTime;
@@ -382,8 +382,17 @@ exports.getAllBookings = async (req, res) => {
 // @access Public
 exports.getBookingByRef = async (req, res) => {
   try {
-    const booking = await Booking.findOne({ referenceNumber: req.params.ref.toUpperCase() })
-      .populate('assignedTechnician', 'name specialization phone');
+    let booking;
+    // Check if the parameter is a valid ObjectId first
+    if (mongoose.Types.ObjectId.isValid(req.params.ref)) {
+      booking = await Booking.findById(req.params.ref)
+        .populate('assignedTechnician', 'name specialization phone email businessName');
+    }
+    // Fallback to checking referenceNumber
+    if (!booking) {
+      booking = await Booking.findOne({ referenceNumber: req.params.ref.toUpperCase() })
+        .populate('assignedTechnician', 'name specialization phone email businessName');
+    }
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
     res.json({ success: true, data: booking });
   } catch (err) {

@@ -80,6 +80,7 @@ const bookingSchema = new mongoose.Schema({
   // Step 7: Feedback Status Control
   customerFeedbackStatus: { type: String, enum: ['Feedback Pending', 'Feedback Submitted'], default: 'Feedback Pending' },
   partnerFeedbackStatus:  { type: String, enum: ['Feedback Pending', 'Feedback Submitted'], default: 'Feedback Pending' },
+  convertedFromLead:      { type: Boolean, default: false },
 }, { timestamps: true });
 
 // Step 17: Performance Optimization Indexes

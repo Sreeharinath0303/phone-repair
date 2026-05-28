@@ -217,6 +217,24 @@ export const OrderManagement = () => {
                       </div>
                       <div className="text-xs text-gray-500">{order.customerPhone}</div>
 
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mt-4">Customer Complaint</h4>
+                      <div className="text-sm text-gray-300 bg-white/5 p-3 rounded-xl border border-white/5 leading-relaxed">
+                        {order.issueDescription || 'No complaint or issue description provided.'}
+                      </div>
+
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mt-4">Assigned Partner</h4>
+                      <div className="text-sm text-purple-400 bg-purple-500/5 p-3 rounded-xl border border-purple-500/10 font-bold">
+                        {order.assignedTechnician ? (
+                          typeof order.assignedTechnician === 'object' ? (
+                            <span>{order.assignedTechnician.name} ({order.assignedTechnician.specialization || 'Technician'})</span>
+                          ) : (
+                            <span>{order.assignedTechnician}</span>
+                          )
+                        ) : (
+                          <span className="text-gray-500 font-medium italic">No service partner assigned yet.</span>
+                        )}
+                      </div>
+
                       <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mt-4">Repair Details</h4>
                       {order.repairDetails?.map((r, ri) => (
                         <div key={ri} className="flex justify-between text-sm">

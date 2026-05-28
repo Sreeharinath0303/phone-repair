@@ -17,7 +17,7 @@ exports.submitCustomerFeedback = async (req, res) => {
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
     // Step 2: Only after completion
-    if (booking.status !== 'Completed' && booking.status !== 'Delivered') {
+    if (!['Completed', 'Delivered', 'Repair Completed', 'Closed', 'Job Closed', 'Ready for Delivery'].includes(booking.status)) {
       return res.status(400).json({ success: false, message: 'Feedback can only be submitted after service completion.' });
     }
 

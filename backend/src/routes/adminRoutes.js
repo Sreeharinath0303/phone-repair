@@ -15,6 +15,7 @@ const {
   // Leads
   getIncompleteLeads,
   convertLeadToBooking,
+  assignLeadToTechnician,
   // Orders
   assignOrderToTechnician,
   // Quotations
@@ -133,6 +134,7 @@ router.post('/customers/:id/reset-password', authorize('admin', 'superadmin'), r
 // ─── INCOMPLETE LEADS ──────────────────────────────────────
 router.get('/incomplete-leads', authorize('admin', 'superadmin'), getIncompleteLeads);
 router.post('/convert-lead', authorize('admin', 'superadmin'), convertLeadToBooking);
+router.post('/assign-lead', authorize('admin', 'superadmin'), assignLeadToTechnician);
 
 // ─── ORDER MANAGEMENT ──────────────────────────────────────
 router.post('/assign-order', authorize('admin', 'superadmin'), assignOrderToTechnician);

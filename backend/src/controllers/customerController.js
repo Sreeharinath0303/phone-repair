@@ -333,12 +333,17 @@ exports.submitFeedback = async (req, res) => {
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
     
     const feedback = await Feedback.create({
-      bookingId,
-      customerId: req.user._id,
-      customerName: req.user.name,
+      booking: booking._id,
+      orderId: booking.referenceNumber,
+      type: 'customer',
+      fromId: req.user._id,
+      fromName: req.user.name || 'Customer',
       rating,
-      comment
+      review: comment
     });
+
+    booking.customerFeedbackStatus = 'Feedback Submitted';
+    await booking.save();
 
     res.status(201).json({ success: true, message: 'Feedback submitted', data: feedback });
   } catch (err) {
@@ -351,9 +356,9 @@ exports.submitFeedback = async (req, res) => {
 // @access Private (Customer)
 exports.getMyFeedback = async (req, res) => {
   try {
-    const feedbacks = await Feedback.find({ customerId: req.user._id })
+    const feedbacks = await Feedback.find({ fromId: req.user._id, type: 'customer' })
       .sort({ createdAt: -1 })
-      .populate('bookingId', 'referenceNumber deviceBrand deviceModel');
+      .populate('booking', 'referenceNumber deviceBrand deviceModel');
     
     res.json({ success: true, data: feedbacks });
   } catch (err) {

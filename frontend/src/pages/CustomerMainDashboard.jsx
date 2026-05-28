@@ -94,6 +94,7 @@ export const CustomerDashboard = () => {
   // Profile Edit State
   const [profileData, setProfileData] = useState({ name: '', email: '', phone: '' });
   const [savingProfile, setSavingProfile] = useState(false);
+  const [myFeedbacks, setMyFeedbacks] = useState([]);
 
   useEffect(() => {
     const stored = localStorage.getItem('rv_user');
@@ -127,11 +128,13 @@ export const CustomerDashboard = () => {
   const fetchDashboard = async () => {
     setLoading(true);
     try {
-      const [ordersRes, statsRes] = await Promise.all([
+      const [ordersRes, statsRes, feedbackRes] = await Promise.all([
         apiFetch('/customer/orders'),
-        apiFetch('/customer/stats')
+        apiFetch('/customer/stats'),
+        apiFetch('/customer/my-feedback')
       ]);
       if (ordersRes?.success) setOrders(ordersRes.data || []);
+      if (feedbackRes?.success) setMyFeedbacks(feedbackRes.data || []);
       if (statsRes?.success) {
         setStats({
           total: statsRes.data?.total || 0,
@@ -250,6 +253,7 @@ export const CustomerDashboard = () => {
         showToast('Feedback submitted successfully! Thank you.', 'success');
         activeOrder.customerFeedbackStatus = 'Feedback Submitted';
         setOrders(orders.map(o => o._id === activeOrder._id ? { ...o, customerFeedbackStatus: 'Feedback Submitted' } : o));
+        fetchDashboard();
       } else {
         showToast(res?.message || 'Failed to submit feedback', 'error');
       }
@@ -265,6 +269,10 @@ export const CustomerDashboard = () => {
   const filteredOrders = orderTab === 'all' ? orders : orderTab === 'active' ? activeOrders : historyOrders;
   const notifications = extractNotifications(orders);
   const pendingQuoteCount = orders.filter((o) => (o.quotationStatus === 'Awaiting Customer Approval' && (o.quotationAmount || 0) > 0)).length;
+  const pendingFeedbackOrders = orders.filter(o => 
+    ['Completed', 'Delivered', 'Repair Completed', 'Closed', 'Job Closed', 'Ready for Delivery'].includes(o.status) && 
+    o.customerFeedbackStatus !== 'Feedback Submitted'
+  );
 
   const openDetails = (order) => {
     setActiveOrder(order);
@@ -274,6 +282,7 @@ export const CustomerDashboard = () => {
   const NAV_ITEMS = [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
     { id: 'orders', label: 'My Bookings', icon: Package },
+    { id: 'feedback', label: 'Service Feedback', icon: Star },
     { id: 'profile', label: 'My Profile', icon: UserCircle },
     { id: 'support', label: 'Help & Support', icon: LifeBuoy }
   ];
@@ -375,6 +384,29 @@ export const CustomerDashboard = () => {
                     <h1 className="text-3xl font-black font-['Outfit']">Dashboard Overview</h1>
                     <p className="text-gray-500 mt-1">Welcome back, {user?.name?.split(' ')[0] || 'Customer'}!</p>
                   </div>
+
+                  {pendingFeedbackOrders.length > 0 && (
+                    <div className="mb-8 bg-gradient-to-r from-blue-600/20 via-indigo-600/10 to-transparent border border-blue-500/30 rounded-3xl p-6 relative overflow-hidden shadow-2xl">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+                        <div className="space-y-1">
+                          <div className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                            <Star size={14} className="fill-blue-400" /> Service Completed
+                          </div>
+                          <h3 className="text-lg font-bold text-white font-['Outfit']">Share Your Feedback</h3>
+                          <p className="text-sm text-gray-400">
+                            Your repair for <span className="text-white font-semibold">{pendingFeedbackOrders[0].deviceBrand} {pendingFeedbackOrders[0].deviceModel}</span> has been finished. Please share your experience to help us improve!
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => openDetails(pendingFeedbackOrders[0])}
+                          className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg shadow-blue-600/20 text-sm whitespace-nowrap self-start md:self-center flex items-center gap-2"
+                        >
+                          <Star size={16} /> Rate Service
+                        </button>
+                      </div>
+                      <div className="absolute right-0 bottom-0 w-32 h-32 bg-blue-500/[0.03] rounded-tl-full pointer-events-none" />
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                     {[
@@ -590,6 +622,111 @@ export const CustomerDashboard = () => {
                 </div>
               )}
 
+              {/* --- FEEDBACK --- */}
+              {activeTab === 'feedback' && (
+                <div>
+                  <div className="mb-8">
+                    <h1 className="text-3xl font-black font-['Outfit']">Service Feedback</h1>
+                    <p className="text-gray-500 mt-1">Review your completed repairs and submit your feedback.</p>
+                  </div>
+
+                  {/* Pending Feedback Sub-section */}
+                  <div className="mb-10">
+                    <h2 className="text-xl font-bold font-['Outfit'] mb-4 text-amber-400 flex items-center gap-2">
+                      <Clock size={20} /> Awaiting Feedback
+                    </h2>
+                    {pendingFeedbackOrders.length === 0 ? (
+                      <div className="bg-[#0d1422] border border-white/5 rounded-2xl p-8 text-center text-gray-500 text-sm">
+                        No pending feedback. All your completed repairs have been reviewed. Thank you!
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {pendingFeedbackOrders.map(order => (
+                          <div key={order._id} className="bg-[#0d1422] border border-blue-500/20 rounded-2xl p-5 hover:border-blue-500/40 transition-colors flex items-center justify-between">
+                            <div>
+                              <div className="font-bold text-white text-base">{order.deviceBrand} {order.deviceModel}</div>
+                              <div className="text-xs text-gray-400 mt-1 font-mono">Ref: {order.referenceNumber}</div>
+                              <div className="text-xs text-gray-500 mt-0.5">Finished: {new Date(order.updatedAt).toLocaleDateString()}</div>
+                            </div>
+                            <button
+                              onClick={() => openDetails(order)}
+                              className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-xl text-xs flex items-center gap-1.5 transition-colors"
+                            >
+                              <Star size={14} className="fill-white" /> Rate Service
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Feedback History Sub-section */}
+                  <div>
+                    <h2 className="text-xl font-bold font-['Outfit'] mb-4 text-emerald-400 flex items-center gap-2">
+                      <Check size={20} /> Submitted Feedback History
+                    </h2>
+                    {myFeedbacks.length === 0 ? (
+                      <div className="bg-[#0d1422] border border-white/5 rounded-2xl p-8 text-center text-gray-500 text-sm">
+                        You have not submitted any feedback yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {myFeedbacks.map(fb => (
+                          <div key={fb._id} className="bg-[#0d1422] border border-white/5 rounded-2xl p-5 space-y-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-2">
+                              <div>
+                                <div className="font-semibold text-white">
+                                  {fb.booking ? `${fb.booking.deviceBrand} ${fb.booking.deviceModel}` : `Order #${fb.orderId}`}
+                                </div>
+                                <div className="text-[10px] text-gray-500 mt-0.5 font-mono">Ref: {fb.orderId}</div>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className="flex gap-0.5">
+                                  {[1, 2, 3, 4, 5].map(star => (
+                                    <Star 
+                                      key={star} 
+                                      size={12} 
+                                      className={fb.rating >= star ? 'text-amber-400 fill-amber-400' : 'text-gray-700'} 
+                                    />
+                                  ))}
+                                </div>
+                                <span className="text-xs font-bold text-amber-400">{fb.rating}/5</span>
+                              </div>
+                            </div>
+
+                            {fb.review && (
+                              <p className="text-xs text-gray-300 italic bg-white/[0.01] p-3 rounded-lg border border-white/5">
+                                "{fb.review}"
+                              </p>
+                            )}
+
+                            {/* Detailed metrics */}
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-[10px]">
+                              {[
+                                { label: 'Service Quality', value: fb.serviceQuality },
+                                { label: 'Pickup Exp.', value: fb.pickupExperience },
+                                { label: 'Tech Behavior', value: fb.technicianBehavior },
+                                { label: 'Timeliness', value: fb.timeliness },
+                                { label: 'Overall Sat.', value: fb.overallSatisfaction }
+                              ].map(metric => (
+                                <div key={metric.label} className="bg-black/20 p-2 rounded-xl text-center">
+                                  <div className="text-gray-500 font-semibold mb-0.5">{metric.label}</div>
+                                  <div className="text-amber-400 font-bold">{metric.value || fb.rating}/5</div>
+                                </div>
+                              ))}
+                            </div>
+                            
+                            <div className="text-[10px] text-gray-500 text-right">
+                              Submitted: {new Date(fb.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* --- SUPPORT --- */}
               {activeTab === 'support' && (
                 <div className="max-w-2xl">
@@ -745,7 +882,7 @@ export const CustomerDashboard = () => {
               )}
             </div>
 
-            {['Completed', 'Delivered'].includes(activeOrder.status) && (
+            {['Completed', 'Delivered', 'Repair Completed', 'Closed', 'Job Closed', 'Ready for Delivery'].includes(activeOrder.status) && (
               <div className="mt-8 border-t border-white/10 pt-6">
                 <div className="text-sm font-black font-['Outfit'] mb-4 uppercase tracking-widest text-blue-400 flex items-center gap-2">
                   <Star size={16} /> Service Feedback

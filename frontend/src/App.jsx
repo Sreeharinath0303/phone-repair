@@ -11,6 +11,17 @@ import { PartnerDashboard } from './pages/PartnerMainDashboard.jsx';
 import { BookingFlow } from './pages/BookingFlow.jsx';
 import { Home } from './pages/Home.jsx';
 
+// Import New Custom Admin Module Components
+import { BookingsManagement } from './pages/BookingsManagement.jsx';
+import { CustomersManagement } from './pages/CustomersManagement.jsx';
+import { PartnersManagement } from './pages/PartnersManagement.jsx';
+import { AuditLogsManagement } from './pages/AuditLogsManagement.jsx';
+import { TemplatesManagement } from './pages/TemplatesManagement.jsx';
+import { EnquiriesManagement } from './pages/EnquiriesManagement.jsx';
+import { AnalyticsDashboard } from './pages/AnalyticsDashboard.jsx';
+import { LocationIntelligence } from './pages/LocationIntelligence.jsx';
+import { SettingsManagement } from './pages/SettingsManagement.jsx';
+
 // Auth Check Helper
 const isAuthenticated = () => !!(localStorage.getItem('rv_token') || sessionStorage.getItem('rv_token'));
 const getUserRole = () => localStorage.getItem('rv_role');
@@ -53,6 +64,15 @@ function App() {
                   <Route index element={<AdminDashboard />} />
                   <Route path="leads" element={<LeadManagement />} />
                   <Route path="orders" element={<OrderManagement />} />
+                  <Route path="bookings" element={<BookingsManagement />} />
+                  <Route path="customers" element={<CustomersManagement />} />
+                  <Route path="partners" element={<PartnersManagement />} />
+                  <Route path="audit-logs" element={<AuditLogsManagement />} />
+                  <Route path="templates" element={<TemplatesManagement />} />
+                  <Route path="enquiries" element={<EnquiriesManagement />} />
+                  <Route path="analytics" element={<AnalyticsDashboard />} />
+                  <Route path="location" element={<LocationIntelligence />} />
+                  <Route path="settings" element={<SettingsManagement />} />
                   <Route path="*" element={<AdminDashboard />} />
                 </Routes>
               </Layout>

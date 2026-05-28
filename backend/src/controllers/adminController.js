@@ -385,9 +385,17 @@ exports.getIncompleteLeads = async (req, res) => {
     }
     if (city) filter.city = city;
     if (state) filter.state = state;
-    if (status) filter.stage = status;
-
-    const leads = await Lead.find(filter).sort({ createdAt: -1 }).limit(100);
+    const leads = await Lead.find(filter)
+      .populate('assignedTechnician', 'name phone specialization businessName email city state')
+      .populate({
+        path: 'bookingId',
+        populate: {
+          path: 'assignedTechnician',
+          select: 'name phone specialization businessName email city state'
+        }
+      })
+      .sort({ createdAt: -1 })
+      .limit(100);
     res.json({ success: true, data: leads, total: leads.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -428,8 +436,8 @@ exports.assignOrderToTechnician = async (req, res) => {
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
     
     // Step 1 & 2: Structural Lock -> Condition Before Assignment
-    if (booking.status !== 'Approved by Customer') {
-       return res.status(403).json({ success: false, message: 'Assignment actively restricted: Customer must approve Order Workflow Quotation exactly before Partner assignment.' });
+    if (['Completed', 'Delivered', 'Closed', 'Cancelled', 'Rejected'].includes(booking.status)) {
+       return res.status(403).json({ success: false, message: 'Assignment restricted: Cannot assign partner to a finalized, cancelled, or rejected booking.' });
     }
 
     const tech = await Technician.findById(technicianId);
@@ -489,10 +497,9 @@ exports.assignOrderToTechnician = async (req, res) => {
 };
 
 // ─── QUOTATION MANAGEMENT ──────────────────────────────────
-// Set service quote/price
 exports.setServiceQuote = async (req, res) => {
   try {
-    const { bookingId, quotationAmount, description, repairSummary, termsAndConditions } = req.body;
+    const { bookingId, quotationAmount, description, repairSummary, termsAndConditions, estimatedTime, warrantyPeriod } = req.body;
     const amountNum = Number(quotationAmount);
     if (!bookingId || !Number.isFinite(amountNum) || amountNum <= 0) {
       return res.status(400).json({ success: false, message: 'bookingId and quotationAmount required' });
@@ -506,6 +513,8 @@ exports.setServiceQuote = async (req, res) => {
 
     booking.quotationAmount = amountNum;
     booking.technicianNote = description;
+    if (estimatedTime) booking.estimatedTime = estimatedTime;
+    if (warrantyPeriod) booking.warrantyPeriod = warrantyPeriod;
     // Step 2 & 3: Mapping Estimate Details
     booking.repairSummary = repairSummary || '';
     booking.termsAndConditions = termsAndConditions || 'Standard review conditions apply.';
@@ -645,20 +654,32 @@ exports.convertLeadToBooking = async (req, res) => {
     // Generate reference number
     const ref = 'RV' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 1000);
 
+    // Normalize category
+    const category = (lead.deviceCategory || 'smartphone').toLowerCase();
+    const validCategories = ['smartphone', 'laptop', 'tablet', 'smartwatch'];
+    const finalCategory = validCategories.includes(category) ? category : 'smartphone';
+
     const booking = await Booking.create({
       referenceNumber: ref,
-      customerName: lead.customerName,
-      customerPhone: lead.mobileNumber,
-      customerEmail: lead.email,
-      address: lead.address,
-      city: lead.city,
-      state: lead.state,
-      pincode: lead.pincode,
-      deviceCategory: lead.deviceCategory,
-      deviceBrand: lead.deviceBrand,
-      deviceModel: lead.deviceModel,
-      repairTypes: lead.repairTypes,
-      status: 'Received'
+      customerName: lead.customerName || 'Anonymous Customer',
+      customerPhone: lead.mobileNumber || '9999999999',
+      customerEmail: lead.email || 'no-email@repairvafe.com',
+      serviceType: 'pickup',
+      address: lead.address || 'Address not provided',
+      city: lead.city || 'Delhi',
+      state: lead.state || 'Delhi',
+      pincode: lead.pincode || '110001',
+      preferredDate: new Date(),
+      preferredTimeSlot: 'Anytime',
+      deviceCategory: finalCategory,
+      deviceBrand: lead.deviceBrand || 'Generic',
+      deviceModel: lead.deviceModel || 'Model',
+      repairTypes: (lead.repairTypes && lead.repairTypes.length > 0) ? lead.repairTypes : ['General Diagnostics'],
+      issueDescription: lead.issueDescription || '',
+      assignedTechnician: lead.assignedTechnician || null,
+      partnerPayout: lead.partnerPayout || 0,
+      status: lead.assignedTechnician ? 'Assigned' : 'Received',
+      convertedFromLead: true
     });
 
     lead.stage = LEAD_STAGES.CONVERTED_TO_ORDER;
@@ -669,6 +690,59 @@ exports.convertLeadToBooking = async (req, res) => {
     await lead.save();
 
     res.json({ success: true, message: 'Lead converted to booking successfully', data: booking });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Assign lead to technician
+exports.assignLeadToTechnician = async (req, res) => {
+  try {
+    const { leadId, technicianId, payoutAmount } = req.body;
+    if (!leadId || !technicianId) {
+      return res.status(400).json({ success: false, message: 'leadId and technicianId required' });
+    }
+
+    const { Lead } = require('../models/Lead');
+    const lead = await Lead.findById(leadId);
+    if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
+
+    const tech = await Technician.findById(technicianId);
+    if (!tech) return res.status(404).json({ success: false, message: 'Technician not found' });
+
+    // Update Lead directly
+    lead.assignedTechnician = technicianId;
+    if (payoutAmount) lead.partnerPayout = payoutAmount;
+    
+    // If the lead is already converted, assign to its booking too!
+    if (lead.bookingId) {
+      const booking = await Booking.findById(lead.bookingId);
+      if (booking) {
+        booking.assignedTechnician = technicianId;
+        if (payoutAmount) booking.partnerPayout = payoutAmount;
+        // Set status to Assigned to Partner
+        booking.status = 'Assigned to Partner';
+        booking.timeline.push({
+          stage: 'Assigned to Partner',
+          note: `Order assigned to Service Partner: ${tech.name} via Lead screen update.`
+        });
+        await booking.save();
+      }
+    }
+    
+    await lead.save();
+
+    // Log activity
+    const { logActivity } = require('../utils/logger');
+    await logActivity({
+      action: 'LEAD_PARTNER_ASSIGNED',
+      entityType: 'Lead',
+      entityId: lead._id,
+      req,
+      description: `Lead assigned to partner: ${tech.name}`
+    });
+
+    res.json({ success: true, message: 'Lead partner assignment successful', data: lead });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1233,7 +1307,7 @@ exports.exportBookings = async (req, res) => {
       if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
 
-    const bookings = await Booking.find(filter).lean();
+    const bookings = await Booking.find(filter).populate('assignedTechnician', 'name businessName phone email specialization').lean();
 
     // Implement CSV/JSON export
     if (format === 'csv') {
@@ -1242,10 +1316,12 @@ exports.exportBookings = async (req, res) => {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=bookings.csv');
       res.send(csv);
-    } else {
+    } else if (format === 'json') {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', 'attachment; filename=bookings.json');
       res.send(JSON.stringify(bookings, null, 2));
+    } else {
+      res.json({ success: true, data: bookings });
     }
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

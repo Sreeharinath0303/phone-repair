@@ -91,7 +91,7 @@ export const BookingFlow = () => {
   const canProceed = () => {
     if (step === 0) return form.deviceType && form.brand && form.model;
     if (step === 1) return form.issue;
-    if (step === 2) return form.name && form.phone && form.address && form.city && form.pincode;
+    if (step === 2) return form.name && form.phone && form.address && form.city && form.state && form.pincode;
     if (step === 3) return form.date && form.timeSlot;
     return true;
   };
@@ -166,7 +166,7 @@ export const BookingFlow = () => {
               Back to Home
             </Link>
             <Link
-              to="/login"
+              to={localStorage.getItem('rv_token') ? "/dashboard" : "/customer-login"}
               className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold px-6 py-3 rounded-xl hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-all"
             >
               Track Order
@@ -373,7 +373,7 @@ export const BookingFlow = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-400 mb-2">State</label>
+                      <label className="block text-xs font-bold text-gray-400 mb-2">State *</label>
                       <input
                         type="text"
                         placeholder="State"

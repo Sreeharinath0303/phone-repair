@@ -50,10 +50,6 @@ export const Layout = ({ children }) => {
     { label: 'Governance', type: 'label' },
     { path: '/admin/audit-logs', icon: ShieldCheck, label: 'Audit Logs' },
     { path: '/admin/templates', icon: Mail, label: 'Email Templates' },
-    { path: '/admin/enquiries', icon: MessageSquare, label: 'Enquiries' },
-    { label: 'Intelligence', type: 'label' },
-    { path: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
-    { path: '/admin/location', icon: MapPin, label: 'Location Intel' },
     { label: 'System', type: 'label' },
     { path: '/admin/settings', icon: Settings, label: 'Settings' }
   ];

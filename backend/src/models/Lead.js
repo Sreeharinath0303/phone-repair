@@ -23,6 +23,9 @@ const leadSchema = new mongoose.Schema({
   deviceBrand: { type: String, default: '' },
   deviceModel: { type: String, default: '' },
   repairTypes: [{ type: String }],
+  issueDescription: { type: String, default: '' },
+  assignedTechnician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', default: null },
+  partnerPayout: { type: Number, default: 0 },
   source: { type: String, default: 'website' },
   stage: {
     type: String,

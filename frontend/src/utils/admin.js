@@ -217,7 +217,7 @@ async function loadBookings() {
       <td>${b.deviceBrand} ${b.deviceModel}</td>
       <td>${formatDate(b.preferredDate)}</td>
       <td>${getBadge(b.status)}</td>
-      <td><button class="action-btn" onclick="openRepairModal('${b._id}')">Manage</button></td>
+      <td><button class="action-btn" onclick="openRepairModal('${b._id}')">View</button></td>
     </tr>
   `).join('') || '<tr><td colspan="6" style="text-align:center;padding:20px">No new bookings</td></tr>';
 }
@@ -347,7 +347,7 @@ async function loadOrders() {
       <td>${getBadge(o.status)}</td>
       <td>${o.assignedTechnician?.name || '—'}</td>
       <td>${new Date(o.createdAt).toLocaleDateString()}</td>
-      <td><button class="action-btn" onclick="openRepairModal('${o._id}')">Details</button></td>
+      <td><button class="action-btn" onclick="openRepairModal('${o._id}')">View</button></td>
     </tr>
   `).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px">No orders found</td></tr>';
 }
@@ -701,6 +701,27 @@ async function openRepairModal(id) {
       <div><label class="form-label">Amount</label><div style="font-weight:700; color:var(--clr-primary)">${r.quotationAmount ? formatCurrency(r.quotationAmount) : 'Pending Quote'}</div></div>
     </div>
 
+    <!-- Customer Complaint -->
+    <div style="margin-top:16px; padding:15px; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); border-radius:12px;">
+      <div class="form-label" style="color:#f87171; display:flex; align-items:center; gap:6px;">⚠️ Customer Complaint</div>
+      <div style="font-size:0.9rem; color:#f3f4f6; margin-top:8px; line-height:1.4; white-space:pre-wrap;">${r.issueDescription || 'No complaint details provided by the customer.'}</div>
+    </div>
+
+    <!-- Assigned Partner Info -->
+    <div style="margin-top:16px; padding:15px; background:rgba(168,85,247,0.07); border:1px solid rgba(168,85,247,0.25); border-radius:12px;">
+      <div class="form-label" style="color:#c084fc; display:flex; align-items:center; gap:6px;">🤝 Assigned Partner</div>
+      <div style="font-size:0.9rem; color:#f3f4f6; margin-top:8px; line-height:1.4;">
+        ${r.assignedTechnician ? `
+          <strong>${r.assignedTechnician.name}</strong> (${r.assignedTechnician.businessName || 'Independent Partner'})<br>
+          <span style="color:var(--clr-text-faint)">Phone:</span> ${r.assignedTechnician.phone || '—'} · 
+          <span style="color:var(--clr-text-faint)">Specialization:</span> ${r.assignedTechnician.specialization || 'General'} · 
+          <span style="color:var(--clr-text-faint)">Payout Commission:</span> <strong>${r.partnerPayout ? formatCurrency(r.partnerPayout) : '₹0'}</strong>
+        ` : `
+          <span style="color:var(--clr-text-muted); font-style:italic;">No partner assigned to this order yet.</span>
+        `}
+      </div>
+    </div>
+
     <!-- Step 13: Location Detail Section -->
     <div style="margin-top:16px; padding:14px; background:rgba(99,102,241,0.07); border:1px solid rgba(99,102,241,0.2); border-radius:12px;">
       <div class="form-label" style="margin-bottom:8px;">📍 Order Location</div>
@@ -1016,27 +1037,110 @@ async function openLeadModal(id) {
   const data = await api(`/admin/incomplete-leads`);
   const lead = (data?.data || []).find(l => l._id === id);
   if (!lead) return showToast('Lead not found', 'error');
-  document.getElementById('modalTitle').textContent = `Lead: ${lead.customerName}`;
+
+  // Fetch Technicians for Dropdown
+  const techRes = await api('/admin/partners');
+  const techs = techRes?.data || [];
+
+  const complaint = lead.issueDescription || lead.bookingId?.issueDescription || 'No complaint or issue description provided.';
+  
+  // Find current partner
+  const currentPartner = lead.assignedTechnician || lead.bookingId?.assignedTechnician || null;
+  const currentPartnerName = currentPartner 
+    ? (typeof currentPartner === 'object' ? currentPartner.name : currentPartner) 
+    : 'None';
+  const partnerPayout = lead.partnerPayout || lead.bookingId?.partnerPayout || 0;
+
+  document.getElementById('modalTitle').textContent = `Lead & Complaint: ${lead.customerName}`;
   document.getElementById('modalBody').innerHTML = `
     <div class="modal-detail-grid">
-      <div><label class="form-label">Name</label><div>${lead.customerName}</div></div>
-      <div><label class="form-label">Phone</label><div>${lead.mobileNumber}</div></div>
-      <div><label class="form-label">Email</label><div>${lead.email || '—'}</div></div>
-      <div><label class="form-label">Device</label><div>${lead.deviceBrand || ''} ${lead.deviceModel || ''}</div></div>
-      <div><label class="form-label">City / State</label><div>${lead.city || '—'}, ${lead.state || '—'}</div></div>
+      <div><label class="form-label">Name</label><div style="font-weight:600;color:#fff">${lead.customerName}</div></div>
+      <div><label class="form-label">Phone</label><div style="font-weight:600;color:#fff">${lead.mobileNumber}</div></div>
+      <div><label class="form-label">Email</label><div style="color:#d1d5db">${lead.email || '—'}</div></div>
+      <div><label class="form-label">Device</label><div style="color:#d1d5db">${lead.deviceBrand || ''} ${lead.deviceModel || ''}</div></div>
+      <div><label class="form-label">City / State</label><div style="color:#d1d5db">${lead.city || '—'}, ${lead.state || '—'}</div></div>
       <div><label class="form-label">Stage</label><div>${getBadge(lead.stage || 'New')}</div></div>
     </div>
-    <div style="margin-top:16px;">
-      <button class="btn btn-primary" style="width:100%" onclick="convertLead('${lead._id}')">Convert to Booking</button>
-    </div>`;
+    
+    <!-- Customer Complaint -->
+    <div style="margin-top:18px; padding:15px; background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.15); border-radius:12px;">
+      <h4 style="margin:0 0 8px 0; color:#fbbf24; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+        ⚠️ Customer Complaint
+      </h4>
+      <div style="font-size:0.82rem; color:#e5e7eb; line-height:1.4; white-space:pre-wrap;">${complaint}</div>
+    </div>
+
+    <!-- Assigned Partner Section -->
+    <div style="margin-top:18px; padding:15px; background:rgba(192,132,252,0.06); border:1px solid rgba(192,132,252,0.15); border-radius:12px;">
+      <h4 style="margin:0 0 8px 0; color:#c084fc; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+        🤝 Assigned Partner Details
+      </h4>
+      <div style="font-size:0.82rem; color:#e5e7eb; margin-bottom:12px;">
+        <strong>Currently Assigned:</strong> <span style="color:#c084fc;font-weight:700">${currentPartnerName}</span><br>
+        ${currentPartner ? `<strong>Payout Pledged:</strong> ₹${partnerPayout.toLocaleString()}` : ''}
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div>
+          <label class="form-label" style="font-size:0.75rem; margin-bottom:4px;">Assign or Change Partner</label>
+          <select id="leadTechSelect" style="width:100%; background:#111; border:1px solid rgba(255,255,255,0.1); color:#fff; padding:8px; border-radius:8px; font-size:0.8rem;">
+            <option value="">-- Select Available Partner --</option>
+            ${techs.map(t => `<option value="${t._id}" ${currentPartner && (currentPartner._id === t._id || currentPartner === t._id) ? 'selected' : ''}>${t.name} - ${t.specialization || 'General'} (${t.city || 'Any'})</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label" style="font-size:0.75rem; margin-bottom:4px;">Technician Payout Commission (₹)</label>
+          <input type="number" id="leadPayoutInput" value="${partnerPayout || ''}" placeholder="Payout Amount" style="width:100%; background:#111; border:1px solid rgba(255,255,255,0.1); color:#fff; padding:8px; border-radius:8px; font-size:0.8rem;" />
+        </div>
+        <button class="btn" style="background:#8b5cf6; color:#fff; font-weight:bold; font-size:0.8rem; margin-top:6px; padding:10px; width:100%; border-radius:8px;" onclick="assignLeadPartner('${lead._id}')">
+          Save Partner Assignment
+        </button>
+      </div>
+    </div>
+
+    ${lead.stage !== 'Converted to order' && lead.stage !== 'Lost / inactive' ? `
+      <div style="margin-top:18px;">
+        <button class="btn btn-primary" style="width:100%; font-weight:bold;" onclick="convertLead('${lead._id}')">Convert to Booking ↗</button>
+      </div>
+    ` : ''}
+  `;
   document.getElementById('modalStatusActions').innerHTML = '';
   document.getElementById('repairModal').style.display = 'flex';
 }
 
+async function assignLeadPartner(leadId) {
+  const technicianId = document.getElementById('leadTechSelect').value;
+  const payoutAmount = document.getElementById('leadPayoutInput').value;
+
+  if (!technicianId) return showToast('Please select a service partner', 'warning');
+
+  const res = await api('/admin/assign-lead', {
+    method: 'POST',
+    body: JSON.stringify({
+      leadId,
+      technicianId,
+      payoutAmount: Number(payoutAmount) || 0
+    })
+  });
+
+  if (res?.success) {
+    showToast('Service Partner assigned to Lead successfully!', 'success');
+    closeModal();
+    loadLeads();
+  } else {
+    showToast(res?.message || 'Assignment failed', 'error');
+  }
+}
+
 async function convertLead(leadId) {
   const res = await api('/admin/convert-lead', { method: 'POST', body: JSON.stringify({ leadId }) });
-  if (res?.success) { showToast('Lead converted to booking!', 'success'); closeModal(); loadLeads(); }
-  else showToast(res?.message || 'Conversion failed', 'error');
+  if (res?.success) {
+    showToast('Lead converted to booking!', 'success');
+    closeModal();
+    loadLeads();
+  } else {
+    showToast(res?.message || 'Conversion failed', 'error');
+  }
 }
 
 // ── Feedback ──────────────────────────────────────────────────
