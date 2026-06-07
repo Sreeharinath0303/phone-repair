@@ -6,8 +6,10 @@ import {
   CheckCircle, Star, IndianRupee, ShieldAlert, Award, 
   TrendingUp, Wallet, ArrowUpRight
 } from 'lucide-react';
+import { getApiBaseUrl } from '../utils/apiBase';
 
 export const PartnersManagement = () => {
+  const apiBaseUrl = getApiBaseUrl();
   const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -37,7 +39,7 @@ export const PartnersManagement = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/partners`, {
+      const res = await fetch(`${apiBaseUrl}/admin/partners`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -56,7 +58,7 @@ export const PartnersManagement = () => {
     setPerformanceData(null);
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/partners/${partnerId}/performance`, {
+      const res = await fetch(`${apiBaseUrl}/admin/partners/${partnerId}/performance`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -74,7 +76,7 @@ export const PartnersManagement = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/partners`, {
+      const res = await fetch(`${apiBaseUrl}/admin/partners`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -100,7 +102,7 @@ export const PartnersManagement = () => {
     if (!selectedPartner) return;
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/partners/${selectedPartner._id}`, {
+      const res = await fetch(`${apiBaseUrl}/admin/partners/${selectedPartner._id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -133,7 +135,7 @@ export const PartnersManagement = () => {
     if (!window.confirm('Are you sure you want to remove this service partner?')) return;
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/partners/${partnerId}`, {
+      const res = await fetch(`${apiBaseUrl}/admin/partners/${partnerId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -154,7 +156,7 @@ export const PartnersManagement = () => {
     if (!selectedPartner || !newPassword) return;
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/partners/${selectedPartner._id}/reset-password`, {
+      const res = await fetch(`${apiBaseUrl}/admin/partners/${selectedPartner._id}/reset-password`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -180,7 +182,7 @@ export const PartnersManagement = () => {
     if (!selectedPartner) return;
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/partners/${selectedPartner._id}/payout`, {
+      const res = await fetch(`${apiBaseUrl}/admin/partners/${selectedPartner._id}/payout`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

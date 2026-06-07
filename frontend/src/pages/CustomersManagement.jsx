@@ -5,8 +5,10 @@ import {
   MapPin, KeyRound, Edit, Trash2, X, ClipboardList, 
   CheckCircle, ShieldAlert, AlertCircle, ShoppingBag
 } from 'lucide-react';
+import { getApiBaseUrl } from '../utils/apiBase';
 
 export const CustomersManagement = () => {
+  const apiBaseUrl = getApiBaseUrl();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -32,7 +34,7 @@ export const CustomersManagement = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/customers`, {
+      const res = await fetch(`${apiBaseUrl}/admin/customers`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -51,7 +53,7 @@ export const CustomersManagement = () => {
     setCustomerHistory([]);
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/customers/${email}/history`, {
+      const res = await fetch(`${apiBaseUrl}/admin/customers/${email}/history`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -69,7 +71,7 @@ export const CustomersManagement = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/customers`, {
+      const res = await fetch(`${apiBaseUrl}/admin/customers`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -95,7 +97,7 @@ export const CustomersManagement = () => {
     if (!selectedCustomer) return;
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/customers/${selectedCustomer._id}`, {
+      const res = await fetch(`${apiBaseUrl}/admin/customers/${selectedCustomer._id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -129,7 +131,7 @@ export const CustomersManagement = () => {
     if (!window.confirm('Are you sure you want to deactivate or delete this customer account?')) return;
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/customers/${customerId}`, {
+      const res = await fetch(`${apiBaseUrl}/admin/customers/${customerId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -148,7 +150,7 @@ export const CustomersManagement = () => {
     if (!selectedCustomer || !newPassword) return;
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/customers/${selectedCustomer._id}/reset-password`, {
+      const res = await fetch(`${apiBaseUrl}/admin/customers/${selectedCustomer._id}/reset-password`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
