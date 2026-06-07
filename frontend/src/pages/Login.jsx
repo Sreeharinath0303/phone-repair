@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogIn, Shield, AlertCircle, Sparkles, Wrench, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getApiBaseUrl } from '../utils/apiBase';
 
 export const Login = () => {
   const [portalMode, setPortalMode] = useState('admin'); // 'admin', 'partner'
@@ -17,9 +18,10 @@ export const Login = () => {
     setError('');
 
     try {
+      const apiBaseUrl = getApiBaseUrl();
       const loginUrl = portalMode === 'partner'
-        ? `${import.meta.env.VITE_API_BASE_URL}/technician-auth/login`
-        : `${import.meta.env.VITE_API_BASE_URL}/auth/login`;
+        ? `${apiBaseUrl}/technician-auth/login`
+        : `${apiBaseUrl}/auth/login`;
 
       const payload = portalMode === 'partner'
         ? { identifier: email, password }

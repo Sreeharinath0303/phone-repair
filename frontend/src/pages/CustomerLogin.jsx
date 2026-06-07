@@ -5,6 +5,7 @@ import {
   LogIn, Smartphone, Mail, Lock, Eye, EyeOff,
   AlertCircle, CheckCircle2, Copy, ArrowLeft, User, Phone, Loader2, KeyRound
 } from 'lucide-react';
+import { getApiBaseUrl } from '../utils/apiBase';
 
 // ── Sample demo credentials (shown in UI) ──────────────────────
 const DEMO_ACCOUNTS = [
@@ -52,7 +53,7 @@ export const CustomerLogin = () => {
   const [otp, setOtp]               = useState('');
   const [regEmail, setRegEmail]     = useState('');
 
-  const API = import.meta.env.VITE_API_BASE_URL;
+  const API = getApiBaseUrl();
 
   // ── Auto-fill demo credentials ──────────────────────────────
   const fillDemo = (acc) => {
