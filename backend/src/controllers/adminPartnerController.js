@@ -1,12 +1,31 @@
 const Technician = require('../models/Technician');
 const Booking = require('../models/Booking');
+const PartnerIncident = require('../models/PartnerIncident');
 
 // @desc  Get all partners
 // @route GET /api/admin/partners
 exports.getAllPartners = async (req, res) => {
   try {
-    const partners = await Technician.find().sort({ createdAt: -1 });
-    res.json({ success: true, count: partners.length, data: partners });
+    const partners = await Technician.find().sort({ createdAt: -1 }).lean();
+    const partnerIds = partners.map((partner) => partner._id);
+    const incidents = await PartnerIncident.find({
+      partnerId: { $in: partnerIds },
+      reviewStatus: 'confirmed'
+    }).sort({ createdAt: -1 }).lean();
+
+    const incidentMap = incidents.reduce((acc, incident) => {
+      const key = String(incident.partnerId);
+      if (!acc[key]) acc[key] = [];
+      if (acc[key].length < 5) acc[key].push(incident);
+      return acc;
+    }, {});
+
+    const data = partners.map((partner) => ({
+      ...partner,
+      recentConfirmedIncidents: incidentMap[String(partner._id)] || []
+    }));
+
+    res.json({ success: true, count: data.length, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -144,16 +163,23 @@ exports.getPartnerPerformance = async (req, res) => {
     const repairs = await Booking.find({ assignedTechnician: partner._id })
       .sort({ createdAt: -1 })
       .limit(50);
+    const incidents = await PartnerIncident.find({ partnerId: partner._id, reviewStatus: 'confirmed' })
+      .sort({ createdAt: -1 })
+      .limit(20);
 
     res.json({
       success: true,
       data: {
         partner,
         repairs,
+        incidents,
         stats: {
           total: partner.totalRepairs,
           completed: partner.completedRepairs,
-          avgRating: partner.averageRating
+          avgRating: partner.averageRating,
+          warningStatus: partner.warningStatus,
+          confirmedIncidentCount: partner.confirmedIncidentCount,
+          successfulRecoveryCount: partner.successfulRecoveryCount
         }
       }
     });

@@ -8,6 +8,7 @@ const {
   getInvoiceHtml,
   approveQuote,
   rejectQuote,
+  verifyReturnOtp,
   updateProfile,
   submitFeedback,
   getMyFeedback,
@@ -26,6 +27,7 @@ router.get('/stats', getStats);
 router.get('/invoice/:id/html', getInvoiceHtml);
 router.put('/approve-quote/:id', approveQuote);
 router.put('/reject-quote/:id', rejectQuote);
+router.post('/bookings/:id/verify-return-otp', verifyReturnOtp);
 
 // Profile and Feedback
 router.put('/profile', updateProfile);

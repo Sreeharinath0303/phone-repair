@@ -28,6 +28,9 @@ const technicianSchema = new mongoose.Schema({
   payoutBalance: { type: Number, default: 0 },
   totalEarned:   { type: Number, default: 0 },
   commissionRate: { type: Number, default: 10 }, // Percentage per repair
+  warningStatus: { type: String, enum: ['normal', 'yellow'], default: 'normal' },
+  confirmedIncidentCount: { type: Number, default: 0 },
+  successfulRecoveryCount: { type: Number, default: 0 },
   
   isActive:     { type: Boolean, default: true },
   loginAttempts: { type: Number, default: 0 },

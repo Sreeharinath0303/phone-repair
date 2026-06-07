@@ -13,6 +13,7 @@ router.get('/',                  protect, adminOnly, getAllBookings);
 router.post('/',                  optionalAuth,   createBooking);
 router.get('/:ref',                       getBookingByRef);
 router.post('/:ref/quote-otp',            requestQuoteOtp);
+router.post('/:ref/request-approval-otp', requestQuoteOtp);
 router.put('/:ref/quote-action',          quotationAction);
 router.put('/:id/status',        protect, adminOrPartner, updateStatus);
 router.put('/:id/quotation',     protect, adminOnly, issueQuotation);

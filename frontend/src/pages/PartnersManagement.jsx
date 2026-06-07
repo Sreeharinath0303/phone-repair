@@ -214,6 +214,9 @@ export const PartnersManagement = () => {
     p.specialization?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const isWarningPartner = (partner) => partner?.warningStatus === 'yellow';
+  const warningPartners = partners.filter(isWarningPartner);
+
   return (
     <div className="space-y-8">
       {/* Title Header */}
@@ -249,7 +252,7 @@ export const PartnersManagement = () => {
           { label: 'Active Service Partners', value: partners.length, icon: Users, color: 'text-purple-500', bg: 'bg-purple-500/10' },
           { label: 'Avg Partner Rating', value: partners.length > 0 ? `${(partners.reduce((acc, curr) => acc + (curr.averageRating || 5), 0) / partners.length).toFixed(1)} ★` : '5.0 ★', icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10' },
           { label: 'Total Paid Out', value: `₹${partners.reduce((acc, curr) => acc + (curr.totalEarned || 0), 0).toLocaleString()}`, icon: IndianRupee, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-        ].map((card, i) => (
+        ].map((card) => (
           <div key={card.label} className="bg-[#111111] border border-white/5 p-6 rounded-3xl group relative overflow-hidden">
             <div className="flex justify-between items-start mb-4">
               <div className={`p-3 rounded-2xl ${card.bg} ${card.color}`}>
@@ -260,6 +263,23 @@ export const PartnersManagement = () => {
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{card.label}</div>
           </div>
         ))}
+      </div>
+
+      <div className={`rounded-3xl border p-5 ${warningPartners.length ? 'border-yellow-500/30 bg-yellow-500/10' : 'border-white/5 bg-[#111111]'}`}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-bold text-white">
+              <ShieldAlert size={16} className={warningPartners.length ? 'text-yellow-400' : 'text-gray-500'} />
+              Partner Warning Zone
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Partners enter the yellow zone after 3 confirmed handoff failures and stay there until they complete the recovery threshold.
+            </p>
+          </div>
+          <div className={`text-sm font-black ${warningPartners.length ? 'text-yellow-300' : 'text-white'}`}>
+            {warningPartners.length} flagged
+          </div>
+        </div>
       </div>
 
       {/* Main Panel Search */}
@@ -309,11 +329,25 @@ export const PartnersManagement = () => {
                         fetchPerformance(p._id);
                       }}
                       className={`group hover:bg-white/[0.01] transition-colors cursor-pointer ${
-                        selectedPartner?._id === p._id ? 'bg-white/[0.02] border-l-2 border-purple-500' : ''
+                        selectedPartner?._id === p._id
+                          ? isWarningPartner(p)
+                            ? 'bg-yellow-500/[0.06] border-l-2 border-yellow-400'
+                            : 'bg-white/[0.02] border-l-2 border-purple-500'
+                          : isWarningPartner(p)
+                            ? 'bg-yellow-500/[0.03]'
+                            : ''
                       }`}
                     >
                       <td className="px-6 py-4">
-                        <div className="font-bold text-white text-sm">{p.name}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-bold text-white text-sm">{p.name}</div>
+                          {isWarningPartner(p) && (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-yellow-400/30 bg-yellow-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-yellow-300">
+                              <ShieldAlert size={10} />
+                              Warning
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[10px] text-gray-500 mt-0.5">{p.email}</div>
                         <div className="text-[10px] text-gray-500 mt-0.5">{p.phone}</div>
                       </td>
@@ -335,6 +369,11 @@ export const PartnersManagement = () => {
                           {(p.averageRating || 5.0).toFixed(1)}
                         </div>
                         <div className="text-[9px] text-gray-500 mt-0.5">{p.totalRepairs || 0} Jobs</div>
+                        {isWarningPartner(p) && (
+                          <div className="text-[9px] text-yellow-300 mt-0.5">
+                            {p.confirmedIncidentCount || 0} confirmed handoff incidents
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
@@ -402,9 +441,17 @@ export const PartnersManagement = () => {
 
           {selectedPartner ? (
             <div className="space-y-6">
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+              <div className={`p-4 rounded-2xl border ${isWarningPartner(selectedPartner) ? 'bg-yellow-500/10 border-yellow-400/20' : 'bg-white/5 border-white/5'}`}>
                 <div className="text-xs text-gray-400">Viewing Partner Profile</div>
-                <div className="text-base font-black text-white mt-1">{selectedPartner.name}</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="text-base font-black text-white">{selectedPartner.name}</div>
+                  {isWarningPartner(selectedPartner) && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-yellow-400/30 bg-yellow-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-yellow-300">
+                      <ShieldAlert size={10} />
+                      Yellow Zone
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs text-gray-500 mt-1">{selectedPartner.specialization} Engineer</div>
               </div>
 
@@ -443,6 +490,29 @@ export const PartnersManagement = () => {
                     </div>
                   </div>
 
+                  <div className={`rounded-2xl border p-4 ${performanceData.stats.warningStatus === 'yellow' ? 'border-yellow-400/30 bg-yellow-500/10' : 'border-white/5 bg-white/[0.01]'}`}>
+                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                      <ShieldAlert size={12} className={performanceData.stats.warningStatus === 'yellow' ? 'text-yellow-300' : 'text-gray-500'} />
+                      Risk Review
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 mt-3">
+                      <div>
+                        <div className="text-[10px] text-gray-500">Warning Status</div>
+                        <div className={`text-sm font-bold mt-1 ${performanceData.stats.warningStatus === 'yellow' ? 'text-yellow-300' : 'text-emerald-400'}`}>
+                          {performanceData.stats.warningStatus === 'yellow' ? 'Yellow Zone' : 'Normal'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-gray-500">Confirmed Incidents</div>
+                        <div className="text-sm font-bold text-white mt-1">{performanceData.stats.confirmedIncidentCount || 0}</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-gray-500">Recovery Handoffs</div>
+                        <div className="text-sm font-bold text-white mt-1">{performanceData.stats.successfulRecoveryCount || 0}</div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-3">
                     <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Recent Assignments</h4>
                     {performanceData.repairs?.length === 0 ? (
@@ -456,6 +526,34 @@ export const PartnersManagement = () => {
                               <div className="text-[10px] text-gray-500">{r.deviceBrand} {r.deviceModel}</div>
                             </div>
                             <span className="text-[9px] font-bold text-gray-400 capitalize">{r.status}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Confirmed Handoff Incidents</h4>
+                    {performanceData.incidents?.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4 bg-white/[0.01] border border-white/5 rounded-xl">No confirmed incidents</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {performanceData.incidents.slice(0, 5).map((incident) => (
+                          <div key={incident._id} className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="text-white font-bold">
+                                {incident.incidentType === 'customer_no_show' ? 'Customer No-Show' : 'Customer Cancelled at Handoff'}
+                              </div>
+                              <div className="text-[10px] text-yellow-200">
+                                Attempt {incident.attemptNumber || 1}
+                              </div>
+                            </div>
+                            <div className="text-[10px] text-gray-400 mt-1">
+                              {incident.serviceMode} • {incident.createdAt ? new Date(incident.createdAt).toLocaleString() : 'Recently'}
+                            </div>
+                            {incident.partnerNote && (
+                              <div className="text-[10px] text-gray-300 mt-2">{incident.partnerNote}</div>
+                            )}
                           </div>
                         ))}
                       </div>

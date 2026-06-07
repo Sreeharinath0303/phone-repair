@@ -394,7 +394,10 @@ exports.getBookingByRef = async (req, res) => {
         .populate('assignedTechnician', 'name specialization phone email businessName');
     }
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
-    res.json({ success: true, data: booking });
+    const safeBooking = booking.toObject();
+    delete safeBooking.trackingOtp;
+    delete safeBooking.trackingOtpExpiry;
+    res.json({ success: true, data: safeBooking });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -522,6 +525,17 @@ exports.updateStatus = async (req, res) => {
            note: `Automated Invoice ${booking.invoiceNumber} generated for amount ₹${booking.finalAmount}.`,
            date: new Date()
         });
+    }
+
+    if (status === 'Ready for Return' || status === 'Out for Delivery / Ready for Pickup' || status === 'Delivered / Returned') {
+      booking.returnOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      booking.returnOtpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+      booking.workflowPhase = 'return';
+      booking.timeline.push({
+        stage: 'Return OTP Issued',
+        note: 'Return verification OTP issued to customer.',
+        date: new Date()
+      });
     }
 
     await booking.save();
@@ -692,10 +706,17 @@ exports.quotationAction = async (req, res) => {
 
       booking.quotationStatus = 'Approved by Customer';
       // Step 9: Customer Approval Workflow execution mapping status directly
-      booking.status = 'Approved by Customer'; 
+      booking.status = 'Quote Approved'; 
+      booking.workflowPhase = 'partner_locked';
+      if (booking.quotedByPartnerId) {
+        booking.assignedTechnician = booking.quotedByPartnerId;
+        booking.assignmentLockedAt = new Date();
+        booking.assignmentLockReason = 'Customer approved selected partner quote';
+        booking.status = 'Partner Locked';
+      }
       // Step 10 & 12: Record Timestamps explicitly in the history payload.
       booking.timeline.push({ 
-         stage: 'Approved by Customer', 
+         stage: booking.status, 
          note: 'Customer securely approved Estimate Form parameters.', 
          date: new Date() 
       });
@@ -712,8 +733,9 @@ exports.quotationAction = async (req, res) => {
     } else {
       booking.quotationStatus = 'Rejected by Customer';
       // Step 9: Rejection Logic maps firmly to Cancelled string block
-      booking.status = 'Cancelled'; 
-      booking.timeline.push({ stage: 'Rejected by Customer', note: 'Customer actively denied estimate offer parameters.', date: new Date() });
+      booking.status = 'Quote Rejected'; 
+      booking.workflowPhase = 'customer_approval';
+      booking.timeline.push({ stage: 'Quote Rejected', note: 'Customer actively denied estimate offer parameters.', date: new Date() });
       booking.timeline.push({ stage: 'Cancelled', note: 'Workflow locked permanently to Cancelled workflow via rejection parameter.', date: new Date() });
       
       if (lead) {

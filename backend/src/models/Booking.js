@@ -32,11 +32,20 @@ const bookingSchema = new mongoose.Schema({
       'Repair Completed', 'Quality Check Done', 'Ready for Dispatch', 'Out for Delivery / Ready for Pickup', 
       'Delivered', 'Completed', 'Feedback Pending', 'Closed', 'Cancelled', 
       'In Diagnosis', 'In Progress', 'Repair In Progress', 'Ready for Delivery', 'Job Closed', 'Device Picked Up', 'Assigned', 'Awaiting Approval',
-      'Ongoing', 'Waiting for Spare Part', 'Ready for Return'
+      'Ongoing', 'Waiting for Spare Part', 'Ready for Return',
+      'Lead Received', 'Sent For Partner Quote', 'Partner Quote Received', 'Quote Sent To Customer',
+      'Quote Approved', 'Quote Rejected', 'Partner Locked', 'Store Visit Scheduled',
+      'Handoff Started', 'Revised Quote Required', 'Repair In Progress', 'Delivered / Returned',
+      'Settlement Pending', 'Settlement Completed', 'Disputed'
     ],
     default: 'Pending'
   },
   assignedTechnician: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', default: null },
+  workflowPhase: {
+    type: String,
+    enum: ['intake', 'partner_quote_collection', 'commercial_review', 'customer_approval', 'partner_locked', 'handoff', 'repair', 'return', 'settlement'],
+    default: 'intake'
+  },
   // Timeline
   timeline: [{
     stage:     { type: String },
@@ -48,6 +57,14 @@ const bookingSchema = new mongoose.Schema({
   approxAmount: { type: Number, default: 0 },
   quotationAmount: { type: Number, default: 0 },
   partnerPayout:   { type: Number, default: 0 }, // Amount assigned by Admin to the partner
+  partnerQuotedAmount: { type: Number, default: 0 },
+  quotedByPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', default: null },
+  markupType: { type: String, enum: ['fixed', 'percentage', 'direct_admin_quote', null], default: null },
+  markupValue: { type: Number, default: 0 },
+  partnerPayoutLocked: { type: Number, default: 0 },
+  platformMargin: { type: Number, default: 0 },
+  assignmentLockedAt: { type: Date, default: null },
+  assignmentLockReason: { type: String, default: '' },
   quotationStatus: { type: String, enum: ['Pending', 'Quote Prepared', 'Offer Sent', 'Awaiting Customer Approval', 'Approved by Customer', 'Rejected by Customer', 'Not Issued', 'Approved', 'Rejected'], default: 'Not Issued' },
   discount:        { type: Number, default: 0 },
   estimatedTime:   { type: String, default: '' },
@@ -62,6 +79,23 @@ const bookingSchema = new mongoose.Schema({
   // Step 3: Tracking Page OTP Security
   trackingOtp: { type: String, select: false },
   trackingOtpExpiry: { type: Date, select: false },
+  pickupOtp: { type: String, select: false },
+  pickupOtpExpiry: { type: Date, select: false },
+  returnOtp: { type: String, select: false },
+  returnOtpExpiry: { type: Date, select: false },
+  handoffStartedAt: { type: Date, default: null },
+  handoffVerifiedAt: { type: Date, default: null },
+  handoffVerifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Technician', default: null },
+  handoffMode: { type: String, enum: ['pickup', 'dropoff', 'walkin', null], default: null },
+  handoffAttempts: { type: Number, default: 0 },
+  lastHandoffAttemptAt: { type: Date, default: null },
+  handoffFailureReason: { type: String, default: '' },
+  handoffFailureHistory: [{
+    attemptNumber: { type: Number, default: 0 },
+    incidentType: { type: String, enum: ['customer_cancelled_at_handoff', 'customer_no_show'] },
+    note: { type: String, default: '' },
+    reportedAt: { type: Date, default: Date.now }
+  }],
   // Step 7: Rejected Quote Tracking
   rejectionReason: { type: String, default: null },
   followUpStatus:  { type: String, enum: ['Not Applicable', 'Follow-Up Pending', 'Followed Up', 'Reopened Quotes', 'Cancelled Cases'], default: 'Not Applicable' },

@@ -1,5 +1,6 @@
 const Booking = require('../models/Booking');
 const User = require('../models/User');
+const { addTimelineEntry } = require('../utils/workflow');
 
 // @desc  Get logged-in customer's bookings
 // @route GET /api/customer/my-bookings
@@ -214,11 +215,15 @@ exports.approveQuote = async (req, res) => {
     }
 
     booking.quotationStatus = 'Approved by Customer';
-    booking.status = 'Approved by Customer';
-    booking.timeline.push({ 
-      stage: 'Approved by Customer', 
-      note: 'Quotation approved by customer. Repair work will move to the next service phase.' 
-    });
+    booking.status = 'Quote Approved';
+    booking.workflowPhase = 'partner_locked';
+    if (booking.quotedByPartnerId) {
+      booking.assignedTechnician = booking.quotedByPartnerId;
+      booking.assignmentLockedAt = new Date();
+      booking.assignmentLockReason = 'Customer approved selected partner quote';
+      booking.status = 'Partner Locked';
+    }
+    addTimelineEntry(booking, booking.status, 'Quotation approved by customer. Fulfillment locked to the selected partner.');
 
     await booking.save();
     res.json({ success: true, message: 'Quotation approved successfully', data: booking });
@@ -246,17 +251,14 @@ exports.rejectQuote = async (req, res) => {
 
     // Step 3: Status explicitly changes to 'Rejected'
     booking.quotationStatus = 'Rejected by Customer';
-    booking.status = 'Rejected';
+    booking.status = 'Quote Rejected';
+    booking.workflowPhase = 'customer_approval';
     
     // Step 5 & 7: Log rejection reason explicitly mapped for trackablity 
     const reasonNote = reason ? `Reason provided: ${reason}` : 'No reason provided.';
     booking.rejectionReason = reasonNote;
     booking.followUpStatus = 'Follow-Up Pending'; // Step 7 Tracker Loop execution
-    booking.timeline.push({ 
-      stage: 'Rejected', 
-      note: `Customer securely rejected the service estimate workflow. ${reasonNote}`,
-      date: new Date()
-    });
+    addTimelineEntry(booking, 'Quote Rejected', `Customer securely rejected the service estimate workflow. ${reasonNote}`);
 
     await booking.save();
     
@@ -274,6 +276,38 @@ exports.rejectQuote = async (req, res) => {
     }
 
     res.json({ success: true, message: 'Quotation gracefully rejected', data: booking });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc  Verify return / delivery OTP for settlement release
+// @route POST /api/customer/bookings/:id/verify-return-otp
+// @access Private (Customer)
+exports.verifyReturnOtp = async (req, res) => {
+  try {
+    const { otp } = req.body;
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      $or: [{ customerId: req.user._id }, { customerEmail: req.user.email }]
+    }).select('+returnOtp +returnOtpExpiry');
+
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (!otp || !booking.returnOtp || booking.returnOtp !== String(otp)) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    }
+    if (booking.returnOtpExpiry && booking.returnOtpExpiry < new Date()) {
+      return res.status(400).json({ success: false, message: 'OTP expired' });
+    }
+
+    booking.returnOtp = undefined;
+    booking.returnOtpExpiry = undefined;
+    booking.status = 'Settlement Pending';
+    booking.workflowPhase = 'settlement';
+    addTimelineEntry(booking, 'Settlement Pending', 'Customer verified return OTP. Booking is ready for settlement.');
+    await booking.save();
+
+    res.json({ success: true, data: booking, message: 'Return verified successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

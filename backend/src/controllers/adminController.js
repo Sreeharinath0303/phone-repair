@@ -409,6 +409,9 @@ exports.getRecommendedPartners = async (req, res) => {
     const { bookingId } = req.params;
     const booking = await Booking.findById(bookingId);
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (booking.assignmentLockedAt && booking.quotedByPartnerId && String(booking.quotedByPartnerId) !== String(technicianId)) {
+      return res.status(403).json({ success: false, message: 'Assignment locked to the quoting partner. Use override-assignment with a reason.' });
+    }
 
     // Match by city and specialization (basic)
     const partners = await Technician.find({
@@ -445,9 +448,13 @@ exports.assignOrderToTechnician = async (req, res) => {
 
     booking.assignedTechnician = technicianId;
     booking.status = 'Assigned to Partner';
+    booking.workflowPhase = 'partner_locked';
     
     // Step 5: Partner Payout Setup
-    if (payoutAmount) booking.partnerPayout = payoutAmount;
+    if (payoutAmount) {
+      booking.partnerPayout = payoutAmount;
+      booking.partnerPayoutLocked = payoutAmount;
+    }
 
     booking.timeline.push({ 
       stage: 'Assigned to Partner', 
@@ -499,10 +506,10 @@ exports.assignOrderToTechnician = async (req, res) => {
 // ─── QUOTATION MANAGEMENT ──────────────────────────────────
 exports.setServiceQuote = async (req, res) => {
   try {
-    const { bookingId, quotationAmount, description, repairSummary, termsAndConditions, estimatedTime, warrantyPeriod } = req.body;
+    const { bookingId, quotationAmount, description, repairSummary, termsAndConditions, estimatedTime, warrantyPeriod, markupType, markupValue, partnerQuotedAmount } = req.body;
     const amountNum = Number(quotationAmount);
-    if (!bookingId || !Number.isFinite(amountNum) || amountNum <= 0) {
-      return res.status(400).json({ success: false, message: 'bookingId and quotationAmount required' });
+    if (!bookingId || ((!Number.isFinite(amountNum) || amountNum <= 0) && !markupType)) {
+      return res.status(400).json({ success: false, message: 'bookingId and quote commercial inputs required' });
     }
 
     const booking = await Booking.findById(bookingId);
@@ -511,21 +518,26 @@ exports.setServiceQuote = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Cannot change quote after customer approval. Create a new order or reset workflow.' });
     }
 
-    booking.quotationAmount = amountNum;
-    booking.technicianNote = description;
-    if (estimatedTime) booking.estimatedTime = estimatedTime;
-    if (warrantyPeriod) booking.warrantyPeriod = warrantyPeriod;
-    // Step 2 & 3: Mapping Estimate Details
-    booking.repairSummary = repairSummary || '';
-    booking.termsAndConditions = termsAndConditions || 'Standard review conditions apply.';
+    const { applyQuoteCommercials } = require('./adminWorkflowController');
+    await applyQuoteCommercials(booking, {
+      quotationAmount: amountNum,
+      markupType,
+      markupValue,
+      partnerQuotedAmount,
+      estimatedTime,
+      warrantyPeriod,
+      repairSummary,
+      termsAndConditions,
+      technicianNote: description
+    });
     
     // Step 3 Transition Binding
-    booking.status = 'Offer Sent';
+    booking.status = 'Quote Sent To Customer';
     booking.quotationStatus = 'Awaiting Customer Approval';
     booking.timeline.push({ stage: 'Quote Prepared', note: 'Quote module calculation initialized' });
     booking.timeline.push({ 
-      stage: 'Offer Sent', 
-      note: `Service estimate of ₹${quotationAmount} verified and dispatched to customer portal.` 
+      stage: 'Quote Sent To Customer',
+      note: `Service estimate of Rs ${booking.quotationAmount} verified and dispatched to customer portal.`
     });
     await booking.save();
 
@@ -540,7 +552,7 @@ exports.setServiceQuote = async (req, res) => {
         data: { 
           name: booking.customerName, 
           orderId: booking.referenceNumber, 
-          price: quotationAmount, 
+          price: booking.quotationAmount,
           device: `${booking.deviceBrand} ${booking.deviceModel}`,
           service: booking.repairTypes.join(', '),
           actionUrl: `http://repairvafe.com/pages/tracking.html?ref=${booking.referenceNumber}`
@@ -552,14 +564,14 @@ exports.setServiceQuote = async (req, res) => {
       await sendEmail({
          email: adminEmail,
          subject: `Quotation Sent: #${booking.referenceNumber}`,
-         message: `Estimate of ₹${quotationAmount} dispatched for Order #${booking.referenceNumber}.`
+         message: `Estimate of Rs ${booking.quotationAmount} dispatched for Order #${booking.referenceNumber}.`
       });
 
     } catch (ignoreErr) {
        console.error('Estimate triggering exception natively bypassed: ', ignoreErr.message);
     }
 
-    res.json({ success: true, message: 'Quote generated and Offer Sent successfully', data: booking });
+    res.json({ success: true, message: 'Quote generated and sent successfully', data: booking });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
