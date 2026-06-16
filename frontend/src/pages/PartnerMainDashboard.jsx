@@ -1037,7 +1037,7 @@ export const PartnerDashboard = () => {
                               <td className="p-4 text-white font-medium">{o.deviceBrand} {o.deviceModel}</td>
                               <td className="p-4 text-xs">{new Date(o.updatedAt).toLocaleDateString()}</td>
                               <td className="p-4">
-                                <span className={	ext-[10px] font-bold px-2.5 py-1 rounded-full border uppercase }>
+                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase ${getPartnerQuoteStatusClass(o)}`}>
                                   {getPartnerQuoteStatusLabel(o)}
                                 </span>
                               </td>
