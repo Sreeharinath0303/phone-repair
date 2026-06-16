@@ -6,6 +6,28 @@ const sendSMS = require('../utils/sendSMS');
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '30d' });
 
+exports.getAccountStatus = async (req, res) => {
+  try {
+    const email = String(req.query.email || '').trim().toLowerCase();
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email }).select('_id email name isActive');
+    res.json({
+      success: true,
+      data: {
+        exists: Boolean(user),
+        email,
+        name: user?.name || '',
+        isActive: user?.isActive ?? true
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // ─── EMAIL & PASSWORD FLOW (Steps 4 & 5) ──────────────────────
 
 // Register via Email & Password
@@ -189,16 +211,29 @@ exports.verifyMobileOtp = async (req, res) => {
 
 exports.forgotPassword = async (req, res) => {
   try {
-    const { loginId } = req.body;
-    const user = await User.findOne({ $or: [{ email: loginId.toLowerCase() }, { phone: loginId }] });
+    const email = String(req.body.email || req.body.loginId || '').trim().toLowerCase();
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email }).select('+otp +otpExpiry');
 
     if (!user) return res.status(404).json({ success: false, message: 'No user found' });
 
     const otp = user.generateOTP();
     await user.save();
-    console.log(`[FORGOT PASSWORD OTP] sent to ${loginId}: ${otp}`);
 
-    res.json({ success: true, message: 'OTP sent for password reset' });
+    try {
+      await sendEmail({
+        email,
+        type: 'otp',
+        data: { name: user.name || 'Customer', otp }
+      });
+    } catch (sendErr) {
+      return res.status(500).json({ success: false, message: sendErr.message });
+    }
+
+    res.json({ success: true, message: 'Password reset OTP sent to your email' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -207,21 +242,21 @@ exports.forgotPassword = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
-    const user = await User.findOne({ $or: [{ email: email.toLowerCase() }, { phone: email }] }).select('+otp +otpExpiry');
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail }).select('+otp +otpExpiry +password');
 
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     if (!user.verifyOTP(otp)) return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
 
-    // Password strength validation
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(newPassword)) {
+    if (!newPassword || newPassword.length < 6) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Password must be at least 8 characters long, and include at least one uppercase letter, one lowercase letter, one number and one special character' 
+        message: 'Password must be at least 6 characters long'
       });
     }
 
     user.password = newPassword;
+    user.mustResetPassword = false;
     user.clearOTP();
     await user.save();
 

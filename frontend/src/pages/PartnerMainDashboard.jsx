@@ -8,6 +8,7 @@ import {
   Settings, ChevronRight, X, MessageSquare, AlertTriangle, FileText,
   Phone, UserCheck
 } from 'lucide-react';
+import { getApiBaseUrl } from '../utils/apiBase';
 
 const STATUS_COLOR = {
   'Assigned to Partner': 'bg-blue-500/10 text-blue-400 border-blue-500/20',
@@ -21,8 +22,36 @@ const STATUS_COLOR = {
   'Cancelled': 'bg-red-500/10 text-red-400 border-red-500/20'
 };
 
+const QUOTE_STATUS_META = {
+  'Approved by Customer': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  'Awaiting Customer Approval': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  'Rejected by Customer': 'bg-red-500/10 text-red-400 border-red-500/20',
+  'Not Issued': 'bg-slate-500/10 text-slate-300 border-slate-500/20'
+};
+
+const getPartnerQuoteStatusLabel = (order) => {
+  if (order.quotationStatus === 'Approved by Customer' || order.status === 'Partner Locked') {
+    return 'Customer Accepted';
+  }
+  if (order.quotationStatus === 'Rejected by Customer') {
+    return 'Customer Rejected';
+  }
+  if (order.quotationStatus === 'Awaiting Customer Approval') {
+    return 'Awaiting Customer Approval';
+  }
+  return 'No Customer Decision';
+};
+
+const getPartnerQuoteStatusClass = (order) =>
+  QUOTE_STATUS_META[
+    order.quotationStatus === 'Approved by Customer' || order.status === 'Partner Locked'
+      ? 'Approved by Customer'
+      : (order.quotationStatus || 'Not Issued')
+  ] || QUOTE_STATUS_META['Not Issued'];
+
 export const PartnerDashboard = () => {
   const navigate = useNavigate();
+  const apiBaseUrl = getApiBaseUrl();
   const isPartnerRole = (role) => role === 'partner' || role === 'Technician';
   
   // Auth State
@@ -49,10 +78,17 @@ export const PartnerDashboard = () => {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({ assigned: 0, active: 0, pending: 0, completed: 0, payouts: 0, notifications: 0 });
   const [orders, setOrders] = useState([]);
+  const [quoteRequests, setQuoteRequests] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
   const [toast, setToast] = useState(null);
+
+  // Quote Modal State
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [quoteTargetId, setQuoteTargetId] = useState(null);
+  const [quoteNotes, setQuoteNotes] = useState('');
+  const [quoteForm, setQuoteForm] = useState({ amount: '', eta: '24-48 hours', warranty: '3 Months' });
 
   // Modal / Interaction State
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -105,17 +141,19 @@ export const PartnerDashboard = () => {
     setLoading(true);
     try {
       const headers = { Authorization: `Bearer ${token}` };
-      const [meRes, statsRes, ordersRes, fbRes] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/technician-auth/me`, { headers }),
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/technicians/dashboard-stats`, { headers }),
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/technicians/my-orders`, { headers }),
-        fetch(`${import.meta.env.VITE_API_BASE_URL}/feedback/my`, { headers })
+      const [meRes, statsRes, ordersRes, fbRes, quoteReqRes] = await Promise.all([
+        fetch(`${apiBaseUrl}/technician-auth/me`, { headers }),
+        fetch(`${apiBaseUrl}/technicians/dashboard-stats`, { headers }),
+        fetch(`${apiBaseUrl}/technicians/my-orders`, { headers }),
+        fetch(`${apiBaseUrl}/feedback/my`, { headers }),
+        fetch(`${apiBaseUrl}/technicians/quote-requests`, { headers })
       ]);
 
       const meData = await meRes.json();
       const statsData = await statsRes.json();
       const ordersData = await ordersRes.json();
       const fbData = await fbRes.json();
+      const quoteReqData = await quoteReqRes.json();
 
       if (meData.success) {
         const u = meData.data;
@@ -137,6 +175,9 @@ export const PartnerDashboard = () => {
 
       if (fbData.success) {
         setFeedbacks(fbData.data || []);
+      }
+      if (quoteReqData.success) {
+        setQuoteRequests(quoteReqData.data || []);
       }
 
     } catch (err) {
@@ -211,7 +252,7 @@ export const PartnerDashboard = () => {
     setAuthLoading(true);
     setAuthError('');
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/technician-auth/login`, {
+      const res = await fetch(`${apiBaseUrl}/technician-auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier: loginId, password: loginPassword })
@@ -256,7 +297,7 @@ export const PartnerDashboard = () => {
     setAuthLoading(true);
     setAuthError('');
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/technician-auth/forgot-password`, {
+      const res = await fetch(`${apiBaseUrl}/technician-auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail })
@@ -288,7 +329,7 @@ export const PartnerDashboard = () => {
     setAuthLoading(true);
     setAuthError('');
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/technician-auth/reset-password`, {
+      const res = await fetch(`${apiBaseUrl}/technician-auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail, otp: resetOtp, newPassword: resetNewPass })
@@ -313,7 +354,7 @@ export const PartnerDashboard = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/technician-auth/profile`, {
+      const res = await fetch(`${apiBaseUrl}/technician-auth/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -347,7 +388,7 @@ export const PartnerDashboard = () => {
     }
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/technician-auth/update-password`, {
+      const res = await fetch(`${apiBaseUrl}/technician-auth/update-password`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ oldPassword: profOldPass, newPassword: profNewPass })
@@ -385,7 +426,7 @@ export const PartnerDashboard = () => {
 
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/bookings/${selectedOrder._id}/status`, {
+      const res = await fetch(`${apiBaseUrl}/bookings/${selectedOrder._id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload)
@@ -428,7 +469,7 @@ export const PartnerDashboard = () => {
     if (!selectedOrder) return;
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/feedback/partner`, {
+      const res = await fetch(`${apiBaseUrl}/feedback/partner`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -451,6 +492,113 @@ export const PartnerDashboard = () => {
     } catch {
       showToast('Feedback saved locally.', 'success');
       setFeedbackSubmittedForJob(true);
+    }
+  };
+
+  const handleSubmitQuoteRequest = async (quoteRequest) => {
+    setQuoteTargetId(quoteRequest._id);
+    setQuoteNotes(quoteRequest.notes || '');
+    setQuoteForm({ amount: quoteRequest.quoteAmount || '', eta: quoteRequest.eta || '24-48 hours', warranty: quoteRequest.warranty || '3 Months' });
+    setShowQuoteModal(true);
+  };
+
+  const confirmSubmitQuoteRequest = async () => {
+    if (!quoteForm.amount) {
+      showToast('Please enter a quote amount', 'error');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('rv_token');
+      const res = await fetch(`${apiBaseUrl}/technicians/quote-requests/${quoteTargetId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          quoteAmount: Number(quoteForm.amount),
+          eta: quoteForm.eta,
+          warranty: quoteForm.warranty,
+          notes: quoteNotes
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Quote submitted successfully', 'success');
+        setShowQuoteModal(false);
+        fetchData();
+      } else {
+        showToast(data.message || 'Failed to submit quote', 'error');
+      }
+    } catch {
+      showToast('Quote submission failed', 'error');
+    }
+  };
+
+  const handleStartHandoff = async () => {
+    if (!selectedOrder) return;
+    try {
+      const token = localStorage.getItem('rv_token');
+      const res = await fetch(`${apiBaseUrl}/technicians/bookings/${selectedOrder._id}/start-handoff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Handoff started. Ask the customer for the OTP at pickup / in-store handoff.', 'success');
+        fetchData();
+      } else {
+        showToast(data.message || 'Failed to start handoff', 'error');
+      }
+    } catch {
+      showToast('Failed to start handoff', 'error');
+    }
+  };
+
+  const handleVerifyHandoffOtp = async () => {
+    if (!selectedOrder) return;
+    const otp = window.prompt('Enter the OTP provided by the customer');
+    if (!otp) return;
+    try {
+      const token = localStorage.getItem('rv_token');
+      const res = await fetch(`${apiBaseUrl}/technicians/bookings/${selectedOrder._id}/verify-handoff-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ otp })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Handoff OTP verified successfully', 'success');
+        fetchData();
+      } else {
+        showToast(data.message || 'OTP verification failed', 'error');
+      }
+    } catch {
+      showToast('OTP verification failed', 'error');
+    }
+  };
+
+  const handleReportIncident = async (incidentType) => {
+    if (!selectedOrder) return;
+    const partnerNote = window.prompt(
+      incidentType === 'customer_no_show'
+        ? 'Add note for customer no-show'
+        : 'Add note for customer cancellation at handoff'
+    ) || '';
+
+    try {
+      const token = localStorage.getItem('rv_token');
+      const res = await fetch(`${apiBaseUrl}/technicians/bookings/${selectedOrder._id}/report-incident`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ incidentType, partnerNote })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Incident reported for admin review', 'success');
+        fetchData();
+      } else {
+        showToast(data.message || 'Failed to report incident', 'error');
+      }
+    } catch {
+      showToast('Failed to report incident', 'error');
     }
   };
 
@@ -802,6 +950,36 @@ export const PartnerDashboard = () => {
                       </div>
                     </div>
                   </div>
+
+                  <div className="bg-[#0c1322] border border-white/5 rounded-2xl p-6">
+                    <div className="flex items-center justify-between gap-4 mb-4">
+                      <div>
+                        <h3 className="font-extrabold font-['Outfit'] text-white text-base">Quote Requests</h3>
+                        <p className="text-xs text-gray-500 mt-1">Blind quote requests without customer PII. Submit pricing before assignment is locked.</p>
+                      </div>
+                      <div className="text-xs font-bold text-purple-400">{quoteRequests.length} open</div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {quoteRequests.length > 0 ? quoteRequests.slice(0, 5).map((quote) => (
+                        <div key={quote._id} className="p-4 bg-white/5 border border-white/5 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3">
+                          <div className="text-xs space-y-1">
+                            <div className="text-white font-bold">{quote.bookingReference}</div>
+                            <div className="text-gray-400">{quote.requestPayload?.deviceBrand} {quote.requestPayload?.deviceModel} · {quote.requestPayload?.serviceType}</div>
+                            <div className="text-gray-500">{quote.requestPayload?.city}, {quote.requestPayload?.state}</div>
+                          </div>
+                          <button
+                            onClick={() => handleSubmitQuoteRequest(quote)}
+                            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-colors"
+                          >
+                            {quote.status === 'submitted' ? 'Update Quote' : 'Submit Quote'}
+                          </button>
+                        </div>
+                      )) : (
+                        <div className="text-center py-8 text-gray-500 text-xs">No open quote requests.</div>
+                      )}
+                    </div>
+                  </div>
                 </motion.div>
               )}
 
@@ -847,7 +1025,7 @@ export const PartnerDashboard = () => {
                             <th className="p-4">Reference</th>
                             <th className="p-4">Device Model</th>
                             <th className="p-4">Completion Date</th>
-                            <th className="p-4">Quotation Amount</th>
+                            <th className="p-4">Customer Quote Status</th>
                             <th className="p-4">Payout (Commission)</th>
                             <th className="p-4">Settlement Status</th>
                           </tr>
@@ -858,7 +1036,11 @@ export const PartnerDashboard = () => {
                               <td className="p-4 font-mono font-bold text-white">#{o.referenceNumber}</td>
                               <td className="p-4 text-white font-medium">{o.deviceBrand} {o.deviceModel}</td>
                               <td className="p-4 text-xs">{new Date(o.updatedAt).toLocaleDateString()}</td>
-                              <td className="p-4 font-bold text-gray-300">₹{o.quotationAmount || 0}</td>
+                              <td className="p-4">
+                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase ${getPartnerQuoteStatusClass(o)}`}>
+                                  {getPartnerQuoteStatusLabel(o)}
+                                </span>
+                              </td>
                               <td className="p-4 font-bold text-emerald-400">₹{o.partnerPayout || 0}</td>
                               <td className="p-4">
                                 <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full uppercase">
@@ -1117,6 +1299,12 @@ export const PartnerDashboard = () => {
                         <div className="text-emerald-400 font-bold">₹{selectedOrder.partnerPayout || 0}</div>
                       </div>
                     </div>
+                    <div className="pt-2 border-t border-white/5 text-xs flex items-center justify-between gap-3">
+                      <div className="text-gray-500 font-bold">Customer Quote Status</div>
+                      <span className={`px-2.5 py-1 rounded-full border font-bold uppercase text-[10px] ${getPartnerQuoteStatusClass(selectedOrder)}`}>
+                        {getPartnerQuoteStatusLabel(selectedOrder)}
+                      </span>
+                    </div>
                     <div className="pt-2 border-t border-white/5 text-xs">
                       <div className="text-gray-500 font-bold mb-0.5">Reported Issue / Fault Description</div>
                       <p className="text-gray-300 leading-relaxed bg-black/20 p-3 rounded-xl border border-white/5 mt-1">{selectedOrder.issueDescription || 'No description logged.'}</p>
@@ -1213,6 +1401,38 @@ export const PartnerDashboard = () => {
                     </h3>
 
                     <div className="space-y-3.5 text-xs">
+                      <div className="rounded-xl border border-yellow-400/20 bg-yellow-500/10 p-3 space-y-2">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-yellow-200">Secure Handoff</div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={handleStartHandoff}
+                            className="py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-[10px] uppercase transition-all"
+                          >
+                            Start Handoff
+                          </button>
+                          <button
+                            onClick={handleVerifyHandoffOtp}
+                            className="py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl text-[10px] uppercase transition-all"
+                          >
+                            Verify OTP
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => handleReportIncident('customer_cancelled_at_handoff')}
+                            className="py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-[10px] uppercase transition-all"
+                          >
+                            Customer Cancelled
+                          </button>
+                          <button
+                            onClick={() => handleReportIncident('customer_no_show')}
+                            className="py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-[10px] uppercase transition-all"
+                          >
+                            No-Show
+                          </button>
+                        </div>
+                      </div>
+
                       <div>
                         <label className="block text-gray-500 font-bold mb-1.5">Current Stage Status</label>
                         <select
@@ -1279,6 +1499,80 @@ export const PartnerDashboard = () => {
                   </div>
                 </div>
 
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Quote Submission Modal */}
+      <AnimatePresence>
+        {showQuoteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#0c1322] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
+            >
+              <div className="p-5 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-purple-500/10 to-transparent">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <IndianRupee className="w-5 h-5 text-purple-400" />
+                  Submit Custom Quote
+                </h2>
+                <button onClick={() => setShowQuoteModal(false)} className="text-gray-400 hover:text-white transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Quote Amount (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    value={quoteForm.amount}
+                    onChange={(e) => setQuoteForm({ ...quoteForm, amount: e.target.value })}
+                    className="w-full bg-[#080c14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-all font-bold"
+                    placeholder="Enter final cost..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Estimated Turnaround (ETA)</label>
+                  <input
+                    type="text"
+                    required
+                    value={quoteForm.eta}
+                    onChange={(e) => setQuoteForm({ ...quoteForm, eta: e.target.value })}
+                    className="w-full bg-[#080c14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-all"
+                    placeholder="e.g. 24-48 hours"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Warranty Provided</label>
+                  <input
+                    type="text"
+                    required
+                    value={quoteForm.warranty}
+                    onChange={(e) => setQuoteForm({ ...quoteForm, warranty: e.target.value })}
+                    className="w-full bg-[#080c14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-all"
+                    placeholder="e.g. 3 Months"
+                  />
+                </div>
+              </div>
+              <div className="p-5 border-t border-white/10 flex gap-3 bg-[#080c14]/50">
+                <button
+                  onClick={() => setShowQuoteModal(false)}
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmSubmitQuoteRequest}
+                  className="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-purple-500/20 text-sm flex items-center justify-center gap-2"
+                >
+                  <IndianRupee size={16} />
+                  Submit Quote
+                </button>
               </div>
             </motion.div>
           </div>
@@ -1376,6 +1670,13 @@ export const PartnerDashboard = () => {
                     </div>
                   </div>
 
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <span className="text-gray-500 font-bold">Customer Quote Status</span>
+                    <span className={`px-2.5 py-1 rounded-full border font-bold uppercase text-[10px] ${getPartnerQuoteStatusClass(order)}`}>
+                      {getPartnerQuoteStatusLabel(order)}
+                    </span>
+                  </div>
+
                   {order.address && (
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-500 bg-black/20 p-2.5 rounded-xl border border-white/5">
                       <MapPin size={10} className="flex-shrink-0" />
@@ -1401,3 +1702,4 @@ export const PartnerDashboard = () => {
     );
   }
 };
+

@@ -203,7 +203,7 @@
                 <th>Job ID</th>
                 <th>Device</th>
                 <th>Completion Date</th>
-                <th>Total Job Amount</th>
+                <th>Customer Quote Status</th>
                 <th>Your Payout Limit</th>
                 <th>Payment Status</th>
               </tr>
@@ -780,7 +780,7 @@
           <td>#${b.referenceNumber}</td>
           <td>${b.deviceBrand} ${b.deviceModel}</td>
           <td>${new Date(b.updatedAt).toLocaleDateString()}</td>
-          <td>₹${b.quotationAmount || 0}</td>
+          <td>${(b.quotationStatus === 'Approved by Customer' || b.status === 'Partner Locked') ? 'Customer Accepted' : b.quotationStatus === 'Rejected by Customer' ? 'Customer Rejected' : b.quotationStatus === 'Awaiting Customer Approval' ? 'Awaiting Customer Approval' : 'No Customer Decision'}</td>
           <td style="color:#10b981; font-weight:700">₹${b.partnerPayout || 0}</td>
           <td><span class="status-badge status-done">${b.paymentStatus || 'Pending'}</span></td>
         </tr>`;

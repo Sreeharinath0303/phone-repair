@@ -58,6 +58,8 @@ const communicationSettingsSchema = new mongoose.Schema({
   whatsappEnabled: { type: Boolean, default: false },
   emailNotifications: { type: Boolean, default: true },
   smsNotifications: { type: Boolean, default: false },
+  slackWebhookAlerts: { type: Boolean, default: false },
+  slackWebhookUrl: { type: String, default: '' },
   autoFollowup: { type: Boolean, default: true },
   followupDays: { type: Number, default: 3 },
   updatedAt: { type: Date, default: Date.now }

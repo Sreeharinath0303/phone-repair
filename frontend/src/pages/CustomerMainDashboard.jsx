@@ -6,6 +6,7 @@ import {
   Plus, ChevronRight, RefreshCw, Bell, Star, Download, Check, X, LifeBuoy,
   LayoutDashboard, UserCircle, MapPin, Edit3, Save, Trash2
 } from 'lucide-react';
+import { getApiBaseUrl } from '../utils/apiBase';
 
 const STATUS_COLOR = {
   'Received':    'bg-purple-500/10 text-purple-400 border-purple-500/20',
@@ -68,6 +69,7 @@ const ModalShell = ({ open, title, onClose, children }) => {
 
 export const CustomerDashboard = () => {
   const navigate = useNavigate();
+  const apiBaseUrl = getApiBaseUrl();
   const [user, setUser] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -108,7 +110,7 @@ export const CustomerDashboard = () => {
 
   const apiFetch = async (path, options = {}) => {
     const token = getAuthToken();
-    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}${path}`, {
+    const res = await fetch(`${apiBaseUrl}${path}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -216,7 +218,7 @@ export const CustomerDashboard = () => {
   const downloadInvoice = async (orderId, filenameHint) => {
     try {
       const token = getAuthToken();
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/customer/invoice/${orderId}/html`, {
+      const res = await fetch(`${apiBaseUrl}/customer/invoice/${orderId}/html`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Failed');
@@ -261,6 +263,27 @@ export const CustomerDashboard = () => {
       showToast('Server error while submitting feedback', 'error');
     } finally {
       setSubmittingFeedback(false);
+    }
+  };
+
+  const handleVerifyReturnOtp = async (orderId) => {
+    const otp = window.prompt('Enter the return / delivery OTP shared during device handoff');
+    if (!otp) return;
+
+    try {
+      const res = await apiFetch(`/customer/bookings/${orderId}/verify-return-otp`, {
+        method: 'POST',
+        body: JSON.stringify({ otp })
+      });
+      if (res?.success) {
+        showToast('Return verified successfully', 'success');
+        fetchDashboard();
+        setDetailsOpen(false);
+      } else {
+        showToast(res?.message || 'Return OTP verification failed', 'error');
+      }
+    } catch {
+      showToast('Return OTP verification failed', 'error');
     }
   };
 
@@ -878,6 +901,14 @@ export const CustomerDashboard = () => {
                   className="w-full px-4 py-3 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white transition-colors inline-flex justify-center items-center gap-2"
                 >
                   <Download size={16} /> Download Invoice
+                </button>
+              )}
+              {(['Ready For Return', 'Out for Delivery / Ready for Pickup', 'Delivered / Returned', 'Settlement Pending'].includes(activeOrder.status)) && (
+                <button
+                  onClick={() => handleVerifyReturnOtp(activeOrder._id)}
+                  className="w-full px-4 py-3 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors inline-flex justify-center items-center gap-2"
+                >
+                  <Check size={16} /> Verify Return OTP
                 </button>
               )}
             </div>

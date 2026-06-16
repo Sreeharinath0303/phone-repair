@@ -1,4 +1,7 @@
 const Technician = require('../models/Technician');
+const PartnerQuote = require('../models/PartnerQuote');
+const PartnerIncident = require('../models/PartnerIncident');
+const { buildPartnerVisibleBooking, recalculatePartnerRisk } = require('../utils/workflow');
 
 exports.getAllTechnicians = async (req, res) => {
   try {
@@ -120,7 +123,7 @@ exports.getAssignedOrders = async (req, res) => {
   try {
     const techId = req.user.id;
     const orders = await Booking.find({ assignedTechnician: techId }).sort({ createdAt: -1 });
-    res.json({ success: true, data: orders });
+    res.json({ success: true, data: orders.map(buildPartnerVisibleBooking) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -152,7 +155,14 @@ exports.updateMyOrderStatus = async (req, res) => {
       });
     }
 
+    if (!booking.handoffVerifiedAt && ['Picked Up', 'Device Received', 'In Repair', 'Completed', 'Delivered'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Complete handoff OTP verification before continuing fulfillment statuses.' });
+    }
+
     booking.status = status;
+    if (status === 'Picked Up' || status === 'Device Received') {
+      await recalculatePartnerRisk(techId);
+    }
     await booking.save();
 
     res.json({

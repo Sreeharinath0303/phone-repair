@@ -51,14 +51,6 @@ const {
   deleteEmailTemplate,
   previewTemplate,
   sendTestEmail,
-  // Communication Settings
-  getCommunicationSettings,
-  updateCommunicationSettings,
-  // Offers
-  getOffers,
-  createOffer,
-  updateOffer,
-  deleteOffer,
   // Data Export
   exportBookings,
   // Analytics
@@ -100,6 +92,23 @@ const {
   resetPartnerPassword,
   getPartnerPerformance
 } = require('../controllers/adminPartnerController');
+const {
+  requestPartnerQuotes,
+  getPartnerQuotesForBooking,
+  getBookingIncidents,
+  selectPartnerQuote,
+  reviewPartnerIncident,
+  overrideAssignment
+} = require('../controllers/adminWorkflowController');
+
+const {
+  getCommunicationSettings,
+  updateCommunicationSettings,
+  getOffers,
+  createOffer,
+  updateOffer,
+  deleteOffer
+} = require('../controllers/adminSettingsController');
 
 // Protect all routes with authentication
 router.use(protect);
@@ -112,6 +121,12 @@ router.delete('/partners/:id', authorize('admin', 'superadmin'), deletePartner);
 router.post('/partners/:id/payout', authorize('admin', 'superadmin'), managePayout);
 router.post('/partners/:id/reset-password', authorize('admin', 'superadmin'), resetPartnerPassword);
 router.get('/partners/:id/performance', authorize('admin', 'superadmin'), getPartnerPerformance);
+router.post('/partner-quotes/request', authorize('admin', 'superadmin'), requestPartnerQuotes);
+router.get('/partner-quotes/:bookingId', authorize('admin', 'superadmin'), getPartnerQuotesForBooking);
+router.get('/booking-incidents/:bookingId', authorize('admin', 'superadmin'), getBookingIncidents);
+router.post('/partner-quotes/:id/select', authorize('admin', 'superadmin'), selectPartnerQuote);
+router.post('/bookings/:id/incident-review', authorize('admin', 'superadmin'), reviewPartnerIncident);
+router.post('/bookings/:id/override-assignment', authorize('admin', 'superadmin'), overrideAssignment);
 
 // ─── ADMIN USER MANAGEMENT ─────────────────────────────────
 router.get('/admins', authorize('superadmin'), getAllAdmins);
@@ -183,14 +198,14 @@ router.post('/preview-template', authorize('admin', 'superadmin'), previewTempla
 router.post('/send-test-email', authorize('admin', 'superadmin'), sendTestEmail);
 
 // ─── COMMUNICATION SETTINGS ───────────────────────────────
-router.get('/communication-settings', authorize('admin', 'superadmin'), getCommunicationSettings);
-router.put('/communication-settings', authorize('admin', 'superadmin'), updateCommunicationSettings);
+router.get('/settings/communication', authorize('admin', 'superadmin'), getCommunicationSettings);
+router.put('/settings/communication', authorize('admin', 'superadmin'), updateCommunicationSettings);
 
 // ─── OFFERS/PROMOTIONS ────────────────────────────────────
-router.get('/offers', authorize('admin', 'superadmin'), getOffers);
-router.post('/offers', authorize('admin', 'superadmin'), createOffer);
-router.put('/offers/:id', authorize('admin', 'superadmin'), updateOffer);
-router.delete('/offers/:id', authorize('admin', 'superadmin'), deleteOffer);
+router.get('/settings/offers', authorize('admin', 'superadmin'), getOffers);
+router.post('/settings/offers', authorize('admin', 'superadmin'), createOffer);
+router.put('/settings/offers/:id', authorize('admin', 'superadmin'), updateOffer);
+router.delete('/settings/offers/:id', authorize('admin', 'superadmin'), deleteOffer);
 
 // ─── REGISTRATION ─────────────────────────────────────────
 router.post('/customers/register', authorize('admin', 'superadmin'), createCustomerAccount);

@@ -4,7 +4,64 @@ const User = require('../models/User');
 const Technician = require('../models/Technician');
 const Feedback = require('../models/Feedback');
 const RepairType = require('../models/RepairType');
+const Brand = require('../models/Brand');
+const Model = require('../models/Model');
 const mongoose = require('mongoose');
+
+// @desc  Public booking catalog brands
+// @route GET /api/bookings/catalog/brands
+// @access Public
+exports.getPublicBrands = async (req, res) => {
+  try {
+    const { category } = req.query;
+    const filter = { isActive: true };
+
+    if (category) {
+      filter.category = category;
+    }
+
+    const brands = await Brand.find(filter).sort({ name: 1 }).select('name category logo');
+    res.json({ success: true, data: brands });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc  Public booking catalog models
+// @route GET /api/bookings/catalog/models
+// @access Public
+exports.getPublicModels = async (req, res) => {
+  try {
+    const { category, brand } = req.query;
+    const filter = { isActive: true };
+
+    if (category) {
+      filter.category = category;
+    }
+
+    if (brand) {
+      const matchedBrand = await Brand.findOne({
+        name: { $regex: new RegExp(`^${String(brand).trim()}$`, 'i') },
+        ...(category ? { category } : {})
+      }).select('_id');
+
+      if (!matchedBrand) {
+        return res.json({ success: true, data: [] });
+      }
+
+      filter.brand = matchedBrand._id;
+    }
+
+    const models = await Model.find(filter)
+      .populate('brand', 'name')
+      .sort({ name: 1 })
+      .select('name category basePrice image brand');
+
+    res.json({ success: true, data: models });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
 // @desc  Create new booking
 // @route POST /api/bookings
@@ -28,6 +85,7 @@ exports.createBooking = async (req, res) => {
     const customerName = body.customerName || body.name || '';
     const customerPhone = body.customerPhone || body.phone || '';
     const customerEmail = (body.customerEmail || body.email || '').trim();
+    const accountPassword = String(body.accountPassword || '').trim();
     const serviceTypeRaw = (body.serviceType || body.service || 'pickup').toString().toLowerCase();
     const normalizedServiceType = ['pickup', 'dropoff', 'walkin'].includes(serviceTypeRaw)
       ? serviceTypeRaw
@@ -125,14 +183,51 @@ exports.createBooking = async (req, res) => {
     };
 
     let assignedUserId = null;
+    const isAuthenticatedCustomer =
+      req.user &&
+      (req.user.role === 'customer' || req.user.constructor?.modelName === 'User');
 
-    if (req.user) {
-      bookingData.customerId = req.user._id;
-      bookingData.customerEmail = req.user.email; // Ensure it matches the login email
-      assignedUserId = req.user._id;
+    if (isAuthenticatedCustomer) {
+      const authenticatedUser = await User.findById(req.user._id).select('+password');
+      if (!authenticatedUser) {
+        return res.status(401).json({ success: false, message: 'Customer account not found. Please sign in again.' });
+      }
+
+      // Keep the customer profile in sync with the latest booking details.
+      authenticatedUser.name = customerName || authenticatedUser.name;
+      authenticatedUser.phone = normalizedPhone || authenticatedUser.phone;
+      authenticatedUser.email = customerEmail.toLowerCase() || authenticatedUser.email;
+      authenticatedUser.address = address || authenticatedUser.address;
+      authenticatedUser.city = city || authenticatedUser.city;
+      authenticatedUser.state = state || authenticatedUser.state;
+      authenticatedUser.pincode = pincode || authenticatedUser.pincode;
+      if (!authenticatedUser.isVerified) authenticatedUser.isVerified = true;
+      await authenticatedUser.save();
+
+      bookingData.customerId = authenticatedUser._id;
+      bookingData.customerEmail = authenticatedUser.email || safeEmail;
+      bookingData.customerName = authenticatedUser.name || customerName;
+      bookingData.customerPhone = authenticatedUser.phone || normalizedPhone;
+      assignedUserId = authenticatedUser._id;
     } else {
       // Step 8 & 9: Auto Account Creation Logic
-      let user = await User.findOne({ $or: [{ email: customerEmail.toLowerCase() }, { phone: customerPhone }] });
+      let user = await User.findOne({ email: customerEmail.toLowerCase() }).select('+password');
+      const phoneUser = await User.findOne({ phone: normalizedPhone }).select('+password');
+      
+      if (user) {
+        if (!accountPassword) {
+          return res.status(401).json({ success: false, message: 'This email is already registered. Enter your password to continue with booking.' });
+        }
+
+        const passwordMatch = await user.matchPassword(accountPassword);
+        if (!passwordMatch) {
+          return res.status(401).json({ success: false, message: 'Incorrect password for the existing customer account.' });
+        }
+      } else if (phoneUser && phoneUser.email && phoneUser.email !== customerEmail.toLowerCase()) {
+        return res.status(409).json({ success: false, message: 'This phone number is already linked to another customer account. Use that registered email to continue.' });
+      } else if (phoneUser) {
+        user = phoneUser;
+      }
       
       let autoPassword = null;
       if (!user) {
@@ -141,14 +236,26 @@ exports.createBooking = async (req, res) => {
         user = await User.create({
           name: customerName,
           email: customerEmail.toLowerCase(),
-          phone: customerPhone,
+          phone: normalizedPhone,
           password: autoPassword,
           address, city, state, pincode,
           isVerified: true // Auto-created accounts from valid booking flows are pre-verified
         });
+      } else {
+        if (!user.email) user.email = customerEmail.toLowerCase();
+        if (!user.phone) user.phone = customerPhone;
+        if (!user.name || user.name === 'Customer') user.name = customerName;
+        if (address) user.address = address;
+        if (city) user.city = city;
+        if (state) user.state = state;
+        if (pincode) user.pincode = pincode;
+        await user.save();
       }
       
       bookingData.customerId = user._id;
+      bookingData.customerEmail = user.email || safeEmail;
+      bookingData.customerName = user.name || customerName;
+      bookingData.customerPhone = user.phone || normalizedPhone;
       assignedUserId = user._id;
       
       // Step 10: Share Credentials Securely
@@ -394,7 +501,10 @@ exports.getBookingByRef = async (req, res) => {
         .populate('assignedTechnician', 'name specialization phone email businessName');
     }
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
-    res.json({ success: true, data: booking });
+    const safeBooking = booking.toObject();
+    delete safeBooking.trackingOtp;
+    delete safeBooking.trackingOtpExpiry;
+    res.json({ success: true, data: safeBooking });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -522,6 +632,17 @@ exports.updateStatus = async (req, res) => {
            note: `Automated Invoice ${booking.invoiceNumber} generated for amount ₹${booking.finalAmount}.`,
            date: new Date()
         });
+    }
+
+    if (status === 'Ready for Return' || status === 'Out for Delivery / Ready for Pickup' || status === 'Delivered / Returned') {
+      booking.returnOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      booking.returnOtpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+      booking.workflowPhase = 'return';
+      booking.timeline.push({
+        stage: 'Return OTP Issued',
+        note: 'Return verification OTP issued to customer.',
+        date: new Date()
+      });
     }
 
     await booking.save();
@@ -692,10 +813,17 @@ exports.quotationAction = async (req, res) => {
 
       booking.quotationStatus = 'Approved by Customer';
       // Step 9: Customer Approval Workflow execution mapping status directly
-      booking.status = 'Approved by Customer'; 
+      booking.status = 'Quote Approved'; 
+      booking.workflowPhase = 'partner_locked';
+      if (booking.quotedByPartnerId) {
+        booking.assignedTechnician = booking.quotedByPartnerId;
+        booking.assignmentLockedAt = new Date();
+        booking.assignmentLockReason = 'Customer approved selected partner quote';
+        booking.status = 'Partner Locked';
+      }
       // Step 10 & 12: Record Timestamps explicitly in the history payload.
       booking.timeline.push({ 
-         stage: 'Approved by Customer', 
+         stage: booking.status, 
          note: 'Customer securely approved Estimate Form parameters.', 
          date: new Date() 
       });
@@ -712,8 +840,9 @@ exports.quotationAction = async (req, res) => {
     } else {
       booking.quotationStatus = 'Rejected by Customer';
       // Step 9: Rejection Logic maps firmly to Cancelled string block
-      booking.status = 'Cancelled'; 
-      booking.timeline.push({ stage: 'Rejected by Customer', note: 'Customer actively denied estimate offer parameters.', date: new Date() });
+      booking.status = 'Quote Rejected'; 
+      booking.workflowPhase = 'customer_approval';
+      booking.timeline.push({ stage: 'Quote Rejected', note: 'Customer actively denied estimate offer parameters.', date: new Date() });
       booking.timeline.push({ stage: 'Cancelled', note: 'Workflow locked permanently to Cancelled workflow via rejection parameter.', date: new Date() });
       
       if (lead) {
