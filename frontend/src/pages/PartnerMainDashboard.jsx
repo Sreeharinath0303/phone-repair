@@ -22,6 +22,33 @@ const STATUS_COLOR = {
   'Cancelled': 'bg-red-500/10 text-red-400 border-red-500/20'
 };
 
+const QUOTE_STATUS_META = {
+  'Approved by Customer': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  'Awaiting Customer Approval': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  'Rejected by Customer': 'bg-red-500/10 text-red-400 border-red-500/20',
+  'Not Issued': 'bg-slate-500/10 text-slate-300 border-slate-500/20'
+};
+
+const getPartnerQuoteStatusLabel = (order) => {
+  if (order.quotationStatus === 'Approved by Customer' || order.status === 'Partner Locked') {
+    return 'Customer Accepted';
+  }
+  if (order.quotationStatus === 'Rejected by Customer') {
+    return 'Customer Rejected';
+  }
+  if (order.quotationStatus === 'Awaiting Customer Approval') {
+    return 'Awaiting Customer Approval';
+  }
+  return 'No Customer Decision';
+};
+
+const getPartnerQuoteStatusClass = (order) =>
+  QUOTE_STATUS_META[
+    order.quotationStatus === 'Approved by Customer' || order.status === 'Partner Locked'
+      ? 'Approved by Customer'
+      : (order.quotationStatus || 'Not Issued')
+  ] || QUOTE_STATUS_META['Not Issued'];
+
 export const PartnerDashboard = () => {
   const navigate = useNavigate();
   const apiBaseUrl = getApiBaseUrl();
@@ -56,6 +83,12 @@ export const PartnerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
   const [toast, setToast] = useState(null);
+
+  // Quote Modal State
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [quoteTargetId, setQuoteTargetId] = useState(null);
+  const [quoteNotes, setQuoteNotes] = useState('');
+  const [quoteForm, setQuoteForm] = useState({ amount: '', eta: '24-48 hours', warranty: '3 Months' });
 
   // Modal / Interaction State
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -463,28 +496,33 @@ export const PartnerDashboard = () => {
   };
 
   const handleSubmitQuoteRequest = async (quoteRequest) => {
-    const quoteAmount = window.prompt('Enter your quote amount', quoteRequest.quoteAmount || '');
-    if (quoteAmount === null) return;
-    const eta = window.prompt('Enter ETA / turnaround time', quoteRequest.eta || '24-48 hours');
-    if (eta === null) return;
-    const warranty = window.prompt('Enter warranty details', quoteRequest.warranty || '3 Months');
-    if (warranty === null) return;
+    setQuoteTargetId(quoteRequest._id);
+    setQuoteNotes(quoteRequest.notes || '');
+    setQuoteForm({ amount: quoteRequest.quoteAmount || '', eta: quoteRequest.eta || '24-48 hours', warranty: quoteRequest.warranty || '3 Months' });
+    setShowQuoteModal(true);
+  };
 
+  const confirmSubmitQuoteRequest = async () => {
+    if (!quoteForm.amount) {
+      showToast('Please enter a quote amount', 'error');
+      return;
+    }
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${apiBaseUrl}/technicians/quote-requests/${quoteRequest._id}/submit`, {
+      const res = await fetch(`${apiBaseUrl}/technicians/quote-requests/${quoteTargetId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          quoteAmount: Number(quoteAmount),
-          eta,
-          warranty,
-          notes: quoteRequest.notes || ''
+          quoteAmount: Number(quoteForm.amount),
+          eta: quoteForm.eta,
+          warranty: quoteForm.warranty,
+          notes: quoteNotes
         })
       });
       const data = await res.json();
       if (data.success) {
         showToast('Quote submitted successfully', 'success');
+        setShowQuoteModal(false);
         fetchData();
       } else {
         showToast(data.message || 'Failed to submit quote', 'error');
@@ -987,7 +1025,7 @@ export const PartnerDashboard = () => {
                             <th className="p-4">Reference</th>
                             <th className="p-4">Device Model</th>
                             <th className="p-4">Completion Date</th>
-                            <th className="p-4">Quotation Amount</th>
+                            <th className="p-4">Customer Quote Status</th>
                             <th className="p-4">Payout (Commission)</th>
                             <th className="p-4">Settlement Status</th>
                           </tr>
@@ -998,7 +1036,11 @@ export const PartnerDashboard = () => {
                               <td className="p-4 font-mono font-bold text-white">#{o.referenceNumber}</td>
                               <td className="p-4 text-white font-medium">{o.deviceBrand} {o.deviceModel}</td>
                               <td className="p-4 text-xs">{new Date(o.updatedAt).toLocaleDateString()}</td>
-                              <td className="p-4 font-bold text-gray-300">₹{o.quotationAmount || 0}</td>
+                              <td className="p-4">
+                                <span className={	ext-[10px] font-bold px-2.5 py-1 rounded-full border uppercase }>
+                                  {getPartnerQuoteStatusLabel(o)}
+                                </span>
+                              </td>
                               <td className="p-4 font-bold text-emerald-400">₹{o.partnerPayout || 0}</td>
                               <td className="p-4">
                                 <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full uppercase">
@@ -1257,6 +1299,12 @@ export const PartnerDashboard = () => {
                         <div className="text-emerald-400 font-bold">₹{selectedOrder.partnerPayout || 0}</div>
                       </div>
                     </div>
+                    <div className="pt-2 border-t border-white/5 text-xs flex items-center justify-between gap-3">
+                      <div className="text-gray-500 font-bold">Customer Quote Status</div>
+                      <span className={`px-2.5 py-1 rounded-full border font-bold uppercase text-[10px] ${getPartnerQuoteStatusClass(selectedOrder)}`}>
+                        {getPartnerQuoteStatusLabel(selectedOrder)}
+                      </span>
+                    </div>
                     <div className="pt-2 border-t border-white/5 text-xs">
                       <div className="text-gray-500 font-bold mb-0.5">Reported Issue / Fault Description</div>
                       <p className="text-gray-300 leading-relaxed bg-black/20 p-3 rounded-xl border border-white/5 mt-1">{selectedOrder.issueDescription || 'No description logged.'}</p>
@@ -1456,6 +1504,80 @@ export const PartnerDashboard = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Quote Submission Modal */}
+      <AnimatePresence>
+        {showQuoteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#0c1322] border border-white/10 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
+            >
+              <div className="p-5 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-purple-500/10 to-transparent">
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <IndianRupee className="w-5 h-5 text-purple-400" />
+                  Submit Custom Quote
+                </h2>
+                <button onClick={() => setShowQuoteModal(false)} className="text-gray-400 hover:text-white transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Quote Amount (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    value={quoteForm.amount}
+                    onChange={(e) => setQuoteForm({ ...quoteForm, amount: e.target.value })}
+                    className="w-full bg-[#080c14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-all font-bold"
+                    placeholder="Enter final cost..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Estimated Turnaround (ETA)</label>
+                  <input
+                    type="text"
+                    required
+                    value={quoteForm.eta}
+                    onChange={(e) => setQuoteForm({ ...quoteForm, eta: e.target.value })}
+                    className="w-full bg-[#080c14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-all"
+                    placeholder="e.g. 24-48 hours"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Warranty Provided</label>
+                  <input
+                    type="text"
+                    required
+                    value={quoteForm.warranty}
+                    onChange={(e) => setQuoteForm({ ...quoteForm, warranty: e.target.value })}
+                    className="w-full bg-[#080c14] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-all"
+                    placeholder="e.g. 3 Months"
+                  />
+                </div>
+              </div>
+              <div className="p-5 border-t border-white/10 flex gap-3 bg-[#080c14]/50">
+                <button
+                  onClick={() => setShowQuoteModal(false)}
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmSubmitQuoteRequest}
+                  className="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-purple-500/20 text-sm flex items-center justify-center gap-2"
+                >
+                  <IndianRupee size={16} />
+                  Submit Quote
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 
@@ -1548,6 +1670,13 @@ export const PartnerDashboard = () => {
                     </div>
                   </div>
 
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <span className="text-gray-500 font-bold">Customer Quote Status</span>
+                    <span className={`px-2.5 py-1 rounded-full border font-bold uppercase text-[10px] ${getPartnerQuoteStatusClass(order)}`}>
+                      {getPartnerQuoteStatusLabel(order)}
+                    </span>
+                  </div>
+
                   {order.address && (
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-500 bg-black/20 p-2.5 rounded-xl border border-white/5">
                       <MapPin size={10} className="flex-shrink-0" />
@@ -1573,3 +1702,4 @@ export const PartnerDashboard = () => {
     );
   }
 };
+

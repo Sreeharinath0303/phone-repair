@@ -69,30 +69,7 @@ export const Home = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#080c14] text-white font-['Inter']">
-      {/* ── NAVBAR ── */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#080c14]/90 backdrop-blur-xl border-b border-white/5 shadow-lg' : ''}`}>
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center text-sm font-bold shadow-[0_0_20px_rgba(59,130,246,0.4)]">⚡</div>
-            <span className="text-lg font-bold font-['Outfit']">Repair<span className="text-blue-400">Vafe</span></span>
-          </Link>
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <a href="#services" className="hover:text-white transition-colors">Services</a>
-            <a href="#testimonials" className="hover:text-white transition-colors">Reviews</a>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link to="/customer-login" className="text-sm font-semibold text-gray-300 hover:text-white transition-colors hidden sm:block">Login</Link>
-            <Link
-              to="/book"
-              className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-sm font-bold px-5 py-2.5 rounded-full hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:-translate-y-0.5 transition-all duration-200"
-            >
-              Book Now
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <>
 
       {/* ── HERO ── */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
@@ -341,21 +318,6 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <footer className="border-t border-white/5 py-10 px-6">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center text-xs font-bold">⚡</div>
-            <span className="font-bold font-['Outfit']">Repair<span className="text-blue-400">Vafe</span></span>
-          </div>
-          <div className="flex gap-6 text-sm text-gray-500">
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <a href="#services" className="hover:text-white transition-colors">Services</a>
-            <Link to="/customer-login" className="hover:text-white transition-colors">Login</Link>
-          </div>
-          <p className="text-xs text-gray-600">© 2026 RepairVafe Systems. All rights reserved.</p>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 };

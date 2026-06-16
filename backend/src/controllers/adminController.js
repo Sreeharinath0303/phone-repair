@@ -690,7 +690,7 @@ exports.convertLeadToBooking = async (req, res) => {
       issueDescription: lead.issueDescription || '',
       assignedTechnician: lead.assignedTechnician || null,
       partnerPayout: lead.partnerPayout || 0,
-      status: lead.assignedTechnician ? 'Assigned' : 'Received',
+      status: lead.assignedTechnician ? 'Assigned' : 'Pending',
       convertedFromLead: true
     });
 

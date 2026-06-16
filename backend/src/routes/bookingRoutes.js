@@ -1,7 +1,8 @@
 const router = require('express').Router();
 const {
   createBooking, getAllBookings, getBookingByRef, updateStatus,
-  issueQuotation, quotationAction, requestQuoteOtp, getDashboardStats, deleteBooking
+  issueQuotation, quotationAction, requestQuoteOtp, getDashboardStats, deleteBooking,
+  getPublicBrands, getPublicModels
 } = require('../controllers/bookingController');
 const { protect, authorize, optionalAuth } = require('../middleware/auth');
 
@@ -9,6 +10,8 @@ const adminOnly = authorize('superadmin', 'admin', 'sales', 'services');
 const adminOrPartner = authorize('superadmin', 'admin', 'sales', 'services', 'Technician');
 
 router.get('/stats',             protect, adminOnly, getDashboardStats);
+router.get('/catalog/brands',             getPublicBrands);
+router.get('/catalog/models',             getPublicModels);
 router.get('/',                  protect, adminOnly, getAllBookings);
 router.post('/',                  optionalAuth,   createBooking);
 router.get('/:ref',                       getBookingByRef);

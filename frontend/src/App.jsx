@@ -10,11 +10,18 @@ import { CustomerDashboard } from './pages/CustomerMainDashboard.jsx';
 import { PartnerDashboard } from './pages/PartnerMainDashboard.jsx';
 import { BookingFlow } from './pages/BookingFlow.jsx';
 import { Home } from './pages/Home.jsx';
+import { AboutUs } from './pages/AboutUs.jsx';
+import { ContactUs } from './pages/ContactUs.jsx';
+import { Services } from './pages/Services.jsx';
+import { FAQ } from './pages/FAQ.jsx';
+import { BecomePartner } from './pages/BecomePartner.jsx';
+import { PublicLayout } from './components/PublicLayout.jsx';
 
 // Import New Custom Admin Module Components
 import { BookingsManagement } from './pages/BookingsManagement.jsx';
 import { CustomersManagement } from './pages/CustomersManagement.jsx';
 import { PartnersManagement } from './pages/PartnersManagement.jsx';
+import { PartnerApplicationsManagement } from './pages/PartnerApplicationsManagement.jsx';
 import { AuditLogsManagement } from './pages/AuditLogsManagement.jsx';
 import { TemplatesManagement } from './pages/TemplatesManagement.jsx';
 import { EnquiriesManagement } from './pages/EnquiriesManagement.jsx';
@@ -41,7 +48,13 @@ function App() {
       <div className="app-container">
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
+          <Route path="/about" element={<PublicLayout><AboutUs /></PublicLayout>} />
+          <Route path="/contact" element={<PublicLayout><ContactUs /></PublicLayout>} />
+          <Route path="/services" element={<PublicLayout><Services /></PublicLayout>} />
+          <Route path="/faq" element={<PublicLayout><FAQ /></PublicLayout>} />
+          <Route path="/become-partner" element={<PublicLayout><BecomePartner /></PublicLayout>} />
+          
           <Route path="/login" element={<Login />} />
           <Route path="/customer-login" element={<CustomerLogin />} />
           <Route path="/book" element={<BookingFlow />} />
@@ -67,6 +80,7 @@ function App() {
                   <Route path="bookings" element={<BookingsManagement />} />
                   <Route path="customers" element={<CustomersManagement />} />
                   <Route path="partners" element={<PartnersManagement />} />
+                  <Route path="partner-applications" element={<PartnerApplicationsManagement />} />
                   <Route path="audit-logs" element={<AuditLogsManagement />} />
                   <Route path="templates" element={<TemplatesManagement />} />
                   <Route path="enquiries" element={<EnquiriesManagement />} />

@@ -234,17 +234,27 @@ exports.applyQuoteCommercials = async (booking, payload) => {
   const partnerBase = booking.quotedByPartnerId
     ? (Number(partnerQuotedAmount) || Number(booking.partnerQuotedAmount) || 0)
     : (Number(partnerQuotedAmount) || 0);
+  const finalQuotationAmount = Number(quotationAmount) || 0;
+  let normalizedMarkupValue = Number(markupValue) || 0;
+
+  if (effectiveMarkupType !== 'direct_admin_quote' && partnerBase > 0 && finalQuotationAmount > 0) {
+    if (effectiveMarkupType === 'percentage') {
+      normalizedMarkupValue = Math.round((((finalQuotationAmount - partnerBase) / partnerBase) * 100) * 100) / 100;
+    } else {
+      normalizedMarkupValue = Math.round((finalQuotationAmount - partnerBase) * 100) / 100;
+    }
+  }
 
   const commercials = computeCommercials({
     partnerQuotedAmount: partnerBase,
     markupType: effectiveMarkupType,
-    markupValue: Number(markupValue) || 0,
-    quotationAmount: Number(quotationAmount) || 0
+    markupValue: normalizedMarkupValue,
+    quotationAmount: finalQuotationAmount
   });
 
   booking.partnerQuotedAmount = partnerBase;
   booking.markupType = effectiveMarkupType;
-  booking.markupValue = Number(markupValue) || 0;
+  booking.markupValue = normalizedMarkupValue;
   booking.quotationAmount = commercials.quotationAmount;
   booking.partnerPayoutLocked = commercials.partnerPayoutLocked;
   booking.partnerPayout = commercials.partnerPayoutLocked;

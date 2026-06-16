@@ -42,6 +42,7 @@ app.use('/api/auth', require('./src/routes/authRoutes'));
 app.use('/api/customer-auth', require('./src/routes/customerAuthRoutes'));
 app.use('/api/leads', require('./src/routes/leadRoutes'));
 app.use('/api/enquiries', require('./src/routes/enquiryRoutes'));
+app.use('/api/partners', require('./src/routes/partnerRoutes'));
 app.use('/api/admin', require('./src/routes/adminRoutes'));
 
 app.get('/api/health', (req, res) => {

@@ -2,6 +2,20 @@ const Booking = require('../models/Booking');
 const User = require('../models/User');
 const { addTimelineEntry } = require('../utils/workflow');
 
+const sanitizeCustomerBooking = (bookingDoc) => {
+  const booking = bookingDoc?.toObject ? bookingDoc.toObject() : { ...(bookingDoc || {}) };
+
+  delete booking.partnerQuotedAmount;
+  delete booking.partnerPayoutLocked;
+  delete booking.partnerPayout;
+  delete booking.platformMargin;
+  delete booking.markupType;
+  delete booking.markupValue;
+  delete booking.quotedByPartnerId;
+
+  return booking;
+};
+
 // @desc  Get logged-in customer's bookings
 // @route GET /api/customer/my-bookings
 // @access Private (Customer)
@@ -14,7 +28,7 @@ exports.getMyBookings = async (req, res) => {
       ]
     }).sort({ createdAt: -1 });
 
-    res.json({ success: true, data: bookings });
+    res.json({ success: true, data: bookings.map(sanitizeCustomerBooking) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -38,7 +52,7 @@ exports.getOrderByRef = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied to this order' });
     }
 
-    res.json({ success: true, data: booking });
+    res.json({ success: true, data: sanitizeCustomerBooking(booking) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -226,7 +240,7 @@ exports.approveQuote = async (req, res) => {
     addTimelineEntry(booking, booking.status, 'Quotation approved by customer. Fulfillment locked to the selected partner.');
 
     await booking.save();
-    res.json({ success: true, message: 'Quotation approved successfully', data: booking });
+    res.json({ success: true, message: 'Quotation approved successfully', data: sanitizeCustomerBooking(booking) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -275,7 +289,7 @@ exports.rejectQuote = async (req, res) => {
        console.error("Admin rejection email bounce:", e.message);
     }
 
-    res.json({ success: true, message: 'Quotation gracefully rejected', data: booking });
+    res.json({ success: true, message: 'Quotation gracefully rejected', data: sanitizeCustomerBooking(booking) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -307,7 +321,7 @@ exports.verifyReturnOtp = async (req, res) => {
     addTimelineEntry(booking, 'Settlement Pending', 'Customer verified return OTP. Booking is ready for settlement.');
     await booking.save();
 
-    res.json({ success: true, data: booking, message: 'Return verified successfully' });
+    res.json({ success: true, data: sanitizeCustomerBooking(booking), message: 'Return verified successfully' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

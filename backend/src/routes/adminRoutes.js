@@ -51,14 +51,6 @@ const {
   deleteEmailTemplate,
   previewTemplate,
   sendTestEmail,
-  // Communication Settings
-  getCommunicationSettings,
-  updateCommunicationSettings,
-  // Offers
-  getOffers,
-  createOffer,
-  updateOffer,
-  deleteOffer,
   // Data Export
   exportBookings,
   // Analytics
@@ -108,6 +100,15 @@ const {
   reviewPartnerIncident,
   overrideAssignment
 } = require('../controllers/adminWorkflowController');
+
+const {
+  getCommunicationSettings,
+  updateCommunicationSettings,
+  getOffers,
+  createOffer,
+  updateOffer,
+  deleteOffer
+} = require('../controllers/adminSettingsController');
 
 // Protect all routes with authentication
 router.use(protect);
@@ -197,14 +198,14 @@ router.post('/preview-template', authorize('admin', 'superadmin'), previewTempla
 router.post('/send-test-email', authorize('admin', 'superadmin'), sendTestEmail);
 
 // ─── COMMUNICATION SETTINGS ───────────────────────────────
-router.get('/communication-settings', authorize('admin', 'superadmin'), getCommunicationSettings);
-router.put('/communication-settings', authorize('admin', 'superadmin'), updateCommunicationSettings);
+router.get('/settings/communication', authorize('admin', 'superadmin'), getCommunicationSettings);
+router.put('/settings/communication', authorize('admin', 'superadmin'), updateCommunicationSettings);
 
 // ─── OFFERS/PROMOTIONS ────────────────────────────────────
-router.get('/offers', authorize('admin', 'superadmin'), getOffers);
-router.post('/offers', authorize('admin', 'superadmin'), createOffer);
-router.put('/offers/:id', authorize('admin', 'superadmin'), updateOffer);
-router.delete('/offers/:id', authorize('admin', 'superadmin'), deleteOffer);
+router.get('/settings/offers', authorize('admin', 'superadmin'), getOffers);
+router.post('/settings/offers', authorize('admin', 'superadmin'), createOffer);
+router.put('/settings/offers/:id', authorize('admin', 'superadmin'), updateOffer);
+router.delete('/settings/offers/:id', authorize('admin', 'superadmin'), deleteOffer);
 
 // ─── REGISTRATION ─────────────────────────────────────────
 router.post('/customers/register', authorize('admin', 'superadmin'), createCustomerAccount);

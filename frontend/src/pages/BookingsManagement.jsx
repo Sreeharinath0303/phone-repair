@@ -819,7 +819,7 @@ export const BookingsManagement = () => {
 
       {showQuoteModal && selectedBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#111111] border border-white/5 p-8 rounded-3xl w-full max-w-lg relative">
+          <div className="bg-[#111111] border border-white/5 p-8 rounded-3xl w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
             <button onClick={() => setShowQuoteModal(false)} className="absolute right-4 top-4 p-2 text-gray-500 hover:text-white rounded-lg">
               <X size={18} />
             </button>
@@ -932,7 +932,7 @@ export const BookingsManagement = () => {
 
       {showAssignModal && selectedBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#111111] border border-white/5 p-8 rounded-3xl w-full max-w-md relative">
+          <div className="bg-[#111111] border border-white/5 p-8 rounded-3xl w-full max-w-md relative max-h-[90vh] overflow-y-auto">
             <button onClick={() => setShowAssignModal(false)} className="absolute right-4 top-4 p-2 text-gray-500 hover:text-white rounded-lg">
               <X size={18} />
             </button>
@@ -996,7 +996,7 @@ export const BookingsManagement = () => {
 
       {showQuoteRequestModal && selectedBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#111111] border border-white/5 p-8 rounded-3xl w-full max-w-lg relative">
+          <div className="bg-[#111111] border border-white/5 p-8 rounded-3xl w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
             <button onClick={() => setShowQuoteRequestModal(false)} className="absolute right-4 top-4 p-2 text-gray-500 hover:text-white rounded-lg">
               <X size={18} />
             </button>

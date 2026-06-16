@@ -8,7 +8,8 @@ const {
   forgotPassword,
   resetPassword,
   changePassword,
-  getMe
+  getMe,
+  getAccountStatus
 } = require('../controllers/customerAuthController');
 const { protect } = require('../middleware/auth');
 
@@ -18,6 +19,7 @@ router.post('/verify-registration', verifyRegistration);
 
 // Email Login
 router.post('/login', login);
+router.get('/account-status', getAccountStatus);
 
 // Mobile OTP Auth (Steps 3 & 5)
 router.post('/mobile-otp', requestMobileOtp);

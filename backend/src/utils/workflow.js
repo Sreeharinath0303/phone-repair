@@ -11,6 +11,26 @@ const maskPhone = (phone = '') => {
   return `${raw.slice(0, 2)}XXXX${raw.slice(-2)}`;
 };
 
+const buildPartnerTimelineEntry = (entry = {}) => {
+  const stage = entry.stage || '';
+
+  if (stage === 'Quote Sent To Customer') {
+    return {
+      ...entry,
+      note: 'Quote was shared with the customer. Awaiting customer decision.'
+    };
+  }
+
+  if (stage === 'Quote Prepared') {
+    return {
+      ...entry,
+      note: 'Admin prepared the customer quote.'
+    };
+  }
+
+  return entry;
+};
+
 const buildPartnerVisibleBooking = (bookingDoc) => {
   const booking = bookingDoc.toObject ? bookingDoc.toObject() : { ...bookingDoc };
   const handoffVerified = Boolean(booking.handoffVerifiedAt);
@@ -20,6 +40,17 @@ const buildPartnerVisibleBooking = (bookingDoc) => {
     booking.address = booking.city || booking.address;
     booking.customerEmail = undefined;
   }
+
+  booking.timeline = Array.isArray(booking.timeline)
+    ? booking.timeline.map(buildPartnerTimelineEntry)
+    : [];
+
+  booking.quotationAmount = undefined;
+  booking.partnerQuotedAmount = undefined;
+  booking.partnerPayoutLocked = undefined;
+  booking.platformMargin = undefined;
+  booking.markupType = undefined;
+  booking.markupValue = undefined;
 
   return booking;
 };

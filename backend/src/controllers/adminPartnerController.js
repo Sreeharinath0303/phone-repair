@@ -1,7 +1,102 @@
 const Technician = require('../models/Technician');
 const Booking = require('../models/Booking');
 const PartnerIncident = require('../models/PartnerIncident');
+const PartnerApplication = require('../models/PartnerApplication');
 
+// @desc  Get all partner applications
+// @route GET /api/admin/partner-applications
+exports.getAllPartnerApplications = async (req, res) => {
+  try {
+    const applications = await PartnerApplication.find().sort({ createdAt: -1 }).lean();
+    res.json({ success: true, count: applications.length, data: applications });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc  Update partner application
+// @route PUT /api/admin/partner-applications/:id
+exports.updatePartnerApplication = async (req, res) => {
+  try {
+    const app = await PartnerApplication.findById(req.params.id);
+    if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
+
+    const { name, businessName, phone, email, specialization, serviceAreas, experienceYears, adminNotes } = req.body;
+    
+    if (name) app.name = name;
+    if (businessName) app.businessName = businessName;
+    if (phone) app.phone = phone;
+    if (email) app.email = email;
+    if (specialization) app.specialization = specialization;
+    if (serviceAreas) app.serviceAreas = Array.isArray(serviceAreas) ? serviceAreas : serviceAreas.split(',').map(s => s.trim());
+    if (experienceYears !== undefined) app.experienceYears = experienceYears;
+    if (adminNotes !== undefined) app.adminNotes = adminNotes;
+
+    await app.save();
+    res.json({ success: true, data: app });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc  Approve partner application
+// @route POST /api/admin/partner-applications/:id/approve
+exports.approvePartnerApplication = async (req, res) => {
+  try {
+    const app = await PartnerApplication.findById(req.params.id);
+    if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
+
+    if (app.status === 'approved') {
+      return res.status(400).json({ success: false, message: 'Application is already approved' });
+    }
+
+    app.status = 'approved';
+    if (req.body.adminNotes) app.adminNotes = req.body.adminNotes;
+    
+    await app.save();
+
+    // Check if partner already exists
+    let partner = await Technician.findOne({ email: app.email });
+    if (!partner) {
+      partner = await Technician.create({
+        name: app.name,
+        businessName: app.businessName || 'Independent Technician',
+        email: app.email,
+        phone: app.phone,
+        specialization: app.specialization,
+        serviceAreas: app.serviceAreas,
+        password: app.phone, // Default password is phone number
+        commissionRate: 10,
+        address: app.address,
+        city: app.city,
+        state: app.state,
+        pincode: app.pincode
+      });
+    }
+
+    res.json({ success: true, message: 'Application approved and Partner account created', data: partner });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// @desc  Reject partner application
+// @route POST /api/admin/partner-applications/:id/reject
+exports.rejectPartnerApplication = async (req, res) => {
+  try {
+    const app = await PartnerApplication.findById(req.params.id);
+    if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
+
+    app.status = 'rejected';
+    if (req.body.adminNotes) app.adminNotes = req.body.adminNotes;
+    
+    await app.save();
+
+    res.json({ success: true, message: 'Application rejected', data: app });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 // @desc  Get all partners
 // @route GET /api/admin/partners
 exports.getAllPartners = async (req, res) => {
@@ -95,7 +190,7 @@ exports.deletePartner = async (req, res) => {
     // Check if they have assigned repairs
     const hasActiveRepairs = await Booking.countDocuments({ 
       assignedTechnician: partner._id,
-      status: { $in: ['In Progress', 'Received', 'Diagnosed'] }
+      status: { $in: ['In Progress', 'Device Received', 'Diagnosis In Progress', 'Repair Ongoing', 'Repair In Progress', 'Assigned to Partner'] }
     });
 
     if (hasActiveRepairs > 0) {

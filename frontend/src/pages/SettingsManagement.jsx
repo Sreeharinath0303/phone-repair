@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Settings, Save, RefreshCw, Mail, MessageSquare, ShieldAlert,
-  Percent, Calendar, PlusCircle, Trash2, Sliders, Bell, Info
+  Percent, Calendar, PlusCircle, Trash2, Sliders, Bell, Info, X
 } from 'lucide-react';
 
 export const SettingsManagement = () => {

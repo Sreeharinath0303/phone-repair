@@ -3,79 +3,62 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LogIn, Smartphone, Mail, Lock, Eye, EyeOff,
-  AlertCircle, CheckCircle2, Copy, ArrowLeft, User, Phone, Loader2, KeyRound
+  AlertCircle, CheckCircle2, ArrowLeft, User, Phone, Loader2, KeyRound
 } from 'lucide-react';
 import { getApiBaseUrl } from '../utils/apiBase';
-
-// ── Sample demo credentials (shown in UI) ──────────────────────
-const DEMO_ACCOUNTS = [
-  {
-    role: 'Customer',
-    email: 'customer@repairvafe.com',
-    password: 'Customer@123',
-    name: 'Rohan Verma',
-    color: 'from-blue-600 to-cyan-500',
-    bg: 'bg-blue-500/10',
-    border: 'border-blue-500/20',
-    text: 'text-blue-400'
-  },
-  {
-    role: 'Demo User',
-    email: 'demo@repairvafe.com',
-    password: 'Demo@1234',
-    name: 'Priya Sharma',
-    color: 'from-purple-600 to-pink-500',
-    bg: 'bg-purple-500/10',
-    border: 'border-purple-500/20',
-    text: 'text-purple-400'
-  }
-];
 
 const TABS = ['Email Login', 'Mobile OTP', 'Register'];
 
 export const CustomerLogin = () => {
   const navigate = useNavigate();
-  const [tab, setTab]           = useState('Email Login');
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName]         = useState('');
-  const [phone, setPhone]       = useState('');
-  const [mobile, setMobile]     = useState('');
-  const [showPwd, setShowPwd]   = useState(false);
-  const [error, setError]       = useState('');
-  const [success, setSuccess]   = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [copied, setCopied]     = useState(null);
-
-  // OTP verification state (shown after register or mobile login)
-  const [otpStep, setOtpStep]       = useState(false);
-  const [otpStepMobile, setOtpStepMobile] = useState(false);
-  const [otp, setOtp]               = useState('');
-  const [regEmail, setRegEmail]     = useState('');
-
   const API = getApiBaseUrl();
 
-  // ── Auto-fill demo credentials ──────────────────────────────
-  const fillDemo = (acc) => {
-    setEmail(acc.email);
-    setPassword(acc.password);
-    setTab('Email Login');
+  const [tab, setTab] = useState('Email Login');
+  const [emailAuthView, setEmailAuthView] = useState('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpStepMobile, setOtpStepMobile] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetOtp, setResetOtp] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+
+  const resetTransientState = () => {
     setError('');
     setSuccess('');
+    setOtp('');
+    setOtpStep(false);
+    setOtpStepMobile(false);
+    setEmailAuthView('login');
+    setForgotEmail('');
+    setResetOtp('');
+    setResetNewPassword('');
   };
 
-  const copyText = (text, key) => {
-    navigator.clipboard.writeText(text);
-    setCopied(key);
-    setTimeout(() => setCopied(null), 1500);
+  const persistSession = (data, token) => {
+    localStorage.setItem('rv_token', token);
+    localStorage.setItem('rv_role', 'customer');
+    localStorage.setItem('rv_user', JSON.stringify(data));
+    navigate('/dashboard');
   };
 
-  // ── Login ───────────────────────────────────────────────────
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true); setError(''); setSuccess('');
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
     try {
-      const res  = await fetch(`${API}/customer-auth/login`, {
+      const res = await fetch(`${API}/customer-auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim().toLowerCase(), password })
@@ -83,16 +66,13 @@ export const CustomerLogin = () => {
       const data = await res.json();
 
       if (data.success) {
-        localStorage.setItem('rv_token', data.token);
-        localStorage.setItem('rv_role',  'customer');
-        localStorage.setItem('rv_user',  JSON.stringify(data.data));
-        navigate('/dashboard');
+        persistSession(data.data, data.token);
       } else if (data.unverified) {
         setError('Account not verified. Check your email for OTP.');
-        setRegEmail(email);
+        setRegEmail(email.trim().toLowerCase());
         setOtpStep(true);
       } else {
-        setError(data.message || 'Invalid credentials. Try the demo accounts below.');
+        setError(data.message || 'Invalid credentials. Please check your email and password.');
       }
     } catch {
       setError('Cannot reach server. Please try again shortly.');
@@ -101,12 +81,14 @@ export const CustomerLogin = () => {
     }
   };
 
-  // ── Register ────────────────────────────────────────────────
   const handleRegister = async (e) => {
     e.preventDefault();
-    setLoading(true); setError(''); setSuccess('');
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
     try {
-      const res  = await fetch(`${API}/customer-auth/register`, {
+      const res = await fetch(`${API}/customer-auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), password })
@@ -116,7 +98,7 @@ export const CustomerLogin = () => {
       if (data.success) {
         setTab('Email Login');
         setPassword('');
-        setSuccess('Registration successful! Please sign in with your new account.');
+        setSuccess('Registration successful. Please sign in with your new account.');
       } else {
         setError(data.message || 'Registration failed. Please try again.');
       }
@@ -127,22 +109,83 @@ export const CustomerLogin = () => {
     }
   };
 
-  // ── Verify OTP ──────────────────────────────────────────────
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const res = await fetch(`${API}/customer-auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setEmailAuthView('reset');
+        setSuccess(data.message || 'OTP sent to your email.');
+      } else {
+        setError(data.message || 'Could not send reset OTP.');
+      }
+    } catch {
+      setError('Cannot reach server. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const res = await fetch(`${API}/customer-auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: forgotEmail.trim().toLowerCase(),
+          otp: resetOtp.trim(),
+          newPassword: resetNewPassword
+        })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setEmailAuthView('login');
+        setPassword('');
+        setResetOtp('');
+        setResetNewPassword('');
+        setEmail(forgotEmail.trim().toLowerCase());
+        setSuccess('Password updated. Please sign in.');
+      } else {
+        setError(data.message || 'Password reset failed.');
+      }
+    } catch {
+      setError('Cannot reach server. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    setLoading(true); setError('');
+    setLoading(true);
+    setError('');
+
     try {
-      const res  = await fetch(`${API}/customer-auth/verify-registration`, {
+      const res = await fetch(`${API}/customer-auth/verify-registration`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: regEmail.trim().toLowerCase(), otp: otp.trim() })
       });
       const data = await res.json();
+
       if (data.success) {
-        localStorage.setItem('rv_token', data.token);
-        localStorage.setItem('rv_role',  'customer');
-        localStorage.setItem('rv_user',  JSON.stringify(data.data));
-        navigate('/dashboard');
+        persistSession(data.data, data.token);
       } else {
         setError(data.message || 'Invalid OTP. Please check your email.');
       }
@@ -155,7 +198,10 @@ export const CustomerLogin = () => {
 
   const handleRequestMobileOtp = async (e) => {
     e.preventDefault();
-    setLoading(true); setError(''); setSuccess('');
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
     try {
       const res = await fetch(`${API}/customer-auth/mobile-otp`, {
         method: 'POST',
@@ -163,11 +209,11 @@ export const CustomerLogin = () => {
         body: JSON.stringify({ phone: mobile.trim() })
       });
       const data = await res.json();
+
       if (data.success) {
         setOtpStep(true);
         setOtpStepMobile(true);
         setSuccess('OTP sent to your mobile number. Enter it below to login.');
-        setPhone(mobile.trim());
       } else {
         setError(data.message || 'Unable to send OTP. Please check your number.');
       }
@@ -180,7 +226,9 @@ export const CustomerLogin = () => {
 
   const handleVerifyMobileOtp = async (e) => {
     e.preventDefault();
-    setLoading(true); setError('');
+    setLoading(true);
+    setError('');
+
     try {
       const res = await fetch(`${API}/customer-auth/verify-mobile-otp`, {
         method: 'POST',
@@ -188,11 +236,9 @@ export const CustomerLogin = () => {
         body: JSON.stringify({ phone: mobile.trim(), otp: otp.trim() })
       });
       const data = await res.json();
+
       if (data.success) {
-        localStorage.setItem('rv_token', data.token);
-        localStorage.setItem('rv_role',  'customer');
-        localStorage.setItem('rv_user',  JSON.stringify(data.data));
-        navigate('/dashboard');
+        persistSession(data.data, data.token);
       } else {
         setError(data.message || 'Invalid OTP. Please retry.');
       }
@@ -203,7 +249,6 @@ export const CustomerLogin = () => {
     }
   };
 
-  // ── OTP Step ────────────────────────────────────────────────
   if (otpStep) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#080c14] px-4 font-['Inter']">
@@ -235,22 +280,29 @@ export const CustomerLogin = () => {
                 type="text"
                 required
                 maxLength={6}
-                placeholder="• • • • • •"
+                placeholder="123456"
                 value={otp}
-                onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-center text-2xl tracking-[0.6em] font-bold focus:outline-none focus:border-blue-500 transition-colors placeholder:text-sm placeholder:tracking-normal"
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-center text-2xl tracking-[0.4em] font-bold focus:outline-none focus:border-blue-500 transition-colors placeholder:text-sm placeholder:tracking-normal"
               />
               <button
                 type="submit"
                 disabled={loading || otp.length < 6}
                 className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold py-3 rounded-xl hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] disabled:opacity-40 transition-all flex items-center justify-center gap-2"
               >
-                {loading ? <><Loader2 size={18} className="animate-spin" /> Verifying...</> : <><CheckCircle2 size={18} /> Verify & Login</>}
+                {loading ? <><Loader2 size={18} className="animate-spin" /> Verifying...</> : <><CheckCircle2 size={18} /> Verify and Login</>}
               </button>
             </form>
 
             <button
-              onClick={() => { setOtpStep(false); setOtp(''); setError(''); setSuccess(''); }}
+              type="button"
+              onClick={() => {
+                setOtpStep(false);
+                setOtpStepMobile(false);
+                setOtp('');
+                setError('');
+                setSuccess('');
+              }}
               className="mt-5 text-sm text-gray-500 hover:text-white transition-colors flex items-center gap-1.5 mx-auto"
             >
               <ArrowLeft size={14} /> Back to login
@@ -261,120 +313,57 @@ export const CustomerLogin = () => {
     );
   }
 
-  // ── Main Login/Register View ────────────────────────────────
   return (
     <div className="min-h-screen bg-[#080c14] flex items-start justify-center pt-10 pb-16 px-4 font-['Inter']">
       <div className="w-full max-w-4xl">
-
-        {/* Back link */}
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-white transition-colors mb-8">
           <ArrowLeft size={14} /> Back to Home
         </Link>
 
         <div className="grid md:grid-cols-5 gap-8 items-start">
-
-          {/* ─── Left: Demo Credentials Panel ─── */}
           <div className="md:col-span-2 space-y-4">
             <div className="mb-5">
               <div className="flex items-center gap-2 mb-1">
-                <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center text-xs font-bold">⚡</div>
-                <span className="font-black text-lg font-['Outfit']">Repair<span className="text-blue-400">Vafe</span></span>
+                <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center text-xs font-bold">RV</div>
+                <span className="font-black text-lg font-['Outfit'] text-white">Repair<span className="text-blue-400">Vafe</span></span>
               </div>
               <h1 className="text-2xl font-black text-white font-['Outfit'] mt-3">Customer Portal</h1>
-              <p className="text-gray-500 text-sm mt-1">Login to track your repairs, view history, and manage bookings.</p>
+              <p className="text-gray-500 text-sm mt-1">Sign in to track repairs, view quotes, and manage your bookings.</p>
             </div>
 
-            {/* Demo accounts */}
-            <div className="space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Sample Credentials</p>
-              {DEMO_ACCOUNTS.map((acc, i) => (
-                <motion.div
-                  key={acc.role}
-                  initial={{ opacity: 0, x: -15 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className={`${acc.bg} border ${acc.border} rounded-2xl p-4 space-y-3`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${acc.color} flex items-center justify-center font-bold text-xs text-white`}>
-                        {acc.name[0]}
-                      </div>
-                      <div>
-                        <div className={`text-xs font-bold ${acc.text}`}>{acc.role}</div>
-                        <div className="text-[11px] text-gray-500">{acc.name}</div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => fillDemo(acc)}
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-lg ${acc.bg} border ${acc.border} ${acc.text} hover:opacity-80 transition-opacity`}
-                    >
-                      Use this
-                    </button>
-                  </div>
-
-                  {/* Email */}
-                  <div className="bg-black/20 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
-                    <div>
-                      <div className="text-[10px] text-gray-500 mb-0.5">Email</div>
-                      <div className="text-xs font-mono text-white">{acc.email}</div>
-                    </div>
-                    <button
-                      onClick={() => copyText(acc.email, `${i}-email`)}
-                      className="text-gray-500 hover:text-white transition-colors flex-shrink-0"
-                    >
-                      {copied === `${i}-email` ? <CheckCircle2 size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                    </button>
-                  </div>
-
-                  {/* Password */}
-                  <div className="bg-black/20 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
-                    <div>
-                      <div className="text-[10px] text-gray-500 mb-0.5">Password</div>
-                      <div className="text-xs font-mono text-white">{acc.password}</div>
-                    </div>
-                    <button
-                      onClick={() => copyText(acc.password, `${i}-pwd`)}
-                      className="text-gray-500 hover:text-white transition-colors flex-shrink-0"
-                    >
-                      {copied === `${i}-pwd` ? <CheckCircle2 size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
+            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-5 space-y-3">
+              <div className="text-xs font-bold uppercase tracking-widest text-blue-400">Customer Access</div>
+              <p className="text-sm text-gray-300 leading-relaxed">Use your registered email and password, or request a one-time OTP on your mobile number.</p>
+              <p className="text-xs text-gray-500">If you booked as a guest earlier, use the same email or phone number linked to that booking.</p>
             </div>
 
-            {/* Admin note */}
             <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 text-xs text-gray-500 leading-relaxed">
               <span className="text-gray-400 font-semibold">Admin?</span>{' '}
-              Use the{' '}
-              <Link to="/login" className="text-blue-400 hover:underline">Admin Login</Link>{' '}
-              portal with your admin credentials.
+              Use the <Link to="/login" className="text-blue-400 hover:underline">Admin Login</Link> portal with your assigned credentials.
             </div>
           </div>
 
-          {/* ─── Right: Login / Register Form ─── */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="md:col-span-3"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="md:col-span-3">
             <div className="bg-[#0d1422] border border-white/5 rounded-3xl p-8 shadow-2xl">
-
-              {/* Tabs */}
               <div className="flex gap-1 bg-white/5 p-1 rounded-xl mb-8">
-                {TABS.map(t => (
+                {TABS.map((item) => (
                   <button
-                    key={t}
-                    onClick={() => { setTab(t); setError(''); setSuccess(''); setOtp(''); setOtpStep(false); setOtpStepMobile(false); }}
-                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${tab === t ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                    key={item}
+                    type="button"
+                    onClick={() => {
+                      setTab(item);
+                      resetTransientState();
+                      if (item !== 'Email Login') {
+                        setEmailAuthView('login');
+                      }
+                    }}
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${tab === item ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
                   >
-                    {t}
+                    {item}
                   </button>
                 ))}
               </div>
 
-              {/* Alert messages */}
               <AnimatePresence>
                 {error && (
                   <motion.div
@@ -399,8 +388,7 @@ export const CustomerLogin = () => {
                 )}
               </AnimatePresence>
 
-              {/* ── EMAIL LOGIN TAB ── */}
-              {tab === 'Email Login' && (
+              {tab === 'Email Login' && emailAuthView === 'login' && (
                 <form onSubmit={handleLogin} className="space-y-5">
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Email Address</label>
@@ -410,7 +398,7 @@ export const CustomerLogin = () => {
                         type="email"
                         required
                         value={email}
-                        onChange={e => setEmail(e.target.value)}
+                        onChange={(e) => setEmail(e.target.value)}
                         placeholder="you@example.com"
                         className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
                       />
@@ -423,8 +411,10 @@ export const CustomerLogin = () => {
                       <button
                         type="button"
                         onClick={() => {
-                          setTab('Email Login');
-                          setError('Forgot password? Use the /forgot-password flow.');
+                          setForgotEmail(email.trim().toLowerCase());
+                          setEmailAuthView('forgot');
+                          setError('');
+                          setSuccess('');
                         }}
                         className="text-xs text-blue-400 hover:underline"
                       >
@@ -437,13 +427,13 @@ export const CustomerLogin = () => {
                         type={showPwd ? 'text' : 'password'}
                         required
                         value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        placeholder="••••••••"
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter your password"
                         className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-12 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
                       />
                       <button
                         type="button"
-                        onClick={() => setShowPwd(!showPwd)}
+                        onClick={() => setShowPwd((current) => !current)}
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
                       >
                         {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -456,22 +446,119 @@ export const CustomerLogin = () => {
                     disabled={loading}
                     className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold py-3.5 rounded-xl hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] disabled:opacity-40 transition-all flex items-center justify-center gap-2 text-sm"
                   >
-                    {loading
-                      ? <><Loader2 size={18} className="animate-spin" /> Signing in...</>
-                      : <><LogIn size={18} /> Sign In</>
-                    }
+                    {loading ? <><Loader2 size={18} className="animate-spin" /> Signing in...</> : <><LogIn size={18} /> Sign In</>}
                   </button>
 
                   <p className="text-center text-xs text-gray-500">
-                    Don't have an account?{' '}
+                    Do not have an account?{' '}
                     <button type="button" onClick={() => setTab('Register')} className="text-blue-400 hover:underline font-semibold">
-                      Create one free
+                      Create one
                     </button>
                   </p>
                 </form>
               )}
 
-              {/* ── MOBILE OTP TAB ── */}
+              {tab === 'Email Login' && emailAuthView === 'forgot' && (
+                <form onSubmit={handleForgotPassword} className="space-y-5">
+                  <div>
+                    <h3 className="text-white font-bold text-lg">Reset Password</h3>
+                    <p className="text-gray-500 text-sm mt-1">We will send a 6-digit OTP to your registered email address.</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Email Address</label>
+                    <div className="relative">
+                      <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                      <input
+                        type="email"
+                        required
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold py-3.5 rounded-xl hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] disabled:opacity-40 transition-all flex items-center justify-center gap-2 text-sm"
+                  >
+                    {loading ? <><Loader2 size={18} className="animate-spin" /> Sending OTP...</> : <><Mail size={18} /> Send Reset OTP</>}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmailAuthView('login');
+                      setError('');
+                      setSuccess('');
+                    }}
+                    className="text-xs text-gray-400 hover:text-white"
+                  >
+                    Back to login
+                  </button>
+                </form>
+              )}
+
+              {tab === 'Email Login' && emailAuthView === 'reset' && (
+                <form onSubmit={handleResetPassword} className="space-y-5">
+                  <div>
+                    <h3 className="text-white font-bold text-lg">Enter OTP</h3>
+                    <p className="text-gray-500 text-sm mt-1">Use the OTP sent to {forgotEmail} and set a new password.</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">6-Digit OTP</label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={6}
+                      value={resetOtp}
+                      onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, ''))}
+                      placeholder="123456"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">New Password</label>
+                    <div className="relative">
+                      <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                      <input
+                        type={showPwd ? 'text' : 'password'}
+                        required
+                        value={resetNewPassword}
+                        onChange={(e) => setResetNewPassword(e.target.value)}
+                        placeholder="Minimum 6 characters"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-12 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPwd((current) => !current)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                      >
+                        {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold py-3.5 rounded-xl hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] disabled:opacity-40 transition-all flex items-center justify-center gap-2 text-sm"
+                  >
+                    {loading ? <><Loader2 size={18} className="animate-spin" /> Updating Password...</> : <><CheckCircle2 size={18} /> Update Password</>}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmailAuthView('forgot');
+                      setError('');
+                      setSuccess('');
+                    }}
+                    className="text-xs text-gray-400 hover:text-white"
+                  >
+                    Back
+                  </button>
+                </form>
+              )}
+
               {tab === 'Mobile OTP' && !otpStepMobile && (
                 <form onSubmit={handleRequestMobileOtp} className="space-y-5">
                   <div>
@@ -482,9 +569,9 @@ export const CustomerLogin = () => {
                         type="tel"
                         required
                         value={mobile}
-                        onChange={e => setMobile(e.target.value.replace(/\D/g, ''))}
+                        onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
                         maxLength={15}
-                        placeholder="10-digit mobile"
+                        placeholder="10-digit mobile number"
                         className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
                       />
                     </div>
@@ -495,18 +582,8 @@ export const CustomerLogin = () => {
                     disabled={loading || mobile.trim().length < 10}
                     className="w-full bg-gradient-to-r from-cyan-600 to-blue-500 text-white font-bold py-3.5 rounded-xl hover:shadow-[0_0_25px_rgba(34,211,238,0.4)] disabled:opacity-40 transition-all flex items-center justify-center gap-2 text-sm"
                   >
-                    {loading
-                      ? <><Loader2 size={18} className="animate-spin" /> Sending OTP...</>
-                      : <><Smartphone size={18} /> Send OTP</>
-                    }
+                    {loading ? <><Loader2 size={18} className="animate-spin" /> Sending OTP...</> : <><Smartphone size={18} /> Send OTP</>}
                   </button>
-
-                  <p className="text-center text-xs text-gray-500">
-                    Have an account?{' '}
-                    <button type="button" onClick={() => setTab('Email Login')} className="text-blue-400 hover:underline font-semibold">
-                      Use email login
-                    </button>
-                  </p>
                 </form>
               )}
 
@@ -519,7 +596,7 @@ export const CustomerLogin = () => {
                       required
                       maxLength={6}
                       value={otp}
-                      onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                       placeholder="123456"
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
                     />
@@ -530,22 +607,27 @@ export const CustomerLogin = () => {
                     disabled={loading || otp.trim().length < 6}
                     className="w-full bg-gradient-to-r from-cyan-600 to-blue-500 text-white font-bold py-3.5 rounded-xl hover:shadow-[0_0_25px_rgba(34,211,238,0.4)] disabled:opacity-40 transition-all flex items-center justify-center gap-2 text-sm"
                   >
-                    {loading
-                      ? <><Loader2 size={18} className="animate-spin" /> Verifying OTP...</>
-                      : <><CheckCircle2 size={18} /> Verify & Login</>
-                    }
+                    {loading ? <><Loader2 size={18} className="animate-spin" /> Verifying OTP...</> : <><CheckCircle2 size={18} /> Verify and Login</>}
                   </button>
 
                   <p className="text-center text-xs text-gray-500">
-                    Didn't get OTP?{' '}
-                    <button type="button" onClick={() => { setOtp(''); setOtpStepMobile(false); setOtpStep(false); setSuccess(''); }} className="text-blue-400 hover:underline font-semibold">
+                    Did not get OTP?{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtp('');
+                        setOtpStepMobile(false);
+                        setOtpStep(false);
+                        setSuccess('');
+                      }}
+                      className="text-blue-400 hover:underline font-semibold"
+                    >
                       Retry mobile login
                     </button>
                   </p>
                 </form>
               )}
 
-              {/* ── REGISTER TAB ── */}
               {tab === 'Register' && (
                 <form onSubmit={handleRegister} className="space-y-4">
                   <div>
@@ -556,7 +638,7 @@ export const CustomerLogin = () => {
                         type="text"
                         required
                         value={name}
-                        onChange={e => setName(e.target.value)}
+                        onChange={(e) => setName(e.target.value)}
                         placeholder="Your full name"
                         className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
                       />
@@ -571,7 +653,7 @@ export const CustomerLogin = () => {
                         type="email"
                         required
                         value={email}
-                        onChange={e => setEmail(e.target.value)}
+                        onChange={(e) => setEmail(e.target.value)}
                         placeholder="you@example.com"
                         className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
                       />
@@ -586,11 +668,15 @@ export const CustomerLogin = () => {
                         type={showPwd ? 'text' : 'password'}
                         required
                         value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        placeholder="Min 6 characters"
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Minimum 6 characters"
                         className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-12 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
                       />
-                      <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors">
+                      <button
+                        type="button"
+                        onClick={() => setShowPwd((current) => !current)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                      >
                         {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
@@ -602,28 +688,17 @@ export const CustomerLogin = () => {
                     disabled={loading}
                     className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3.5 rounded-xl hover:shadow-[0_0_25px_rgba(139,92,246,0.4)] disabled:opacity-40 transition-all flex items-center justify-center gap-2 text-sm"
                   >
-                    {loading
-                      ? <><Loader2 size={18} className="animate-spin" /> Creating account...</>
-                      : <><User size={18} /> Create Account</>
-                    }
+                    {loading ? <><Loader2 size={18} className="animate-spin" /> Creating account...</> : <><User size={18} /> Create Account</>}
                   </button>
-
-                  <p className="text-center text-xs text-gray-500">
-                    Already have an account?{' '}
-                    <button type="button" onClick={() => setTab('Email Login')} className="text-blue-400 hover:underline font-semibold">
-                      Sign in
-                    </button>
-                  </p>
                 </form>
               )}
 
-              {/* Quick access row */}
               <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between text-xs text-gray-600">
                 <div className="flex items-center gap-1.5">
                   <Smartphone size={12} />
                   <span>Mobile OTP login active</span>
                 </div>
-                <Link to="/book" className="text-blue-400 hover:underline">Book without login →</Link>
+                <Link to="/book" className="text-blue-400 hover:underline">Book without login</Link>
               </div>
             </div>
           </motion.div>
