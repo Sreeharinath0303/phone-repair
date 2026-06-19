@@ -6,13 +6,37 @@ const { CommunicationSettings, Offer } = require('../models/Settings');
 exports.getCommunicationSettings = async (req, res) => {
   try {
     let settings = await CommunicationSettings.findOne();
+    
+    const defaults = {
+      facebookLink: 'https://www.facebook.com/share/192QskMjUo/',
+      instagramLink: 'https://www.instagram.com/erepaircafe?igsh=MWV6Z242eDl5MXl0cg==',
+      youtubeLink: 'https://youtube.com/@erepaircafe?si=XyuvL8OX4-Jjj2Wl',
+      trustpilotLink: 'https://www.trustpilot.com/review/erepaircafe.com',
+      linkedinLink: 'https://www.linkedin.com/company/erepaircafe/',
+      twitterLink: 'https://x.com/ErepairCafe',
+      googleSearchLink: 'https://www.google.com/search?kgmid=%2Fg%2F11hz37hgnj&hl=en-IN&q=eRepairCafe%20-%20Mobile%20Repair%20%26%20Phone%20Screen%20Repair%20Specialized&shem=epsd1%2Cltac%2Crimspwouoe&shndl=30&source=sh%2Fx%2Floc%2Fosrp%2Fm1%2F2&kgs=0832192f0912660b',
+      whatsappLink: 'https://wa.me/message/N6IZQBNEIYG7O1'
+    };
+
     if (!settings) {
       settings = await CommunicationSettings.create({
         emailNotifications: true,
         smsNotifications: false,
         slackWebhookAlerts: true,
-        slackWebhookUrl: 'https://hooks.slack.com/services/...'
+        slackWebhookUrl: 'https://hooks.slack.com/services/...',
+        ...defaults
       });
+    } else {
+      let needsSave = false;
+      for (const [key, val] of Object.entries(defaults)) {
+        if (settings[key] === undefined) {
+          settings[key] = val;
+          needsSave = true;
+        }
+      }
+      if (needsSave) {
+        await settings.save();
+      }
     }
     res.json({ success: true, data: settings });
   } catch (error) {
@@ -34,6 +58,16 @@ exports.updateCommunicationSettings = async (req, res) => {
       settings.smsNotifications = req.body.smsNotifications;
       settings.slackWebhookAlerts = req.body.slackWebhookAlerts;
       settings.slackWebhookUrl = req.body.slackWebhookUrl;
+      
+      // Update social links if provided in the body
+      if (req.body.facebookLink !== undefined) settings.facebookLink = req.body.facebookLink;
+      if (req.body.instagramLink !== undefined) settings.instagramLink = req.body.instagramLink;
+      if (req.body.youtubeLink !== undefined) settings.youtubeLink = req.body.youtubeLink;
+      if (req.body.trustpilotLink !== undefined) settings.trustpilotLink = req.body.trustpilotLink;
+      if (req.body.linkedinLink !== undefined) settings.linkedinLink = req.body.linkedinLink;
+      if (req.body.twitterLink !== undefined) settings.twitterLink = req.body.twitterLink;
+      if (req.body.googleSearchLink !== undefined) settings.googleSearchLink = req.body.googleSearchLink;
+      if (req.body.whatsappLink !== undefined) settings.whatsappLink = req.body.whatsappLink;
     }
     await settings.save();
     res.json({ success: true, data: settings });

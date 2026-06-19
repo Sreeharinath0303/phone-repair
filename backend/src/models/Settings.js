@@ -62,6 +62,14 @@ const communicationSettingsSchema = new mongoose.Schema({
   slackWebhookUrl: { type: String, default: '' },
   autoFollowup: { type: Boolean, default: true },
   followupDays: { type: Number, default: 3 },
+  facebookLink: { type: String, default: 'https://www.facebook.com/share/192QskMjUo/' },
+  instagramLink: { type: String, default: 'https://www.instagram.com/erepaircafe?igsh=MWV6Z242eDl5MXl0cg==' },
+  youtubeLink: { type: String, default: 'https://youtube.com/@erepaircafe?si=XyuvL8OX4-Jjj2Wl' },
+  trustpilotLink: { type: String, default: 'https://www.trustpilot.com/review/erepaircafe.com' },
+  linkedinLink: { type: String, default: 'https://www.linkedin.com/company/erepaircafe/' },
+  twitterLink: { type: String, default: 'https://x.com/ErepairCafe' },
+  googleSearchLink: { type: String, default: 'https://www.google.com/search?kgmid=%2Fg%2F11hz37hgnj&hl=en-IN&q=eRepairCafe%20-%20Mobile%20Repair%20%26%20Phone%20Screen%20Repair%20Specialized&shem=epsd1%2Cltac%2Crimspwouoe&shndl=30&source=sh%2Fx%2Floc%2Fosrp%2Fm1%2F2&kgs=0832192f0912660b' },
+  whatsappLink: { type: String, default: 'https://wa.me/message/N6IZQBNEIYG7O1' },
   updatedAt: { type: Date, default: Date.now }
 });
 

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Mail, Phone, MapPin, Send, Briefcase, Wrench, Zap, CheckCircle2, AlertCircle, RefreshCw 
+  Mail, Phone, MapPin, Send, Briefcase, Wrench, Zap, CheckCircle2, AlertCircle, RefreshCw,
+  MessageCircle, Star, Globe
 } from 'lucide-react';
 import { getApiBaseUrl } from '../utils/apiBase';
 
@@ -18,6 +19,31 @@ export const ContactUs = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
+
+  const [links, setLinks] = useState({
+    whatsapp: 'https://wa.me/message/N6IZQBNEIYG7O1',
+    trustpilot: 'https://www.trustpilot.com/review/erepaircafe.com',
+    google: 'https://www.google.com/search?kgmid=%2Fg%2F11hz37hgnj&hl=en-IN&q=eRepairCafe%20-%20Mobile%20Repair%20%26%20Phone%20Screen%20Repair%20Specialized&shem=epsd1%2Cltac%2Crimspwouoe&shndl=30&source=sh%2Fx%2Floc%2Fosrp%2Fm1%2F2&kgs=0832192f0912660b'
+  });
+
+  useEffect(() => {
+    const fetchLinks = async () => {
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/settings/public`);
+        const result = await res.json();
+        if (result.success && result.data) {
+          setLinks({
+            whatsapp: result.data.whatsappLink || 'https://wa.me/message/N6IZQBNEIYG7O1',
+            trustpilot: result.data.trustpilotLink || 'https://www.trustpilot.com/review/erepaircafe.com',
+            google: result.data.googleSearchLink || 'https://www.google.com/search?kgmid=%2Fg%2F11hz37hgnj&hl=en-IN&q=eRepairCafe%20-%20Mobile%20Repair%20%26%20Phone%20Screen%20Repair%20Specialized&shem=epsd1%2Cltac%2Crimspwouoe&shndl=30&source=sh%2Fx%2Floc%2Fosrp%2Fm1%2F2&kgs=0832192f0912660b'
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load social links in contact page', err);
+      }
+    };
+    fetchLinks();
+  }, []);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -423,6 +449,48 @@ export const ContactUs = () => {
                 Bangalore, Karnataka 560001<br />
                 India
               </p>
+            </div>
+          </div>
+
+          {/* Card 4 - WhatsApp */}
+          <div className="flex gap-5 p-6 bg-[#111927] border border-white/5 rounded-2xl hover:border-emerald-500/20 transition-all duration-300 group">
+            <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center shrink-0 text-emerald-400">
+              <MessageCircle size={22} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">WhatsApp Chat</h3>
+              <p className="text-gray-400 text-xs mb-3 font-['Inter']">Instant response. Chat with our support agents right now.</p>
+              <a href={links.whatsapp} target="_blank" rel="noopener noreferrer" className="text-emerald-400 font-bold hover:underline text-sm flex items-center gap-1">
+                Chat on WhatsApp →
+              </a>
+            </div>
+          </div>
+
+          {/* Card 5 - Trustpilot */}
+          <div className="flex gap-5 p-6 bg-[#111927] border border-white/5 rounded-2xl hover:border-amber-500/20 transition-all duration-300 group">
+            <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center shrink-0 text-amber-400">
+              <Star size={22} className="fill-amber-400/20" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Trustpilot Reviews</h3>
+              <p className="text-gray-400 text-xs mb-3 font-['Inter']">See what our customers say about our quick repair service.</p>
+              <a href={links.trustpilot} target="_blank" rel="noopener noreferrer" className="text-amber-400 font-bold hover:underline text-sm flex items-center gap-1">
+                Read Trustpilot Reviews →
+              </a>
+            </div>
+          </div>
+
+          {/* Card 6 - Google Profile */}
+          <div className="flex gap-5 p-6 bg-[#111927] border border-white/5 rounded-2xl hover:border-blue-500/20 transition-all duration-300 group">
+            <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center shrink-0 text-blue-400">
+              <Globe size={22} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Google Listing</h3>
+              <p className="text-gray-400 text-xs mb-3 font-['Inter']">Find our office location, operating hours, and verify reviews on Google.</p>
+              <a href={links.google} target="_blank" rel="noopener noreferrer" className="text-blue-400 font-bold hover:underline text-sm flex items-center gap-1">
+                View on Google →
+              </a>
             </div>
           </div>
         </motion.div>

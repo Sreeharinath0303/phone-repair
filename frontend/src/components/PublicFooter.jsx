@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUp } from 'lucide-react';
+import { getApiBaseUrl } from '../utils/apiBase';
 
 const XIcon = () => (
   <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
@@ -28,7 +29,68 @@ const FacebookIcon = () => (
   </svg>
 );
 
+const YouTubeIcon = () => (
+  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+    <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.518 3.545 12 3.545 12 3.545s-7.518 0-9.388.507a3.003 3.003 0 0 0-2.11-2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.87.507 9.388.507 9.388.507s7.518 0 9.388-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+  </svg>
+);
+
+const TrustpilotIcon = () => (
+  <svg className="w-5 h-5 fill-current text-[#00b67a]" viewBox="0 0 24 24">
+    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+  </svg>
+);
+
+const GoogleIcon = () => (
+  <svg className="w-5 h-5 fill-current text-[#4285F4]" viewBox="0 0 24 24">
+    <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.113-5.136 4.113-3.48 0-6.3-2.82-6.3-6.3 0-3.48 2.82-6.3 6.3-6.3 1.623 0 3.097.616 4.224 1.62l3.24-3.24C19.182 2.224 15.95 1 12.24 1 5.92 1 1 5.92 1 12.24S5.92 23.48 12.24 23.48c6.12 0 11.23-4.32 11.23-11.23 0-.77-.075-1.52-.2-2.24H12.24z"/>
+  </svg>
+);
+
+const WhatsAppIcon = () => (
+  <svg className="w-5 h-5 fill-current text-[#25D366]" viewBox="0 0 24 24">
+    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.73-1.458L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.449 5.4 0 9.786-4.391 9.79-9.785.002-2.614-1.012-5.074-2.857-6.921C16.36 2.052 14.28 1.01 12.007 1.01c-5.4 0-9.789 4.393-9.793 9.787a9.704 9.704 0 001.498 5.127l-1.02 3.725 3.965-1.037zm11.758-6.852c-.3-.15-1.77-.874-2.046-.975-.276-.102-.476-.15-.676.15-.2.3-.776.975-.95 1.174-.176.2-.351.224-.651.075-1.207-.575-2.072-1.009-2.894-2.414-.213-.365-.013-.562.137-.712.135-.135.3-.35.45-.525.15-.175.2-.3.3-.5.1-.2.05-.375-.025-.525s-.675-1.625-.925-2.225c-.244-.589-.491-.51-.676-.519-.174-.008-.373-.01-.572-.01-.2 0-.525.075-.8.375-.275.3-1.05 1.025-1.05 2.5s1.075 2.9 1.225 3.1c.15.2 2.11 3.224 5.112 4.521.714.308 1.272.492 1.707.63.716.228 1.368.196 1.883.118.574-.087 1.77-.724 2.02-1.387.25-.662.25-1.23.175-1.35-.075-.12-.275-.22-.575-.37z"/>
+  </svg>
+);
+
+const DEFAULT_LINKS = {
+  twitter: 'https://x.com/ErepairCafe',
+  linkedin: 'https://www.linkedin.com/company/erepaircafe/',
+  instagram: 'https://www.instagram.com/erepaircafe?igsh=MWV6Z242eDl5MXl0cg==',
+  facebook: 'https://www.facebook.com/share/192QskMjUo/',
+  youtube: 'https://youtube.com/@erepaircafe?si=XyuvL8OX4-Jjj2Wl',
+  trustpilot: 'https://www.trustpilot.com/review/erepaircafe.com',
+  google: 'https://www.google.com/search?kgmid=%2Fg%2F11hz37hgnj&hl=en-IN&q=eRepairCafe%20-%20Mobile%20Repair%20%26%20Phone%20Screen%20Repair%20Specialized&shem=epsd1%2Cltac%2Crimspwouoe&shndl=30&source=sh%2Fx%2Floc%2Fosrp%2Fm1%2F2&kgs=0832192f0912660b',
+  whatsapp: 'https://wa.me/message/N6IZQBNEIYG7O1'
+};
+
 export const PublicFooter = () => {
+  const [links, setLinks] = useState(DEFAULT_LINKS);
+
+  useEffect(() => {
+    const fetchLinks = async () => {
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/settings/public`);
+        const result = await res.json();
+        if (result.success && result.data) {
+          setLinks({
+            twitter: result.data.twitterLink || DEFAULT_LINKS.twitter,
+            linkedin: result.data.linkedinLink || DEFAULT_LINKS.linkedin,
+            instagram: result.data.instagramLink || DEFAULT_LINKS.instagram,
+            facebook: result.data.facebookLink || DEFAULT_LINKS.facebook,
+            youtube: result.data.youtubeLink || DEFAULT_LINKS.youtube,
+            trustpilot: result.data.trustpilotLink || DEFAULT_LINKS.trustpilot,
+            google: result.data.googleSearchLink || DEFAULT_LINKS.google,
+            whatsapp: result.data.whatsappLink || DEFAULT_LINKS.whatsapp
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load social links, using defaults', err);
+      }
+    };
+    fetchLinks();
+  }, []);
+
   const handleBackToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -65,18 +127,30 @@ export const PublicFooter = () => {
           </p>
 
           {/* Social Links */}
-          <div className="flex items-center gap-5 text-gray-400">
-            <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+          <div className="flex flex-wrap items-center gap-4 text-gray-400">
+            <a href={links.twitter} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="Twitter/X">
               <XIcon />
             </a>
-            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+            <a href={links.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="LinkedIn">
               <LinkedInIcon />
             </a>
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+            <a href={links.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="Instagram">
               <InstagramIcon />
             </a>
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+            <a href={links.facebook} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="Facebook">
               <FacebookIcon />
+            </a>
+            <a href={links.youtube} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="YouTube">
+              <YouTubeIcon />
+            </a>
+            <a href={links.whatsapp} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="WhatsApp Chat">
+              <WhatsAppIcon />
+            </a>
+            <a href={links.trustpilot} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="Trustpilot Reviews">
+              <TrustpilotIcon />
+            </a>
+            <a href={links.google} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="Google Business Profile">
+              <GoogleIcon />
             </a>
           </div>
 

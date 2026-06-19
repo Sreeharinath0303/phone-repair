@@ -49,6 +49,44 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'RepairVafe API is running', timestamp: new Date() });
 });
 
+app.get('/api/settings/public', async (req, res) => {
+  try {
+    const { CommunicationSettings } = require('./src/models/Settings');
+    let settings = await CommunicationSettings.findOne();
+    const defaults = {
+      facebookLink: 'https://www.facebook.com/share/192QskMjUo/',
+      instagramLink: 'https://www.instagram.com/erepaircafe?igsh=MWV6Z242eDl5MXl0cg==',
+      youtubeLink: 'https://youtube.com/@erepaircafe?si=XyuvL8OX4-Jjj2Wl',
+      trustpilotLink: 'https://www.trustpilot.com/review/erepaircafe.com',
+      linkedinLink: 'https://www.linkedin.com/company/erepaircafe/',
+      twitterLink: 'https://x.com/ErepairCafe',
+      googleSearchLink: 'https://www.google.com/search?kgmid=%2Fg%2F11hz37hgnj&hl=en-IN&q=eRepairCafe%20-%20Mobile%20Repair%20%26%20Phone%20Screen%20Repair%20Specialized&shem=epsd1%2Cltac%2Crimspwouoe&shndl=30&source=sh%2Fx%2Floc%2Fosrp%2Fm1%2F2&kgs=0832192f0912660b',
+      whatsappLink: 'https://wa.me/message/N6IZQBNEIYG7O1'
+    };
+
+    if (!settings) {
+      return res.json({ success: true, data: defaults });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        facebookLink: settings.facebookLink || defaults.facebookLink,
+        instagramLink: settings.instagramLink || defaults.instagramLink,
+        youtubeLink: settings.youtubeLink || defaults.youtubeLink,
+        trustpilotLink: settings.trustpilotLink || defaults.trustpilotLink,
+        linkedinLink: settings.linkedinLink || defaults.linkedinLink,
+        twitterLink: settings.twitterLink || defaults.twitterLink,
+        googleSearchLink: settings.googleSearchLink || defaults.googleSearchLink,
+        whatsappLink: settings.whatsappLink || defaults.whatsappLink
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching public settings:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` });
 });
