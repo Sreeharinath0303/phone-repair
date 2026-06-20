@@ -26,7 +26,7 @@ export const PublicNavbar = () => {
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center text-sm font-bold shadow-[0_0_20px_rgba(59,130,246,0.4)]">⚡</div>
           <span className="text-lg font-bold font-['Outfit']">Repair<span className="text-blue-400">Vafe</span></span>
         </Link>
-        <div className="nav-links text-sm font-medium text-gray-400" style={{ display: 'flex', marginLeft: 'auto', marginRight: 'auto' }}>
+        <div className="hidden lg:flex items-center gap-6 mx-auto text-sm font-medium text-gray-400">
           <Link to="/" className={`transition-colors ${isActive('/') ? 'text-white font-semibold' : 'hover:text-white'}`}>Home</Link>
           <Link to="/services" className={`transition-colors ${isActive('/services') ? 'text-white font-semibold' : 'hover:text-white'}`}>Services</Link>
           <Link to="/about" className={`transition-colors ${isActive('/about') ? 'text-white font-semibold' : 'hover:text-white'}`}>About Us</Link>

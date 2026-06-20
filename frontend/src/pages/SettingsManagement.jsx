@@ -247,6 +247,115 @@ export const SettingsManagement = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Social Media & External Links Section */}
+                <div className="pt-6 border-t border-white/5 space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sliders size={18} className="text-blue-500" />
+                    <div>
+                      <h4 className="font-bold text-white text-sm">Social Media & External Links</h4>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Configure target links for external profiles, reviews, and support</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Facebook Link */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-400">Facebook URL</label>
+                      <input
+                        type="url"
+                        value={commSettings.facebookLink || ''}
+                        onChange={(e) => setCommSettings(prev => ({ ...prev, facebookLink: e.target.value }))}
+                        className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-[10px] text-white focus:outline-none focus:border-blue-500"
+                        placeholder="https://facebook.com/..."
+                      />
+                    </div>
+
+                    {/* Instagram Link */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-400">Instagram URL</label>
+                      <input
+                        type="url"
+                        value={commSettings.instagramLink || ''}
+                        onChange={(e) => setCommSettings(prev => ({ ...prev, instagramLink: e.target.value }))}
+                        className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-[10px] text-white focus:outline-none focus:border-blue-500"
+                        placeholder="https://instagram.com/..."
+                      />
+                    </div>
+
+                    {/* YouTube Link */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-400">YouTube URL</label>
+                      <input
+                        type="url"
+                        value={commSettings.youtubeLink || ''}
+                        onChange={(e) => setCommSettings(prev => ({ ...prev, youtubeLink: e.target.value }))}
+                        className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-[10px] text-white focus:outline-none focus:border-blue-500"
+                        placeholder="https://youtube.com/..."
+                      />
+                    </div>
+
+                    {/* LinkedIn Link */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-400">LinkedIn URL</label>
+                      <input
+                        type="url"
+                        value={commSettings.linkedinLink || ''}
+                        onChange={(e) => setCommSettings(prev => ({ ...prev, linkedinLink: e.target.value }))}
+                        className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-[10px] text-white focus:outline-none focus:border-blue-500"
+                        placeholder="https://linkedin.com/company/..."
+                      />
+                    </div>
+
+                    {/* Twitter/X Link */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-400">Twitter/X URL</label>
+                      <input
+                        type="url"
+                        value={commSettings.twitterLink || ''}
+                        onChange={(e) => setCommSettings(prev => ({ ...prev, twitterLink: e.target.value }))}
+                        className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-[10px] text-white focus:outline-none focus:border-blue-500"
+                        placeholder="https://x.com/..."
+                      />
+                    </div>
+
+                    {/* Trustpilot Link */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-400">Trustpilot URL</label>
+                      <input
+                        type="url"
+                        value={commSettings.trustpilotLink || ''}
+                        onChange={(e) => setCommSettings(prev => ({ ...prev, trustpilotLink: e.target.value }))}
+                        className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-[10px] text-white focus:outline-none focus:border-blue-500"
+                        placeholder="https://trustpilot.com/review/..."
+                      />
+                    </div>
+
+                    {/* WhatsApp Link */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-400">WhatsApp URL</label>
+                      <input
+                        type="url"
+                        value={commSettings.whatsappLink || ''}
+                        onChange={(e) => setCommSettings(prev => ({ ...prev, whatsappLink: e.target.value }))}
+                        className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-[10px] text-white focus:outline-none focus:border-blue-500"
+                        placeholder="https://wa.me/..."
+                      />
+                    </div>
+
+                    {/* Google Search Link */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-400">Google Business Listing URL</label>
+                      <input
+                        type="url"
+                        value={commSettings.googleSearchLink || ''}
+                        onChange={(e) => setCommSettings(prev => ({ ...prev, googleSearchLink: e.target.value }))}
+                        className="w-full bg-black/40 border border-white/5 rounded-lg px-3 py-2 text-[10px] text-white focus:outline-none focus:border-blue-500"
+                        placeholder="https://google.com/search?..."
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end pt-4 border-t border-white/5">
