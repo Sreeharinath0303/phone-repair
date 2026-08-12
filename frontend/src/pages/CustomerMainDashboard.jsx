@@ -849,13 +849,39 @@ export const CustomerDashboard = () => {
                 <div className="text-sm font-bold text-blue-400">{activeOrder.quotationStatus || 'Not issued'}</div>
               </div>
               <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 col-span-2">
-                <div className="text-[11px] text-blue-300 uppercase tracking-wider mb-1">Official Quotation</div>
+                <div className="text-[11px] text-blue-300 uppercase tracking-wider mb-1">
+                  {activeOrder.finalAmount ? 'Final Amount Paid/Due' : 'Official Quotation'}
+                </div>
                 <div className="text-xl font-black text-white">
-                  {(activeOrder.quotationAmount || 0) > 0
+                  {activeOrder.finalAmount 
+                    ? `₹${activeOrder.finalAmount.toLocaleString('en-IN')}`
+                    : (activeOrder.quotationAmount || 0) > 0
                     ? `₹${activeOrder.quotationAmount.toLocaleString('en-IN')}`
                     : 'Awaiting Assessment from Admin'}
                 </div>
               </div>
+
+              {/* Pickup Schedule */}
+              {activeOrder.pickupScheduleDate && (
+                <div className="p-3 rounded-xl bg-[#080c14] border border-white/10 col-span-2 sm:col-span-1">
+                  <div className="text-[11px] text-indigo-400 uppercase tracking-wider mb-1">Pickup Schedule</div>
+                  <div className="text-sm font-bold text-white">
+                    {new Date(activeOrder.pickupScheduleDate).toLocaleDateString()} 
+                    {activeOrder.pickupScheduleTimeSlot && ` • ${activeOrder.pickupScheduleTimeSlot}`}
+                  </div>
+                </div>
+              )}
+
+              {/* Delivery Schedule */}
+              {activeOrder.deliveryScheduleDate && (
+                <div className="p-3 rounded-xl bg-[#080c14] border border-white/10 col-span-2 sm:col-span-1">
+                  <div className="text-[11px] text-emerald-400 uppercase tracking-wider mb-1">Delivery Schedule</div>
+                  <div className="text-sm font-bold text-white">
+                    {new Date(activeOrder.deliveryScheduleDate).toLocaleDateString()} 
+                    {activeOrder.deliveryScheduleTimeSlot && ` • ${activeOrder.deliveryScheduleTimeSlot}`}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mt-6">

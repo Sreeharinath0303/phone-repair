@@ -3,6 +3,7 @@ const {
   register,
   verifyRegistration,
   login,
+  exchangeEmailAccessToken,
   requestMobileOtp,
   verifyMobileOtp,
   forgotPassword,
@@ -19,6 +20,7 @@ router.post('/verify-registration', verifyRegistration);
 
 // Email Login
 router.post('/login', login);
+router.post('/email-access', exchangeEmailAccessToken);
 router.get('/account-status', getAccountStatus);
 
 // Mobile OTP Auth (Steps 3 & 5)

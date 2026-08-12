@@ -1,4 +1,5 @@
 const Booking = require('../models/Booking');
+const { ensureOrderForBooking, syncOrderForBooking } = require('../utils/orderSync');
 const User = require('../models/User');
 const { addTimelineEntry } = require('../utils/workflow');
 
@@ -113,7 +114,7 @@ exports.getInvoiceHtml = async (req, res) => {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${safe(invoiceNumber)} - RepairVafe Invoice</title>
+  <title>${safe(invoiceNumber)} - erepaircafe Invoice</title>
   <style>
     :root { --bg:#0b1220; --card:#0f1a2e; --muted:#94a3b8; --text:#e5e7eb; --pri:#60a5fa; --line: rgba(255,255,255,0.08); }
     * { box-sizing: border-box; }
@@ -149,7 +150,7 @@ exports.getInvoiceHtml = async (req, res) => {
     <div class="card">
       <div class="top">
         <div>
-          <div class="brand">Repair<span>Vafe</span></div>
+          <div class="brand">e<span>repaircafe</span></div>
           <div style="color: var(--muted); font-size:12px; margin-top:4px;">Service Invoice</div>
         </div>
         <div class="meta">
@@ -240,6 +241,7 @@ exports.approveQuote = async (req, res) => {
     addTimelineEntry(booking, booking.status, 'Quotation approved by customer. Fulfillment locked to the selected partner.');
 
     await booking.save();
+    await ensureOrderForBooking(booking);
     res.json({ success: true, message: 'Quotation approved successfully', data: sanitizeCustomerBooking(booking) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -275,11 +277,12 @@ exports.rejectQuote = async (req, res) => {
     addTimelineEntry(booking, 'Quote Rejected', `Customer securely rejected the service estimate workflow. ${reasonNote}`);
 
     await booking.save();
+    await syncOrderForBooking(booking);
     
     // Step 4: Admin Rejection Notification hook
     try {
        const sendEmail = require('../utils/sendEmail');
-       const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
+       const adminEmail = process.env.ADMIN_EMAIL || 'erepaircafe2010@gmail.com';
        await sendEmail({
           email: adminEmail,
           subject: `Estimate Rejected: #${booking.referenceNumber}`,
@@ -320,6 +323,7 @@ exports.verifyReturnOtp = async (req, res) => {
     booking.workflowPhase = 'settlement';
     addTimelineEntry(booking, 'Settlement Pending', 'Customer verified return OTP. Booking is ready for settlement.');
     await booking.save();
+    await syncOrderForBooking(booking);
 
     res.json({ success: true, data: sanitizeCustomerBooking(booking), message: 'Return verified successfully' });
   } catch (err) {
@@ -473,3 +477,5 @@ exports.deleteAddress = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+

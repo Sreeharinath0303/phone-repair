@@ -5,6 +5,8 @@ const Booking = require('../models/Booking');
 const { Lead } = require('../models/Lead');
 const Technician = require('../models/Technician');
 const User = require('../models/User');
+const { syncOrderForBooking } = require('../utils/orderSync');
+const { buildQuotationEmailData } = require('../utils/customerPortal');
 
 
 // @desc  Get all accounts (Admins, Customers, Partners) with unified filtering
@@ -236,9 +238,9 @@ exports.updateAccountStatus = async (req, res) => {
         if (subjects[action]) {
           await sendEmail({
             email: account.email,
-            subject: `RepairVafe Security: ${subjects[action]}`,
-            message: `Hello ${account.name},\n\n${messages[action]}\n\nBest regards,\nRepairVafe Security Team`,
-            html: `<h3>Account Update</h3><p>Hello <strong>${account.name}</strong>,</p><p>${messages[action]}</p><p>Best regards,<br>RepairVafe Security Team</p>`
+            subject: `erepaircafe Security: ${subjects[action]}`,
+            message: `Hello ${account.name},\n\n${messages[action]}\n\nBest regards,\nerepaircafe Security Team`,
+            html: `<h3>Account Update</h3><p>Hello <strong>${account.name}</strong>,</p><p>${messages[action]}</p><p>Best regards,<br>erepaircafe Security Team</p>`
           });
         }
       }
@@ -486,7 +488,7 @@ exports.assignOrderToTechnician = async (req, res) => {
        });
 
        // 3. Admin Alert
-       const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
+       const adminEmail = process.env.ADMIN_EMAIL || 'erepaircafe2010@gmail.com';
        await sendEmail({
           email: adminEmail,
           subject: `Partner Assigned: #${booking.referenceNumber}`,
@@ -496,6 +498,8 @@ exports.assignOrderToTechnician = async (req, res) => {
     } catch (e) {
        console.error("Partner assignment omnibus hook fallback skipped:", e.message);
     }
+
+    await syncOrderForBooking(booking);
 
     res.json({ success: true, message: 'Order assigned successfully and partner notified', data: booking });
   } catch (err) {
@@ -546,21 +550,15 @@ exports.setServiceQuote = async (req, res) => {
       const sendEmail = require('../utils/sendEmail');
       
       // 1. Notify Customer
+      const quotationEmailData = await buildQuotationEmailData(booking);
       await sendEmail({
         email: booking.customerEmail,
         type: 'quotation',
-        data: { 
-          name: booking.customerName, 
-          orderId: booking.referenceNumber, 
-          price: booking.quotationAmount,
-          device: `${booking.deviceBrand} ${booking.deviceModel}`,
-          service: booking.repairTypes.join(', '),
-          actionUrl: `http://repairvafe.com/pages/tracking.html?ref=${booking.referenceNumber}`
-        }
+        data: quotationEmailData
       });
-      
+
       // 2. Alert Admin
-      const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
+      const adminEmail = process.env.ADMIN_EMAIL || 'erepaircafe2010@gmail.com';
       await sendEmail({
          email: adminEmail,
          subject: `Quotation Sent: #${booking.referenceNumber}`,
@@ -789,7 +787,7 @@ exports.setFinalInvoice = async (req, res) => {
         await sendEmail({
             email: booking.customerEmail,
             subject: `Final Invoice Generated: ${booking.invoiceNumber}`,
-            message: `Hello ${booking.customerName},\n\nYour repair service for ${booking.deviceModel} is complete.\n\nFinal Invoice Details:\nInvoice Number: ${booking.invoiceNumber}\nFinal Amount Due: ₹${finalAmount}\n\nAll standard warranty terms apply based on the replaced parts structurally agreed upon during the Service Estimate phase.\n\nPlease log into your track dashboard to review and complete final validations.\n\nThank you for choosing RepairVafe!`
+            message: `Hello ${booking.customerName},\n\nYour repair service for ${booking.deviceModel} is complete.\n\nFinal Invoice Details:\nInvoice Number: ${booking.invoiceNumber}\nFinal Amount Due: ₹${finalAmount}\n\nAll standard warranty terms apply based on the replaced parts structurally agreed upon during the Service Estimate phase.\n\nPlease log into your track dashboard to review and complete final validations.\n\nThank you for choosing erepaircafe!`
         });
     } catch (e) {
         console.error("Master Billing exception securely bypassed: ", e.message);
@@ -846,6 +844,8 @@ exports.updateBookingStatus = async (req, res) => {
 
     const booking = await Booking.findByIdAndUpdate(bookingId, { status }, { new: true });
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+    await syncOrderForBooking(booking);
 
     res.json({ success: true, message: 'Status updated successfully', data: booking });
   } catch (err) {
@@ -968,8 +968,13 @@ exports.createBrand = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Brand name and category are required' });
     }
 
-    const existing = await Brand.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
-    if (existing) return res.status(400).json({ success: false, message: `Brand "${name}" already exists` });
+    const existing = await Brand.findOne({
+      name: { $regex: new RegExp(`^${name}$`, 'i') },
+      category
+    });
+    if (existing) {
+      return res.status(400).json({ success: false, message: `Brand "${name}" already exists in category "${category}"` });
+    }
 
     const brand = await Brand.create({ name, category });
     res.status(201).json({ success: true, data: brand });
@@ -1178,10 +1183,10 @@ exports.previewTemplate = async (req, res) => {
     const template = await EmailTemplate.findById(templateId);
     if (!template) return res.status(404).json({ success: false, message: 'Template not found' });
 
-    const { getEmailTemplate } = require('../utils/emailTemplates');
-    const { html } = await getEmailTemplate(template.type, mockData || {});
-    
-    res.json({ success: true, html });
+    const { renderStoredTemplate } = require('../utils/emailTemplates');
+    const rendered = renderStoredTemplate(template, mockData || {});
+
+    res.json({ success: true, html: rendered.html, subject: rendered.subject });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1191,14 +1196,35 @@ exports.previewTemplate = async (req, res) => {
 exports.sendTestEmail = async (req, res) => {
   try {
     const { templateId, testEmail } = req.body;
+    const normalizedEmail = String(testEmail || '').trim().toLowerCase();
     const template = await EmailTemplate.findById(templateId);
     if (!template) return res.status(404).json({ success: false, message: 'Template not found' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return res.status(400).json({ success: false, message: 'Enter a valid email address' });
+    }
 
-    const sendEmail = require('../utils/sendEmail');
+    const { renderStoredTemplate } = require('../utils/emailTemplates');
+    const rendered = renderStoredTemplate(template, {
+      customerName: 'Test Admin',
+      name: 'Test Admin',
+      referenceNumber: 'RV-TEST-999',
+      orderId: 'RV-TEST-999',
+      deviceBrand: 'Apple',
+      brand: 'Apple',
+      deviceModel: 'iPhone Test',
+      model: 'iPhone Test',
+      quotationAmount: 4999,
+      price: 4999,
+      service: 'Screen Replacement',
+      estimatedTime: '2 Hours',
+      status: 'Pending',
+      supportEmail: process.env.EMAIL_FROM || 'support@erepaircafe.com'
+    });
     await sendEmail({
-      email: testEmail,
-      type: template.type,
-      data: { customerName: 'Test Admin', orderId: 'RV-TEST-999', brand: 'Apple', model: 'iPhone Test' }
+      email: normalizedEmail,
+      subject: `[Test] ${rendered.subject}`,
+      html: rendered.html,
+      message: `This is a test email for template ${template.name}.`
     });
 
     res.json({ success: true, message: 'Test email sent' });
@@ -1335,6 +1361,38 @@ exports.exportBookings = async (req, res) => {
     } else {
       res.json({ success: true, data: bookings });
     }
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Toggle whether a completed repair should appear in the customer feedback section
+exports.toggleBookingFeedbackVisibility = async (req, res) => {
+  try {
+    const { visible } = req.body || {};
+    if (typeof visible !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'visible must be a boolean value' });
+    }
+
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    booking.showInCustomerFeedbackSection = visible;
+    booking.timeline.push({
+      stage: visible ? 'Feedback Section Enabled' : 'Feedback Section Hidden',
+      note: `Customer feedback section visibility ${visible ? 'enabled' : 'disabled'} by admin.`,
+      date: new Date()
+    });
+
+    await booking.save();
+
+    res.json({
+      success: true,
+      message: `Customer feedback visibility ${visible ? 'enabled' : 'disabled'}`,
+      data: booking
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1853,6 +1911,54 @@ exports.getMyAuditLogs = async (req, res) => {
 
     const logs = await AuditLog.find(query).sort({ createdAt: -1 }).limit(50);
     res.json({ success: true, data: logs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ─── BOOKING SCHEDULING ──────────────────────────────
+exports.updateSchedule = async (req, res) => {
+  try {
+    const { pickupScheduleDate, pickupScheduleTimeSlot, deliveryScheduleDate, deliveryScheduleTimeSlot } = req.body;
+    const booking = await require('../models/Booking').findById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+    if (pickupScheduleDate !== undefined) booking.pickupScheduleDate = pickupScheduleDate;
+    if (pickupScheduleTimeSlot !== undefined) booking.pickupScheduleTimeSlot = pickupScheduleTimeSlot;
+    if (deliveryScheduleDate !== undefined) booking.deliveryScheduleDate = deliveryScheduleDate;
+    if (deliveryScheduleTimeSlot !== undefined) booking.deliveryScheduleTimeSlot = deliveryScheduleTimeSlot;
+
+    booking.timeline.push({
+      stage: 'Schedule Updated',
+      note: 'Admin updated the scheduling details.'
+    });
+
+    await booking.save();
+    res.json({ success: true, data: booking });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ─── BOOKING FINAL PRICE ──────────────────────────────
+exports.updateFinalPrice = async (req, res) => {
+  try {
+    const { finalAmount } = req.body;
+    if (finalAmount === undefined) {
+      return res.status(400).json({ success: false, message: 'finalAmount is required' });
+    }
+
+    const booking = await require('../models/Booking').findById(req.params.id);
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+    booking.finalAmount = Number(finalAmount);
+    booking.timeline.push({
+      stage: 'Final Price Updated',
+      note: `Admin set final price to Rs. ${booking.finalAmount}.`
+    });
+
+    await booking.save();
+    res.json({ success: true, data: booking });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

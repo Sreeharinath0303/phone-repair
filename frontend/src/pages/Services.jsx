@@ -2,6 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Smartphone, Battery, Cpu, Monitor, Wrench, Phone, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Seo } from '../components/Seo';
+import { buildBreadcrumbSchema, buildServiceSchema } from '../utils/seo';
 
 const ALL_SERVICES = [
   { icon: Smartphone, title: 'Screen Replacement', desc: 'Got a cracked screen? We provide original OLED/LCD replacements with True Tone retention.', color: 'text-blue-400', bg: 'bg-blue-400/10' },
@@ -15,6 +17,23 @@ const ALL_SERVICES = [
 export const Services = () => {
   return (
     <div className="py-20 px-6 max-w-6xl mx-auto">
+      <Seo
+        title="Mobile, Laptop, Tablet and Smartwatch Repair Services"
+        description="Explore erepaircafe repair services in Bengaluru including screen replacement, battery replacement, motherboard repair, back glass repair, water damage repair and camera repair."
+        path="/services"
+        keywords="mobile repair services Bengaluru, screen replacement, battery replacement, motherboard repair, water damage repair, camera repair"
+        structuredData={[
+          buildBreadcrumbSchema([
+            { name: 'Home', path: '/' },
+            { name: 'Services', path: '/services' }
+          ]),
+          ...ALL_SERVICES.map((service) => buildServiceSchema({
+            name: service.title,
+            description: service.desc,
+            path: '/services'
+          }))
+        ]}
+      />
       <div className="text-center mb-16">
         <div className="inline-block bg-purple-500/10 border border-purple-500/20 px-4 py-1.5 rounded-full text-xs font-bold text-purple-400 uppercase tracking-widest mb-4">Our Services</div>
         <h1 className="text-4xl md:text-5xl font-black font-['Outfit'] mb-6">
@@ -57,7 +76,7 @@ export const Services = () => {
         <p className="text-blue-100 max-w-xl mx-auto mb-8 text-lg">
           We handle hundreds of different device models and issues. Contact us for a custom quote or diagnostic service.
         </p>
-        <Link to="/contact" className="inline-block bg-white text-blue-600 font-bold px-8 py-4 rounded-full hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+        <Link to="/book" className="inline-block bg-white text-blue-600 font-bold px-8 py-4 rounded-full hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
           Get a Custom Quote
         </Link>
       </motion.div>

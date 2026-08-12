@@ -188,7 +188,6 @@
 .rtc-icon { font-size: 1.4rem; flex-shrink: 0; }
 .rtc-info { flex: 1; }
 .rtc-name { font-size: 0.9rem; font-weight: 700; }
-.rtc-price { font-size: 0.75rem; color: var(--clr-text-muted); }
 .rtc-check {
   width: 20px; height: 20px;
   border-radius: 50%;

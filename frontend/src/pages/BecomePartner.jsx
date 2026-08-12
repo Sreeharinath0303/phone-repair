@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Briefcase, MapPin, Wrench, Send, CheckCircle2, Phone, Mail, User, ShieldCheck } from 'lucide-react';
 import { getApiBaseUrl } from '../utils/apiBase';
+import { Seo } from '../components/Seo';
+import { buildBreadcrumbSchema, buildLocalBusinessSchema } from '../utils/seo';
 
 export const BecomePartner = () => {
   const [formData, setFormData] = useState({
@@ -53,6 +55,19 @@ export const BecomePartner = () => {
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-6">
+      <Seo
+        title="Become a Repair Partner"
+        description="Join erepaircafe as a service partner in Bengaluru. Apply to receive repair leads, manage jobs efficiently and grow your device repair business."
+        path="/become-partner"
+        keywords="become repair partner, mobile repair franchise Bengaluru, technician partner application"
+        structuredData={[
+          buildLocalBusinessSchema('/become-partner'),
+          buildBreadcrumbSchema([
+            { name: 'Home', path: '/' },
+            { name: 'Become Partner', path: '/become-partner' }
+          ])
+        ]}
+      />
       <div className="max-w-6xl mx-auto">
         <div className="grid lg:grid-cols-2 gap-12 items-start">
           

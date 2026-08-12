@@ -2,6 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Users, Shield, Target, Award, Clock, Heart, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Seo } from '../components/Seo';
+import { buildBreadcrumbSchema, buildLocalBusinessSchema } from '../utils/seo';
 
 const VALUES = [
   {
@@ -37,6 +39,19 @@ const VALUES = [
 export const AboutUs = () => {
   return (
     <div className="py-20 px-6 max-w-6xl mx-auto font-['Outfit']">
+      <Seo
+        title="About erepaircafe"
+        description="Learn how erepaircafe delivers doorstep device repair in Bengaluru with certified technicians, transparent pricing, genuine parts and a warranty-backed process."
+        path="/about"
+        keywords="about erepaircafe, device repair company Bengaluru, doorstep mobile repair company"
+        structuredData={[
+          buildLocalBusinessSchema('/about'),
+          buildBreadcrumbSchema([
+            { name: 'Home', path: '/' },
+            { name: 'About', path: '/about' }
+          ])
+        ]}
+      />
       
       {/* Hero Header Section */}
       <div className="text-center mb-20 relative">
@@ -66,7 +81,7 @@ export const AboutUs = () => {
           transition={{ delay: 0.2 }}
           className="text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed font-['Inter']"
         >
-          At RepairVafe, we believe that a damaged device shouldn't disrupt your daily routine. We bring certified tech expertise and genuine parts straight to your doorstep.
+          At erepaircafe, we believe that a damaged device shouldn't disrupt your daily routine. We bring certified tech expertise and genuine parts straight to your doorstep.
         </motion.p>
       </div>
 
@@ -81,7 +96,7 @@ export const AboutUs = () => {
         >
           <h2 className="text-3xl font-bold text-white leading-tight">Our Mission & Vision</h2>
           <p className="text-gray-400 leading-relaxed font-['Inter']">
-            Founded with a commitment to transparency and premium quality, RepairVafe connects you with highly-trained, certified technicians who resolve issues for smartphones, tablets, and laptops right in front of your eyes.
+            Founded with a commitment to transparency and premium quality, erepaircafe connects you with highly-trained, certified technicians who resolve issues for smartphones, tablets, and laptops right in front of your eyes.
           </p>
           <p className="text-gray-400 leading-relaxed font-['Inter']">
             No more waiting in lines for days, no more concerns about private data, and absolutely no hidden diagnostic costs. We stand for speed, safety, and reliability.
@@ -203,3 +218,4 @@ export const AboutUs = () => {
     </div>
   );
 };
+

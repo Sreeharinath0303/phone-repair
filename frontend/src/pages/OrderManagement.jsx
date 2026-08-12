@@ -1,21 +1,64 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Package, Search, RefreshCw, Smartphone, MapPin,
-  User, ArrowUpRight, ChevronDown, IndianRupee, Filter
+  Package,
+  Search,
+  RefreshCw,
+  Smartphone,
+  MapPin,
+  User,
+  ArrowUpRight,
+  ChevronDown,
+  Trash2
 } from 'lucide-react';
+import { getApiBaseUrl } from '../utils/apiBase';
 
 const STATUS_COLOR = {
-  'Received':  'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  'Confirmed': 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  'Quote Approved': 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  'Partner Locked': 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  'Pickup Scheduled': 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+  'Store Visit Scheduled': 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
   'Picked Up': 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-  'In Repair': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  'Device Received': 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+  'Diagnosis In Progress': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  'Repair Ongoing': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  'Settlement Pending': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
   'Completed': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  'Delivered': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  'Cancelled': 'bg-red-500/10 text-red-400 border-red-500/20'
+  'Delivered / Returned': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  'Settlement Completed': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  Delivered: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  Cancelled: 'bg-red-500/10 text-red-400 border-red-500/20'
 };
 
-const ALL_STATUSES = ['Received', 'Confirmed', 'Picked Up', 'In Repair', 'Completed', 'Delivered', 'Cancelled'];
+const ALL_STATUSES = [
+  'Quote Approved',
+  'Partner Locked',
+  'Pickup Scheduled',
+  'Store Visit Scheduled',
+  'Picked Up',
+  'Device Received',
+  'Diagnosis In Progress',
+  'Repair Ongoing',
+  'Settlement Pending',
+  'Delivered / Returned',
+  'Settlement Completed',
+  'Completed',
+  'Delivered',
+  'Cancelled'
+];
+
+const formatAmount = (amount) => `Rs ${Number(amount || 0).toLocaleString('en-IN')}`;
+const ORDER_READ_STATE_KEY = 'rv_admin_read_orders';
+
+const parseStoredIds = (storageKey) => {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
 
 export const OrderManagement = () => {
   const [orders, setOrders] = useState([]);
@@ -24,58 +67,35 @@ export const OrderManagement = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
   const [updating, setUpdating] = useState(null);
+  const [deleting, setDeleting] = useState(null);
   const [newStatus, setNewStatus] = useState({});
+  const [readOrderIds, setReadOrderIds] = useState(() => parseStoredIds(ORDER_READ_STATE_KEY));
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ORDER_READ_STATE_KEY, JSON.stringify(readOrderIds));
+  }, [readOrderIds]);
 
   const fetchOrders = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('rv_token');
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/export/bookings`, {
+      const res = await fetch(`${getApiBaseUrl()}/orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      if (data.success) setOrders(data.data || []);
-    } catch {
-      setOrders([
-        {
-          _id: 'o1',
-          orderNumber: 'ORD-2025-001',
-          status: 'In Repair',
-          deviceInfo: { brand: 'Apple', model: 'iPhone 15 Pro', category: 'Smartphone' },
-          repairDetails: [{ service: 'Screen Replacement', price: 3999 }],
-          payment: { amount: 3999, status: 'Pending' },
-          customerName: 'Rohan Verma',
-          customerPhone: '9876543210',
-          city: 'New Delhi',
-          createdAt: new Date().toISOString()
-        },
-        {
-          _id: 'o2',
-          orderNumber: 'ORD-2025-002',
-          status: 'Confirmed',
-          deviceInfo: { brand: 'Samsung', model: 'Galaxy S24', category: 'Smartphone' },
-          repairDetails: [{ service: 'Battery Replacement', price: 1299 }],
-          payment: { amount: 1299, status: 'Paid' },
-          customerName: 'Priya Sharma',
-          customerPhone: '9123456789',
-          city: 'Mumbai',
-          createdAt: new Date(Date.now() - 86400000).toISOString()
-        },
-        {
-          _id: 'o3',
-          orderNumber: 'ORD-2025-003',
-          status: 'Delivered',
-          deviceInfo: { brand: 'OnePlus', model: '12', category: 'Smartphone' },
-          repairDetails: [{ service: 'Back Glass', price: 999 }],
-          payment: { amount: 999, status: 'Paid' },
-          customerName: 'Amit Patel',
-          customerPhone: '9988776655',
-          city: 'Bangalore',
-          createdAt: new Date(Date.now() - 172800000).toISOString()
-        }
-      ]);
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to load orders.');
+      }
+
+      setOrders(data.data || []);
+    } catch (error) {
+      console.error('Failed to load orders:', error);
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -84,120 +104,250 @@ export const OrderManagement = () => {
   const handleStatusUpdate = async (orderId) => {
     const status = newStatus[orderId];
     if (!status) return;
+
+    const targetOrder = orders.find((order) => order._id === orderId);
+    const linkedBookingId = typeof targetOrder?.bookingId === 'object'
+      ? targetOrder?.bookingId?._id
+      : targetOrder?.bookingId;
+
+    if (!linkedBookingId) {
+      window.alert('This order is not linked to a booking record.');
+      return;
+    }
+
     setUpdating(orderId);
     try {
       const token = localStorage.getItem('rv_token');
-      await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/update-status`, {
+      const res = await fetch(`${getApiBaseUrl()}/admin/update-status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ bookingId: orderId, status })
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ bookingId: linkedBookingId, status })
       });
-      setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status } : o));
-      setNewStatus(prev => { const n = { ...prev }; delete n[orderId]; return n; });
-    } catch {
-      setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status } : o));
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to update order status.');
+      }
+
+      setOrders((prev) => prev.map((order) => (
+        order._id === orderId ? { ...order, status } : order
+      )));
+      setNewStatus((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+      window.alert(error.message || 'Failed to update order status.');
     } finally {
       setUpdating(null);
     }
   };
 
-  const filtered = orders
-    .filter(o => statusFilter === 'all' || o.status === statusFilter)
-    .filter(o => !search || `${o.orderNumber} ${o.customerName} ${o.customerPhone} ${o.city}`.toLowerCase().includes(search.toLowerCase()));
+  const handleDeleteOrder = async (orderId, orderNumber) => {
+    if (!window.confirm(`Delete order ${orderNumber || 'this order'}? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeleting(orderId);
+    try {
+      const token = localStorage.getItem('rv_token');
+      const res = await fetch(`${getApiBaseUrl()}/orders/${orderId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to delete order.');
+      }
+
+      setOrders((prev) => prev.filter((order) => order._id !== orderId));
+      setExpandedId((current) => (current === orderId ? null : current));
+    } catch (error) {
+      console.error('Failed to delete order:', error);
+      window.alert(error.message || 'Failed to delete order.');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const markOrderAsRead = (orderId) => {
+    if (!orderId) return;
+    setReadOrderIds((current) => (current.includes(orderId) ? current : [...current, orderId]));
+  };
+
+  const filteredOrders = orders
+    .filter((order) => statusFilter === 'all' || order.status === statusFilter)
+    .filter((order) => {
+      if (!search) return true;
+      const haystack = [
+        order.orderNumber,
+        order.referenceNumber,
+        order.customerName,
+        order.customerPhone,
+        order.customerEmail,
+        order.city,
+        order.deviceInfo?.brand,
+        order.deviceInfo?.model
+      ].join(' ').toLowerCase();
+      return haystack.includes(search.toLowerCase());
+    })
+    .sort((a, b) => {
+      const aIsUnread = !readOrderIds.includes(a._id);
+      const bIsUnread = !readOrderIds.includes(b._id);
+      if (aIsUnread !== bIsUnread) {
+        return aIsUnread ? -1 : 1;
+      }
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+
+  const unreadOrdersCount = orders.filter((order) => !readOrderIds.includes(order._id)).length;
+
+  const stats = [
+    { label: 'Total', value: orders.length, color: 'text-white' },
+    {
+      label: 'In Repair',
+      value: orders.filter((order) => (
+        ['Diagnosis In Progress', 'Repair Ongoing', 'Settlement Pending'].includes(order.status)
+      )).length,
+      color: 'text-amber-400'
+    },
+    {
+      label: 'Completed',
+      value: orders.filter((order) => (
+        ['Completed', 'Delivered', 'Delivered / Returned', 'Settlement Completed'].includes(order.status)
+      )).length,
+      color: 'text-emerald-400'
+    },
+    {
+      label: 'Revenue',
+      value: formatAmount(orders.reduce((sum, order) => sum + Number(order.payment?.amount || 0), 0)),
+      color: 'text-purple-400'
+    }
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h2 className="text-2xl font-black text-white font-['Outfit']">Order Management</h2>
-          <p className="text-gray-500 text-sm mt-1">All repair orders — track, update, and manage</p>
+          <h2 className="font-['Outfit'] text-2xl font-black text-white">Order Management</h2>
+          <p className="mt-1 text-sm text-gray-500">All repair orders - track, update, and manage</p>
         </div>
-        <button onClick={fetchOrders} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
-          <RefreshCw size={14} /> Refresh
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-200">
+            <span className="inline-flex h-2.5 w-2.5 rounded-full bg-blue-400" />
+            {unreadOrdersCount} unread order{unreadOrdersCount === 1 ? '' : 's'}
+          </div>
+          <button
+            onClick={fetchOrders}
+            className="flex items-center gap-2 text-sm text-gray-400 transition-colors hover:text-white"
+          >
+            <RefreshCw size={14} />
+            Refresh
+          </button>
+        </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: 'Total', value: orders.length, color: 'text-white' },
-          { label: 'In Repair', value: orders.filter(o => o.status === 'In Repair').length, color: 'text-amber-400' },
-          { label: 'Completed', value: orders.filter(o => ['Completed', 'Delivered'].includes(o.status)).length, color: 'text-emerald-400' },
-          { label: 'Revenue', value: `₹${orders.reduce((s, o) => s + (o.payment?.amount || 0), 0).toLocaleString()}`, color: 'text-purple-400' }
-        ].map(s => (
-          <div key={s.label} className="bg-[#111111] border border-white/5 rounded-2xl p-4">
-            <div className={`text-xl font-black font-['Outfit'] ${s.color}`}>{s.value}</div>
-            <div className="text-xs text-gray-500 mt-1">{s.label}</div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {stats.map((stat) => (
+          <div key={stat.label} className="rounded-2xl border border-white/5 bg-[#111111] p-4">
+            <div className={`font-['Outfit'] text-xl font-black ${stat.color}`}>{stat.value}</div>
+            <div className="mt-1 text-xs text-gray-500">{stat.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
           <input
             type="text"
             placeholder="Search orders..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full bg-[#111111] border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+            onChange={(event) => setSearch(event.target.value)}
+            className="w-full rounded-xl border border-white/5 bg-[#111111] py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-600 transition-colors focus:border-blue-500 focus:outline-none"
           />
         </div>
         <select
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          className="bg-[#111111] border border-white/5 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+          onChange={(event) => setStatusFilter(event.target.value)}
+          className="rounded-xl border border-white/5 bg-[#111111] px-4 py-2.5 text-sm text-white transition-colors focus:border-blue-500 focus:outline-none"
         >
           <option value="all">All Statuses</option>
-          {ALL_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          {ALL_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
         </select>
       </div>
 
-      {/* Order Cards */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
           <RefreshCw size={24} className="animate-spin text-blue-500" />
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-16 bg-[#111111] border border-white/5 rounded-3xl">
-          <Package size={40} className="text-gray-700 mx-auto mb-4" />
+      ) : filteredOrders.length === 0 ? (
+        <div className="rounded-3xl border border-white/5 bg-[#111111] py-16 text-center">
+          <Package size={40} className="mx-auto mb-4 text-gray-700" />
           <p className="text-gray-500">No orders found.</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((order, i) => (
+          {filteredOrders.map((order, index) => (
+            (() => {
+              const isUnread = !readOrderIds.includes(order._id);
+              return (
             <motion.div
               key={order._id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="bg-[#111111] border border-white/5 rounded-2xl overflow-hidden"
+              transition={{ delay: index * 0.05 }}
+              className={`overflow-hidden rounded-2xl border bg-[#111111] ${isUnread ? 'border-blue-500/25 shadow-[0_0_0_1px_rgba(59,130,246,0.08)]' : 'border-white/5'}`}
             >
               <button
-                onClick={() => setExpandedId(expandedId === order._id ? null : order._id)}
-                className="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.02] transition-colors"
+                onClick={() => {
+                  setExpandedId(expandedId === order._id ? null : order._id);
+                  markOrderAsRead(order._id);
+                }}
+                className={`flex w-full items-start justify-between gap-3 p-4 sm:p-5 text-left transition-colors ${isUnread ? 'bg-blue-500/[0.05] hover:bg-blue-500/[0.08]' : 'hover:bg-white/[0.02]'}`}
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-gray-400 flex-shrink-0">
+                <div className="flex min-w-0 items-start gap-4">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/5 text-gray-400">
                     <Smartphone size={18} />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2.5 flex-wrap">
-                      <span className="font-bold text-white text-sm">{order.orderNumber}</span>
-                      <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${STATUS_COLOR[order.status] || 'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <span className="text-sm font-bold text-white">{order.orderNumber}</span>
+                      <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${isUnread ? 'border-blue-400/30 bg-blue-500/15 text-blue-200' : 'border-white/10 bg-white/5 text-gray-500'}`}>
+                        {isUnread ? 'Unread' : 'Read'}
+                      </span>
+                      <span className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${STATUS_COLOR[order.status] || 'border-gray-500/20 bg-gray-500/10 text-gray-400'}`}>
                         {order.status}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-xs text-gray-500">{order.deviceInfo?.brand} {order.deviceInfo?.model}</span>
-                      {order.city && <span className="text-xs text-gray-600 flex items-center gap-1"><MapPin size={10} />{order.city}</span>}
+                    <div className="mt-1 flex flex-wrap items-center gap-2 sm:gap-3">
+                      <span className="text-xs text-gray-500 break-words">
+                        {order.deviceInfo?.brand} {order.deviceInfo?.model}
+                      </span>
+                      {order.city && (
+                        <span className="flex items-center gap-1 text-xs text-gray-600">
+                          <MapPin size={10} />
+                          {order.city}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  {order.payment?.amount && (
-                    <span className="font-bold text-white text-sm hidden sm:block">₹{order.payment.amount.toLocaleString()}</span>
+                <div className="flex shrink-0 items-center gap-3 sm:gap-4">
+                  {Number(order.payment?.amount || 0) > 0 && (
+                    <span className="hidden text-sm font-bold text-white sm:block">
+                      {formatAmount(order.payment.amount)}
+                    </span>
                   )}
                   <ChevronDown
                     size={16}
@@ -207,43 +357,51 @@ export const OrderManagement = () => {
               </button>
 
               {expandedId === order._id && (
-                <div className="px-5 pb-5 border-t border-white/5 pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="border-t border-white/5 px-5 pb-5 pt-4">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div className="space-y-3">
                       <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500">Customer</h4>
                       <div className="flex items-center gap-2 text-sm text-gray-300">
                         <User size={14} className="text-gray-500" />
-                        {order.customerName || '—'}
+                        {order.customerName || '-'}
                       </div>
-                      <div className="text-xs text-gray-500">{order.customerPhone}</div>
+                      <div className="text-xs text-gray-500">{order.customerPhone || 'No phone provided'}</div>
 
-                      <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mt-4">Customer Complaint</h4>
-                      <div className="text-sm text-gray-300 bg-white/5 p-3 rounded-xl border border-white/5 leading-relaxed">
+                      <h4 className="mt-4 text-xs font-bold uppercase tracking-widest text-gray-500">Customer Complaint</h4>
+                      <div className="rounded-xl border border-white/5 bg-white/5 p-3 text-sm leading-relaxed text-gray-300">
                         {order.issueDescription || 'No complaint or issue description provided.'}
                       </div>
 
-                      <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mt-4">Assigned Partner</h4>
-                      <div className="text-sm text-purple-400 bg-purple-500/5 p-3 rounded-xl border border-purple-500/10 font-bold">
+                      <h4 className="mt-4 text-xs font-bold uppercase tracking-widest text-gray-500">Assigned Partner</h4>
+                      <div className="rounded-xl border border-purple-500/10 bg-purple-500/5 p-3 text-sm font-bold text-purple-400">
                         {order.assignedTechnician ? (
                           typeof order.assignedTechnician === 'object' ? (
-                            <span>{order.assignedTechnician.name} ({order.assignedTechnician.specialization || 'Technician'})</span>
+                            <span>
+                              {order.assignedTechnician.name} ({order.assignedTechnician.specialization || 'Technician'})
+                            </span>
                           ) : (
                             <span>{order.assignedTechnician}</span>
                           )
                         ) : (
-                          <span className="text-gray-500 font-medium italic">No service partner assigned yet.</span>
+                          <span className="font-medium italic text-gray-500">No service partner assigned yet.</span>
                         )}
                       </div>
 
-                      <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mt-4">Repair Details</h4>
-                      {order.repairDetails?.map((r, ri) => (
-                        <div key={ri} className="flex justify-between text-sm">
-                          <span className="text-gray-300">{r.service}</span>
-                          {r.price && <span className="font-bold text-white">₹{r.price}</span>}
-                        </div>
-                      ))}
+                      <h4 className="mt-4 text-xs font-bold uppercase tracking-widest text-gray-500">Repair Details</h4>
+                      {(order.repairDetails || []).length > 0 ? (
+                        order.repairDetails.map((repair, repairIndex) => (
+                          <div key={repairIndex} className="flex justify-between text-sm">
+                            <span className="text-gray-300">{repair.service}</span>
+                            {Number(repair.price || 0) > 0 && (
+                              <span className="font-bold text-white">{formatAmount(repair.price)}</span>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-sm text-gray-500">No repair details available.</div>
+                      )}
 
-                      <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                      <div className="flex items-center justify-between border-t border-white/5 pt-2">
                         <span className="text-xs text-gray-500">Payment</span>
                         <span className={`text-xs font-bold ${order.payment?.status === 'Paid' ? 'text-emerald-400' : 'text-amber-400'}`}>
                           {order.payment?.status || 'Pending'}
@@ -251,25 +409,39 @@ export const OrderManagement = () => {
                       </div>
                     </div>
 
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Update Status</h4>
-                      <div className="flex gap-2">
+                    <div className="min-w-0">
+                      <h4 className="mb-3 text-xs font-bold uppercase tracking-widest text-gray-500">Update Status</h4>
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <select
                           value={newStatus[order._id] || order.status}
-                          onChange={e => setNewStatus(prev => ({ ...prev, [order._id]: e.target.value }))}
-                          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                          onChange={(event) => setNewStatus((prev) => ({ ...prev, [order._id]: event.target.value }))}
+                          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
                         >
-                          {ALL_STATUSES.map(s => <option key={s} value={s} className="bg-[#111111]">{s}</option>)}
+                          {ALL_STATUSES.map((status) => (
+                            <option key={status} value={status} className="bg-[#111111]">
+                              {status}
+                            </option>
+                          ))}
                         </select>
                         <button
                           onClick={() => handleStatusUpdate(order._id)}
                           disabled={updating === order._id || !newStatus[order._id] || newStatus[order._id] === order.status}
-                          className="bg-blue-600 text-white font-bold px-4 py-2.5 rounded-xl text-sm hover:bg-blue-700 disabled:opacity-40 transition-colors flex items-center gap-1.5"
+                          className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:opacity-40"
                         >
                           {updating === order._id ? <RefreshCw size={14} className="animate-spin" /> : <ArrowUpRight size={14} />}
                           Update
                         </button>
                       </div>
+
+                      <button
+                        onClick={() => handleDeleteOrder(order._id, order.orderNumber)}
+                        disabled={deleting === order._id}
+                        className="mt-3 inline-flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-sm font-bold text-red-400 transition-colors hover:bg-red-500/15 disabled:opacity-40"
+                      >
+                        {deleting === order._id ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                        Delete Order
+                      </button>
+
                       <div className="mt-3 text-xs text-gray-600">
                         Created: {new Date(order.createdAt).toLocaleString('en-IN')}
                       </div>
@@ -278,6 +450,8 @@ export const OrderManagement = () => {
                 </div>
               )}
             </motion.div>
+              );
+            })()
           ))}
         </div>
       )}

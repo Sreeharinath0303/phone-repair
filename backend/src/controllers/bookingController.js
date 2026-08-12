@@ -6,7 +6,139 @@ const Feedback = require('../models/Feedback');
 const RepairType = require('../models/RepairType');
 const Brand = require('../models/Brand');
 const Model = require('../models/Model');
+const { Offer } = require('../models/Settings');
 const mongoose = require('mongoose');
+const { ensureOrderForBooking, syncOrderForBooking } = require('../utils/orderSync');
+const { buildQuotationEmailData } = require('../utils/customerPortal');
+
+const formatServiceTypeLabel = (serviceType) => {
+  if (serviceType === 'dropoff') return 'Store Dropoff';
+  if (serviceType === 'walkin') return 'Store Visit';
+  return 'Pickup';
+};
+
+const formatDeviceCategoryLabel = (deviceCategory) => {
+  if (!deviceCategory) return '';
+  const labels = {
+    smartphone: 'Phone',
+    tablet: 'Tablet',
+    laptop: 'Laptop',
+    smartwatch: 'Smartwatch'
+  };
+  return labels[deviceCategory] || `${deviceCategory.charAt(0).toUpperCase()}${deviceCategory.slice(1)}`;
+};
+
+const formatBookingDate = (value) => {
+  if (!value) return 'Not provided';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return String(value);
+  }
+  return parsed.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const buildAdminBookingAlert = ({ booking, customerName, customerEmail, customerPhone, issueDescription }) => {
+  const repairTypes = Array.isArray(booking.repairTypes) && booking.repairTypes.length > 0
+    ? booking.repairTypes.join(', ')
+    : 'Not provided';
+  const fullAddress = [booking.address, booking.city, booking.state, booking.pincode].filter(Boolean).join(', ');
+  const deviceLabel = `${formatDeviceCategoryLabel(booking.deviceCategory)} | ${booking.deviceBrand} ${booking.deviceModel}`;
+  const serviceMode = formatServiceTypeLabel(booking.serviceType);
+  const preferredSchedule = `${formatBookingDate(booking.preferredDate)} at ${booking.preferredTimeSlot || 'Not provided'}`;
+  const promoCode = booking.appliedOfferCode || 'Not applied';
+  const issueNotes = issueDescription || booking.issueDescription || 'Not provided';
+  const approxAmount = Number.isFinite(Number(booking.approxAmount))
+    ? `Rs ${Number(booking.approxAmount).toLocaleString('en-IN')}`
+    : 'Rs 0';
+
+  const rows = [
+    ['Booking Reference', booking.referenceNumber],
+    ['Customer Name', customerName || booking.customerName],
+    ['Phone Number', customerPhone || booking.customerPhone],
+    ['Email Address', customerEmail || booking.customerEmail],
+    ['Device', deviceLabel],
+    ['Repair Type', repairTypes],
+    ['Service Mode', serviceMode],
+    ['Preferred Schedule', preferredSchedule],
+    ['Pickup / Store Address', fullAddress || 'Not provided'],
+    ['Issue Details', issueNotes],
+    ['Promo Code', promoCode],
+    ['Approx Estimate', approxAmount]
+  ];
+
+  const text = [
+    `New booking received: ${booking.referenceNumber}`,
+    '',
+    ...rows.map(([label, value]) => `${label}: ${value}`)
+  ].join('\n');
+
+  const htmlRows = rows.map(([label, value]) => `
+    <tr>
+      <td style="padding:10px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:700;width:220px;">${escapeHtml(label)}</td>
+      <td style="padding:10px 12px;border:1px solid #e5e7eb;">${escapeHtml(value)}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#111827;line-height:1.6;">
+      <h2 style="margin:0 0 16px;font-size:22px;">New Order Alert</h2>
+      <p style="margin:0 0 18px;">A new repair booking has been submitted on erepaircafe.</p>
+      <table style="border-collapse:collapse;width:100%;max-width:760px;">
+        <tbody>${htmlRows}</tbody>
+      </table>
+    </div>
+  `;
+
+  return { text, html };
+};
+
+const validateOfferForBooking = async ({ offerCode, deviceCategory, approxAmount }) => {
+  const normalizedCode = String(offerCode || '').trim().toUpperCase();
+  if (!normalizedCode) {
+    return { offer: null, discount: 0, normalizedCode: '' };
+  }
+
+  const offer = await Offer.findOne({ code: normalizedCode, isActive: true });
+  if (!offer) {
+    throw new Error('Promo code not found or inactive.');
+  }
+
+  const now = new Date();
+  if (offer.startDate && offer.startDate > now) {
+    throw new Error('This promo code is not active yet.');
+  }
+  if (offer.endDate && offer.endDate < now) {
+    throw new Error('This promo code has expired.');
+  }
+  if (offer.maxUses !== null && offer.maxUses !== undefined && offer.usedCount >= offer.maxUses) {
+    throw new Error('This promo code has reached its usage limit.');
+  }
+  if (Number(offer.minOrderValue || 0) > Number(approxAmount || 0)) {
+    throw new Error(`This promo code requires a minimum order value of Rs ${Number(offer.minOrderValue || 0).toLocaleString('en-IN')}.`);
+  }
+  if (Array.isArray(offer.applicableCategories) && offer.applicableCategories.length > 0 && !offer.applicableCategories.includes(deviceCategory)) {
+    throw new Error('This promo code is not valid for the selected device category.');
+  }
+
+  const rawDiscount = offer.discountType === 'fixed'
+    ? Number(offer.discountValue || 0)
+    : Math.round((Number(approxAmount || 0) * Number(offer.discountValue || 0)) / 100);
+  const discount = Math.max(0, Math.min(Number(approxAmount || 0), rawDiscount));
+
+  return { offer, discount, normalizedCode };
+};
 
 // @desc  Public booking catalog brands
 // @route GET /api/bookings/catalog/brands
@@ -65,9 +197,17 @@ exports.getPublicModels = async (req, res) => {
 
 // @desc  Create new booking
 // @route POST /api/bookings
-// @access Public
+// @access Private (Customer)
 exports.createBooking = async (req, res) => {
   try {
+    const isAuthenticatedCustomer =
+      req.user &&
+      (req.user.role === 'customer' || req.user.constructor?.modelName === 'User');
+
+    if (!isAuthenticatedCustomer) {
+      return res.status(401).json({ success: false, message: 'Login is required before booking a repair.' });
+    }
+
     const body = req.body || {};
     const deviceCategory = body.deviceCategory || body.deviceType;
     const deviceBrand = body.deviceBrand || body.brand;
@@ -85,7 +225,7 @@ exports.createBooking = async (req, res) => {
     const customerName = body.customerName || body.name || '';
     const customerPhone = body.customerPhone || body.phone || '';
     const customerEmail = (body.customerEmail || body.email || '').trim();
-    const accountPassword = String(body.accountPassword || '').trim();
+    const offerCode = body.offerCode || '';
     const serviceTypeRaw = (body.serviceType || body.service || 'pickup').toString().toLowerCase();
     const normalizedServiceType = ['pickup', 'dropoff', 'walkin'].includes(serviceTypeRaw)
       ? serviceTypeRaw
@@ -182,101 +322,59 @@ exports.createBooking = async (req, res) => {
       timeline: [{ stage: 'Booking Received', note: 'Repair request submitted by customer.' }]
     };
 
-    let assignedUserId = null;
-    const isAuthenticatedCustomer =
-      req.user &&
-      (req.user.role === 'customer' || req.user.constructor?.modelName === 'User');
-
-    if (isAuthenticatedCustomer) {
-      const authenticatedUser = await User.findById(req.user._id).select('+password');
-      if (!authenticatedUser) {
-        return res.status(401).json({ success: false, message: 'Customer account not found. Please sign in again.' });
-      }
-
-      // Keep the customer profile in sync with the latest booking details.
-      authenticatedUser.name = customerName || authenticatedUser.name;
-      authenticatedUser.phone = normalizedPhone || authenticatedUser.phone;
-      authenticatedUser.email = customerEmail.toLowerCase() || authenticatedUser.email;
-      authenticatedUser.address = address || authenticatedUser.address;
-      authenticatedUser.city = city || authenticatedUser.city;
-      authenticatedUser.state = state || authenticatedUser.state;
-      authenticatedUser.pincode = pincode || authenticatedUser.pincode;
-      if (!authenticatedUser.isVerified) authenticatedUser.isVerified = true;
-      await authenticatedUser.save();
-
-      bookingData.customerId = authenticatedUser._id;
-      bookingData.customerEmail = authenticatedUser.email || safeEmail;
-      bookingData.customerName = authenticatedUser.name || customerName;
-      bookingData.customerPhone = authenticatedUser.phone || normalizedPhone;
-      assignedUserId = authenticatedUser._id;
-    } else {
-      // Step 8 & 9: Auto Account Creation Logic
-      let user = await User.findOne({ email: customerEmail.toLowerCase() }).select('+password');
-      const phoneUser = await User.findOne({ phone: normalizedPhone }).select('+password');
-      
-      if (user) {
-        if (!accountPassword) {
-          return res.status(401).json({ success: false, message: 'This email is already registered. Enter your password to continue with booking.' });
-        }
-
-        const passwordMatch = await user.matchPassword(accountPassword);
-        if (!passwordMatch) {
-          return res.status(401).json({ success: false, message: 'Incorrect password for the existing customer account.' });
-        }
-      } else if (phoneUser && phoneUser.email && phoneUser.email !== customerEmail.toLowerCase()) {
-        return res.status(409).json({ success: false, message: 'This phone number is already linked to another customer account. Use that registered email to continue.' });
-      } else if (phoneUser) {
-        user = phoneUser;
-      }
-      
-      let autoPassword = null;
-      if (!user) {
-        // Generate secure 8-character password
-        autoPassword = Math.random().toString(36).slice(-8);
-        user = await User.create({
-          name: customerName,
-          email: customerEmail.toLowerCase(),
-          phone: normalizedPhone,
-          password: autoPassword,
-          address, city, state, pincode,
-          isVerified: true // Auto-created accounts from valid booking flows are pre-verified
-        });
-      } else {
-        if (!user.email) user.email = customerEmail.toLowerCase();
-        if (!user.phone) user.phone = customerPhone;
-        if (!user.name || user.name === 'Customer') user.name = customerName;
-        if (address) user.address = address;
-        if (city) user.city = city;
-        if (state) user.state = state;
-        if (pincode) user.pincode = pincode;
-        await user.save();
-      }
-      
-      bookingData.customerId = user._id;
-      bookingData.customerEmail = user.email || safeEmail;
-      bookingData.customerName = user.name || customerName;
-      bookingData.customerPhone = user.phone || normalizedPhone;
-      assignedUserId = user._id;
-      
-      // Step 10: Share Credentials Securely
-      if (autoPassword) {
-        try {
-          const sendEmail = require('../utils/sendEmail');
-          console.log(`[SMS WEBHOOK DISPATCH] -> Texting +91${customerPhone}: "Welcome to RepairVafe! Your temporary password is: ${autoPassword}"`);
-          if (customerEmail) {
-            await sendEmail({
-              email: customerEmail,
-              subject: 'Welcome to RepairVafe! Your Account Details',
-              message: `Hello ${customerName},\n\nWe have automatically created an account for you so you can easily track your bookings and approve quotes.\n\nLogin Email: ${customerEmail}\nTemporary Password: ${autoPassword}\n\nPlease login and change your password as soon as possible.`
-            });
-          }
-        } catch(e) {
-           console.error('Failed to send auto-generated credentials', e.message);
-        }
-      }
+    const authenticatedUser = await User.findById(req.user._id).select('+password');
+    if (!authenticatedUser) {
+      return res.status(401).json({ success: false, message: 'Customer account not found. Please sign in again.' });
     }
 
+    const conflictingAccount = await User.findOne({
+      _id: { $ne: authenticatedUser._id },
+      $or: [
+        { phone: normalizedPhone },
+        ...(customerEmail ? [{ email: customerEmail.toLowerCase() }] : [])
+      ]
+    }).select('_id email phone');
+    if (conflictingAccount) {
+      const conflictField = conflictingAccount.phone === normalizedPhone ? 'mobile number' : 'email';
+      return res.status(409).json({
+        success: false,
+        message: `This ${conflictField} is already linked to another customer account. Please sign in with that account to continue.`
+      });
+    }
+
+    // Keep the customer profile in sync with the latest booking details.
+    authenticatedUser.name = customerName || authenticatedUser.name;
+    authenticatedUser.phone = normalizedPhone || authenticatedUser.phone;
+    authenticatedUser.email = customerEmail.toLowerCase() || authenticatedUser.email;
+    authenticatedUser.address = address || authenticatedUser.address;
+    authenticatedUser.city = city || authenticatedUser.city;
+    authenticatedUser.state = state || authenticatedUser.state;
+    authenticatedUser.pincode = pincode || authenticatedUser.pincode;
+    if (!authenticatedUser.isVerified) authenticatedUser.isVerified = true;
+    await authenticatedUser.save();
+
+    bookingData.customerId = authenticatedUser._id;
+    bookingData.customerEmail = authenticatedUser.email || safeEmail;
+    bookingData.customerName = authenticatedUser.name || customerName;
+    bookingData.customerPhone = authenticatedUser.phone || normalizedPhone;
+
+    const appliedOffer = await validateOfferForBooking({ offerCode, deviceCategory, approxAmount });
+    bookingData.discount = appliedOffer.discount;
+    bookingData.appliedOfferCode = appliedOffer.normalizedCode;
+    bookingData.appliedOfferId = appliedOffer.offer?._id || null;
+
     const booking = await Booking.create(bookingData);
+
+    if (appliedOffer.offer) {
+      appliedOffer.offer.usedCount += 1;
+      await appliedOffer.offer.save();
+      booking.timeline.push({
+        stage: 'Promo Code Applied',
+        note: `Promo code ${appliedOffer.normalizedCode} applied for discount of Rs ${appliedOffer.discount.toLocaleString('en-IN')}.`,
+        date: new Date()
+      });
+      await booking.save();
+    }
 
     if (leadId && mongoose.Types.ObjectId.isValid(leadId)) {
       const lead = await Lead.findById(leadId);
@@ -336,22 +434,31 @@ exports.createBooking = async (req, res) => {
              email: customerEmail,
              type: 'booking',
              data: { 
-               customerName, 
-               brand: deviceBrand, 
-               model: deviceModel, 
-               orderId: booking.referenceNumber,
-               serviceDate: preferredDate,
-               timeSlot: preferredTimeSlot
-             }
+                customerName, 
+                brand: deviceBrand, 
+                model: deviceModel, 
+                orderId: booking.referenceNumber,
+                serviceType: formatServiceTypeLabel(booking.serviceType),
+                serviceDate: formatBookingDate(booking.preferredDate),
+                timeSlot: booking.preferredTimeSlot
+              }
           });
         }
 
         // 2. Admin Alert Trigger (Internal Notification)
-        const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
+        const adminEmail = process.env.ADMIN_EMAIL || 'erepaircafe2010@gmail.com';
+        const adminAlert = buildAdminBookingAlert({
+          booking,
+          customerName,
+          customerEmail: booking.customerEmail,
+          customerPhone: booking.customerPhone,
+          issueDescription
+        });
         await sendEmail({
            email: adminEmail,
-           subject: `🚨 New Booking: #${booking.referenceNumber}`,
-           message: `New booking received from ${customerName} for ${deviceBrand} ${deviceModel}.`
+           subject: `New Booking Alert: #${booking.referenceNumber}`,
+           message: adminAlert.text,
+           html: adminAlert.html
         });
     } catch(triggerErr) {
         console.error('Booking Submitted Trigger Error:', triggerErr.message);
@@ -647,6 +754,8 @@ exports.updateStatus = async (req, res) => {
 
     await booking.save();
 
+    await syncOrderForBooking(booking);
+
     // Step 12 & 13: Create Omnibus Notification Trigger Rules (Email, SMS, WhatsApp)
     // Step 13: Create Omnibus Notification Trigger Rules
     if (status) {
@@ -665,7 +774,7 @@ exports.updateStatus = async (req, res) => {
         });
         
         // Notify Admin
-        const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
+        const adminEmail = process.env.ADMIN_EMAIL || 'erepaircafe2010@gmail.com';
         await sendEmail({
           email: adminEmail,
           subject: `ADMIN: #${booking.referenceNumber} -> ${status}`,
@@ -728,10 +837,11 @@ exports.issueQuotation = async (req, res) => {
     // Notify Customer
     try {
       const sendEmail = require('../utils/sendEmail');
+      const quotationEmailData = await buildQuotationEmailData(booking);
       await sendEmail({
         email: booking.customerEmail,
-        subject: `Quotation Issued: #${booking.referenceNumber} - Approval Required`,
-        message: `A quotation of ₹${quotationAmount} has been issued for your repair #${booking.referenceNumber}. Please login to your dashboard to configure or respond to the offer.`
+        type: 'quotation',
+        data: quotationEmailData
       });
     } catch (ignore) {}
 
@@ -773,7 +883,7 @@ exports.requestQuoteOtp = async (req, res) => {
       const sendEmail = require('../utils/sendEmail');
       await sendEmail({
         email: booking.customerEmail,
-        subject: 'RepairVafe - Quote Approval Security OTP',
+        subject: 'erepaircafe - Quote Approval Security OTP',
         message: `Your OTP to approve Quote for Order ${booking.referenceNumber} is: ${otp}. It will expire in 10 minutes.`
       });
     } catch(e) {}
@@ -837,6 +947,9 @@ exports.quotationAction = async (req, res) => {
         lead.stageHistory.push({ stage: LEAD_STAGES.CONVERTED_TO_ORDER, note: 'Customer approved quote', changedAt: new Date() });
         await lead.save();
       }
+
+      await booking.save();
+      await ensureOrderForBooking(booking);
     } else {
       booking.quotationStatus = 'Rejected by Customer';
       // Step 9: Rejection Logic maps firmly to Cancelled string block
@@ -856,6 +969,7 @@ exports.quotationAction = async (req, res) => {
     }
 
     await booking.save();
+    await syncOrderForBooking(booking);
 
     // Step 5: Add Quotation Events (Quote Approved & Quote Rejected)
     try {
@@ -872,7 +986,7 @@ exports.quotationAction = async (req, res) => {
         }
         
         // Admin Master Alerts
-        const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
+        const adminEmail = process.env.ADMIN_EMAIL || 'erepaircafe2010@gmail.com';
         await sendEmail({
            email: adminEmail,
            subject: `[EVENT] Quotation ${action === 'approve' ? 'APPROVED' : 'REJECTED'}: #${booking.referenceNumber}`,
@@ -1001,3 +1115,4 @@ exports.deleteBooking = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+

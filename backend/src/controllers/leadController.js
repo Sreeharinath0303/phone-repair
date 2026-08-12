@@ -102,10 +102,10 @@ exports.captureLead = async (req, res) => {
          const sendEmail = require('../utils/sendEmail');
          
          // 1. WhatsApp/SMS Mock Trigger
-         console.log(`[WHATSAPP API DISPATCH] -> Messaging +91${normalizedMobile}: "Hello ${name}! We received your RepairVafe inquiry. Complete your booking online!"`);
+         console.log(`[WHATSAPP API DISPATCH] -> Messaging +91${normalizedMobile}: "Hello ${name}! We received your erepaircafe inquiry. Complete your booking online!"`);
 
          // 2. Admin Alert Trigger
-         const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
+         const adminEmail = process.env.ADMIN_EMAIL || 'erepaircafe2010@gmail.com';
          await sendEmail({
              email: adminEmail,
              subject: `[EVENT] New Lead Created: ${name}`,
@@ -348,3 +348,4 @@ exports.convertToBooking = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+

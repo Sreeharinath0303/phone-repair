@@ -4,7 +4,7 @@ const {
   issueQuotation, quotationAction, requestQuoteOtp, getDashboardStats, deleteBooking,
   getPublicBrands, getPublicModels
 } = require('../controllers/bookingController');
-const { protect, authorize, optionalAuth } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 
 const adminOnly = authorize('superadmin', 'admin', 'sales', 'services');
 const adminOrPartner = authorize('superadmin', 'admin', 'sales', 'services', 'Technician');
@@ -13,7 +13,7 @@ router.get('/stats',             protect, adminOnly, getDashboardStats);
 router.get('/catalog/brands',             getPublicBrands);
 router.get('/catalog/models',             getPublicModels);
 router.get('/',                  protect, adminOnly, getAllBookings);
-router.post('/',                  optionalAuth,   createBooking);
+router.post('/',                  protect,   createBooking);
 router.get('/:ref',                       getBookingByRef);
 router.post('/:ref/quote-otp',            requestQuoteOtp);
 router.post('/:ref/request-approval-otp', requestQuoteOtp);

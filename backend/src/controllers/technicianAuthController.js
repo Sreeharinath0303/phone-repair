@@ -172,8 +172,8 @@ exports.forgotPassword = async (req, res) => {
       const sendEmail = require('../utils/sendEmail');
       await sendEmail({
         email: tech.email,
-        subject: 'RepairVafe Partner - Password Reset OTP',
-        message: `Hello ${tech.name},\n\nYour password reset OTP is: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email.\n\n- RepairVafe Team`
+        subject: 'erepaircafe Partner - Password Reset OTP',
+        message: `Hello ${tech.name},\n\nYour password reset OTP is: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email.\n\n- erepaircafe Team`
       });
     } catch (emailErr) {
       console.log(`[PARTNER RESET OTP] Email: ${email}, OTP: ${otp} (Email send failed: ${emailErr.message})`);
@@ -237,3 +237,4 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+

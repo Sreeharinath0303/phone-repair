@@ -5,6 +5,8 @@ import {
   MessageCircle, Star, Globe
 } from 'lucide-react';
 import { getApiBaseUrl } from '../utils/apiBase';
+import { Seo } from '../components/Seo';
+import { buildBreadcrumbSchema, buildLocalBusinessSchema, OFFICE_ADDRESS_LABEL } from '../utils/seo';
 
 const TABS = [
   { id: 'contact', label: 'General Info', icon: Mail },
@@ -14,6 +16,8 @@ const TABS = [
 ];
 
 export const ContactUs = () => {
+  const officeAddress = OFFICE_ADDRESS_LABEL;
+
   const [activeTab, setActiveTab] = useState('contact');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -55,7 +59,8 @@ export const ContactUs = () => {
     orderReference: '',
     issueType: 'tracking',
     description: '',
-    interest: 'seasonal_offers'
+    interest: 'seasonal_offers',
+    _honey: ''
   });
 
   const handleChange = (e) => {
@@ -72,7 +77,8 @@ export const ContactUs = () => {
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
-      type: activeTab
+      type: activeTab,
+      _honey: formData._honey
     };
 
     if (activeTab === 'contact') {
@@ -124,6 +130,19 @@ export const ContactUs = () => {
 
   return (
     <div className="py-20 px-6 max-w-6xl mx-auto font-['Outfit']">
+      <Seo
+        title="Contact erepaircafe"
+        description="Contact erepaircafe for repair support, sales enquiries and doorstep device repair assistance in Bengaluru. Find our location, map and WhatsApp support."
+        path="/contact"
+        keywords="contact erepaircafe, mobile repair Bengaluru contact, device repair support, WhatsApp repair support"
+        structuredData={[
+          buildLocalBusinessSchema('/contact'),
+          buildBreadcrumbSchema([
+            { name: 'Home', path: '/' },
+            { name: 'Contact', path: '/contact' }
+          ])
+        ]}
+      />
       {/* Page Header */}
       <div className="text-center mb-16">
         <motion.div 
@@ -157,7 +176,7 @@ export const ContactUs = () => {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
-          className="lg:col-span-7 bg-[#111927] p-8 rounded-3xl border border-white/5 relative overflow-hidden shadow-2xl"
+          className="lg:col-span-7 lg:sticky lg:top-24 self-start bg-[#111927] p-8 rounded-3xl border border-white/5 relative overflow-hidden shadow-2xl"
         >
           {/* Glassmorphic Background Blur */}
           <div className="absolute -top-24 -left-24 w-72 h-72 bg-cyan-500/5 rounded-full blur-[80px] pointer-events-none" />
@@ -226,6 +245,17 @@ export const ContactUs = () => {
                 onSubmit={handleSubmit}
                 className="space-y-6 relative z-10"
               >
+                {/* Honeypot field - visually hidden but accessible to bots */}
+                <input 
+                  type="text" 
+                  name="_honey" 
+                  value={formData._honey} 
+                  onChange={handleChange} 
+                  style={{ display: 'none' }} 
+                  tabIndex="-1" 
+                  autoComplete="off" 
+                />
+
                 {error && (
                   <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm font-semibold flex items-center gap-3">
                     <AlertCircle size={18} className="shrink-0" />
@@ -421,7 +451,7 @@ export const ContactUs = () => {
             <div>
               <h3 className="text-lg font-bold text-white mb-1">Call Support</h3>
               <p className="text-gray-400 text-xs mb-3 font-['Inter']">Speak with an agent. Mon-Sat, 9AM to 8PM.</p>
-              <a href="tel:18001234567" className="text-blue-400 font-bold hover:underline text-sm">1800-123-4567</a>
+              <a href="tel:9148136086" className="text-blue-400 font-bold hover:underline text-sm">9148136086</a>
             </div>
           </div>
           
@@ -433,7 +463,7 @@ export const ContactUs = () => {
             <div>
               <h3 className="text-lg font-bold text-white mb-1">Email Helpline</h3>
               <p className="text-gray-400 text-xs mb-3 font-['Inter']">Drop a line anytime. We respond within 2 hours.</p>
-              <a href="mailto:support@repairvafe.com" className="text-cyan-400 font-bold hover:underline text-sm">support@repairvafe.com</a>
+              <a href="mailto:support@erepaircafe.com" className="text-cyan-400 font-bold hover:underline text-sm">support@erepaircafe.com</a>
             </div>
           </div>
 
@@ -445,10 +475,30 @@ export const ContactUs = () => {
             <div>
               <h3 className="text-lg font-bold text-white mb-1">Headquarters</h3>
               <p className="text-gray-400 text-xs font-['Inter'] leading-relaxed">
-                123 Innovation Drive, Tech Park<br />
-                Bangalore, Karnataka 560001<br />
-                India
+                {officeAddress}
               </p>
+            </div>
+          </div>
+
+          <div className="overflow-hidden bg-[#111927] border border-white/5 rounded-2xl hover:border-cyan-500/20 transition-all duration-300">
+            <div className="px-6 pt-6 pb-4">
+              <h3 className="text-lg font-bold text-white mb-1">Find Us on the Map</h3>
+              <p className="text-gray-400 text-xs font-['Inter'] leading-relaxed">
+                {officeAddress}
+              </p>
+            </div>
+            <div className="px-6 pb-6">
+              <div className="overflow-hidden rounded-2xl border border-white/10">
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3887.293334650288!2d77.5915957!3d13.0169829!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bae17cb6cffa2bf%3A0x65465a8953721e26!2seRepairCafe%20-%20Mobile%20Repair%20%26%20Phone%20Screen%20Repair%20Specialized!5e0!3m2!1sen!2sin!4v1781972300240!5m2!1sen!2sin"
+                  title="eRepairCafe Bengaluru location"
+                  className="h-72 w-full"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
             </div>
           </div>
 
@@ -487,7 +537,7 @@ export const ContactUs = () => {
             </div>
             <div>
               <h3 className="text-lg font-bold text-white mb-1">Google Listing</h3>
-              <p className="text-gray-400 text-xs mb-3 font-['Inter']">Find our office location, operating hours, and verify reviews on Google.</p>
+              <p className="text-gray-400 text-xs mb-3 font-['Inter']">Find our office location at {officeAddress}, check operating hours, and verify reviews on Google.</p>
               <a href={links.google} target="_blank" rel="noopener noreferrer" className="text-blue-400 font-bold hover:underline text-sm flex items-center gap-1">
                 View on Google →
               </a>
@@ -498,3 +548,4 @@ export const ContactUs = () => {
     </div>
   );
 };
+

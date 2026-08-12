@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const DEFAULT_WHATSAPP_PHONE = '919148136086';
 
 // Repair Types
 const repairTypeSchema = new mongoose.Schema({
@@ -60,6 +61,7 @@ const communicationSettingsSchema = new mongoose.Schema({
   smsNotifications: { type: Boolean, default: false },
   slackWebhookAlerts: { type: Boolean, default: false },
   slackWebhookUrl: { type: String, default: '' },
+  showCompletedRepairsInFeedbackSection: { type: Boolean, default: true },
   autoFollowup: { type: Boolean, default: true },
   followupDays: { type: Number, default: 3 },
   facebookLink: { type: String, default: 'https://www.facebook.com/share/192QskMjUo/' },
@@ -69,7 +71,7 @@ const communicationSettingsSchema = new mongoose.Schema({
   linkedinLink: { type: String, default: 'https://www.linkedin.com/company/erepaircafe/' },
   twitterLink: { type: String, default: 'https://x.com/ErepairCafe' },
   googleSearchLink: { type: String, default: 'https://www.google.com/search?kgmid=%2Fg%2F11hz37hgnj&hl=en-IN&q=eRepairCafe%20-%20Mobile%20Repair%20%26%20Phone%20Screen%20Repair%20Specialized&shem=epsd1%2Cltac%2Crimspwouoe&shndl=30&source=sh%2Fx%2Floc%2Fosrp%2Fm1%2F2&kgs=0832192f0912660b' },
-  whatsappLink: { type: String, default: 'https://wa.me/message/N6IZQBNEIYG7O1' },
+  whatsappLink: { type: String, default: `https://api.whatsapp.com/send?phone=${DEFAULT_WHATSAPP_PHONE}` },
   updatedAt: { type: Date, default: Date.now }
 });
 

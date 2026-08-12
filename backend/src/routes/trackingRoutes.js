@@ -33,7 +33,7 @@ router.post('/request-otp', async (req, res) => {
       try {
         await sendEmail({
           email: booking.customerEmail,
-          subject: 'RepairVafe - Tracking Security OTP',
+          subject: 'erepaircafe - Tracking Security OTP',
           message: `Your OTP to track Order ${referenceNumber} is: ${otp}. It will expire in 10 minutes.`
         });
       } catch (e) {
@@ -154,7 +154,7 @@ router.post('/request-update', async (req, res) => {
     const booking = await Booking.findOne({ referenceNumber: referenceNumber.toUpperCase() });
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found.' });
 
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
+    const adminEmail = process.env.ADMIN_EMAIL || 'erepaircafe2010@gmail.com';
     try {
       await sendEmail({
         email: adminEmail,
@@ -172,3 +172,4 @@ router.post('/request-update', async (req, res) => {
 });
 
 module.exports = router;
+

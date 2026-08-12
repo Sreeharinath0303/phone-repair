@@ -6,21 +6,50 @@ const sendSMS = require('../utils/sendSMS');
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '30d' });
 
+const normalizePhone = (value) => String(value || '').replace(/\D/g, '').trim();
+
 exports.getAccountStatus = async (req, res) => {
   try {
     const email = String(req.query.email || '').trim().toLowerCase();
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required' });
+    const phone = normalizePhone(req.query.phone);
+    if (!email && !phone) {
+      return res.status(400).json({ success: false, message: 'Email or phone is required' });
     }
 
-    const user = await User.findOne({ email }).select('_id email name isActive');
+    const [emailUser, phoneUser] = await Promise.all([
+      email ? User.findOne({ email }).select('_id email phone name isActive') : null,
+      phone ? User.findOne({ phone }).select('_id email phone name isActive') : null
+    ]);
+
+    const matchedUser = emailUser || phoneUser;
+    const sameUser = Boolean(emailUser && phoneUser && String(emailUser._id) === String(phoneUser._id));
+    const conflict = Boolean(emailUser && phoneUser && !sameUser);
+
     res.json({
       success: true,
       data: {
-        exists: Boolean(user),
+        exists: Boolean(matchedUser),
         email,
-        name: user?.name || '',
-        isActive: user?.isActive ?? true
+        phone,
+        name: matchedUser?.name || '',
+        isActive: matchedUser?.isActive ?? true,
+        matchedBy: conflict
+          ? 'conflict'
+          : sameUser
+            ? 'email_and_phone'
+            : emailUser
+              ? 'email'
+              : phoneUser
+                ? 'phone'
+                : '',
+        conflict,
+        message: conflict
+          ? 'This email and mobile number are linked to different customer accounts. Please sign in with the existing account details.'
+          : emailUser
+            ? 'A customer account already exists for this email.'
+            : phoneUser
+              ? 'A customer account already exists for this mobile number.'
+              : ''
       }
     });
   } catch (err) {
@@ -34,7 +63,13 @@ exports.getAccountStatus = async (req, res) => {
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const normalizedPhone = normalizePhone(req.body.phone);
+
     if (!email || !password) return res.status(400).json({ success: false, message: 'Email and password required' });
+    if (normalizedPhone && !/^[0-9]{10}$/.test(normalizedPhone)) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid 10-digit mobile number.' });
+    }
 
     // Password strength validation (relaxed to 6+ characters to reduce friction)
     if (password.length < 6) {
@@ -44,12 +79,51 @@ exports.register = async (req, res) => {
       });
     }
 
-    let user = await User.findOne({ email: email.toLowerCase() });
-    if (user) return res.status(400).json({ success: false, message: 'Email already registered' });
+    const [emailUser, phoneUser] = await Promise.all([
+      User.findOne({ email: normalizedEmail }).select('+password'),
+      normalizedPhone ? User.findOne({ phone: normalizedPhone }).select('+password') : null
+    ]);
+
+    if (emailUser && phoneUser && String(emailUser._id) !== String(phoneUser._id)) {
+      return res.status(409).json({
+        success: false,
+        message: 'This email and mobile number are already linked to different customer accounts. Please sign in with the existing account.',
+        meta: { matchedBy: 'conflict' }
+      });
+    }
+
+    let user = emailUser || phoneUser;
+    if (user) {
+      if (user.password) {
+        return res.status(409).json({
+          success: false,
+          message: emailUser
+            ? 'This email is already registered. Please sign in instead.'
+            : 'This mobile number is already linked to an existing customer account. Please sign in instead.',
+          meta: { matchedBy: emailUser ? 'email' : 'phone' }
+        });
+      }
+
+      user.name = name || user.name || 'Customer';
+      user.email = normalizedEmail;
+      if (normalizedPhone) {
+        user.phone = normalizedPhone;
+      }
+      user.password = password;
+      user.isVerified = true;
+      await user.save();
+
+      return res.status(201).json({
+        success: true,
+        message: 'Customer account completed successfully. Please login.',
+        data: { email: user.email }
+      });
+    }
 
     user = await User.create({
       name: name || 'Customer',
-      email: email.toLowerCase(),
+      email: normalizedEmail,
+      phone: normalizedPhone || undefined,
       password,
       isVerified: true // Auto-verify all new accounts
     });
@@ -166,7 +240,7 @@ exports.requestMobileOtp = async (req, res) => {
     try {
       await sendSMS({
         phone,
-        message: `Your RepairVafe login OTP is: ${otp}. Valid for 10 minutes.`
+        message: `Your erepaircafe login OTP is: ${otp}. Valid for 10 minutes.`
       });
     } catch (e) {
       console.log('SMS sending failed, but continuing for dev logs');
@@ -239,6 +313,49 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
+exports.exchangeEmailAccessToken = async (req, res) => {
+  try {
+    const token = String(req.body.token || '').trim();
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Email access token is required' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.purpose !== 'customer-email-access' || !decoded.id) {
+      return res.status(400).json({ success: false, message: 'Invalid email access token' });
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Customer account not found' });
+    }
+    if (!user.isActive) {
+      return res.status(403).json({ success: false, message: 'Customer account is inactive' });
+    }
+
+    user.lastLogin = new Date();
+    user.loginAttempts = 0;
+    if (!user.isVerified) {
+      user.isVerified = true;
+    }
+    await user.save();
+
+    const sessionToken = signToken(user._id);
+    res.json({
+      success: true,
+      token: sessionToken,
+      message: 'Customer session restored successfully',
+      data: { id: user._id, name: user.name, email: user.email, phone: user.phone },
+      meta: {
+        bookingId: decoded.bookingId || null,
+        quoteAction: decoded.quoteAction || ''
+      }
+    });
+  } catch (err) {
+    res.status(401).json({ success: false, message: 'Email access link is invalid or expired' });
+  }
+};
+
 exports.resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
@@ -296,4 +413,5 @@ exports.getMe = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
 

@@ -5,6 +5,8 @@ import {
   Smartphone, Shield, Clock, Star, ChevronRight, Zap,
   CheckCircle2, Phone, Mail, MapPin, ArrowRight, Wrench, Battery, Cpu, Monitor
 } from 'lucide-react';
+import { Seo } from '../components/Seo';
+import { buildBreadcrumbSchema, buildLocalBusinessSchema, buildWebsiteSchema } from '../utils/seo';
 
 const FEATURES = [
   {
@@ -70,6 +72,17 @@ export const Home = () => {
 
   return (
     <>
+      <Seo
+        title="Doorstep Device Repair in Bengaluru"
+        description="Doorstep smartphone, tablet, laptop and smartwatch repair in Bengaluru with erepaircafe. Book screen replacement, battery replacement and motherboard repair online."
+        path="/"
+        keywords="doorstep mobile repair Bengaluru, phone screen replacement, battery replacement, laptop repair, tablet repair, smartwatch repair"
+        structuredData={[
+          buildWebsiteSchema(),
+          buildLocalBusinessSchema('/'),
+          buildBreadcrumbSchema([{ name: 'Home', path: '/' }])
+        ]}
+      />
 
       {/* ── HERO ── */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
@@ -150,7 +163,7 @@ export const Home = () => {
       <section id="features" className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <div className="inline-block bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 rounded-full text-xs font-bold text-blue-400 uppercase tracking-widest mb-4">Why RepairVafe</div>
+            <div className="inline-block bg-blue-500/10 border border-blue-500/20 px-4 py-1.5 rounded-full text-xs font-bold text-blue-400 uppercase tracking-widest mb-4">Why erepaircafe</div>
             <h2 className="text-4xl md:text-5xl font-black font-['Outfit'] mb-4">Built for Your <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Convenience</span></h2>
             <p className="text-gray-400 max-w-xl mx-auto">Every feature designed to make device repair as seamless as possible.</p>
           </div>
@@ -269,7 +282,7 @@ export const Home = () => {
                   ))}
                 </div>
                 <p className="text-gray-300 text-sm leading-relaxed mb-6">"{t.text}"</p>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 shrink-0 lg:ml-auto">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center font-bold text-sm">
                     {t.name[0]}
                   </div>
@@ -321,3 +334,4 @@ export const Home = () => {
     </>
   );
 };
+

@@ -71,7 +71,9 @@ const {
   getLocationAnalytics,
   getOrdersByLocation,
   getOrderLocationDetail,
-  getNearbyPartners
+  getNearbyPartners,
+  updateSchedule,
+  updateFinalPrice
 } = require('../controllers/adminController');
 
 const {
@@ -167,6 +169,8 @@ router.post('/set-payout', authorize('admin', 'superadmin'), setTechnicianPayout
 
 // ─── STATUS UPDATES ───────────────────────────────────────
 router.put('/update-status', authorize('admin', 'superadmin'), updateBookingStatus);
+router.put('/bookings/:id/schedule', authorize('admin', 'superadmin'), updateSchedule);
+router.put('/bookings/:id/final-price', authorize('admin', 'superadmin'), updateFinalPrice);
 
 // ─── EMAIL NOTIFICATIONS ──────────────────────────────────
 router.post('/send-email', authorize('admin', 'superadmin'), sendEmailNotification);
