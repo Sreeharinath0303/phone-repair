@@ -9,13 +9,13 @@ import {
 import { getApiBaseUrl } from '../utils/apiBase';
 
 const STATUS_COLOR = {
-  'Received':    'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  'Confirmed':   'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  'Picked Up':   'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-  'In Repair':   'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  'Completed':   'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  'Delivered':   'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  'Cancelled':   'bg-red-500/10 text-red-400 border-red-500/20'
+  'Received': 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  'Confirmed': 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  'Picked Up': 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+  'In Repair': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  'Completed': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  'Delivered': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  'Cancelled': 'bg-red-500/10 text-red-400 border-red-500/20'
 };
 
 const getAuthToken = () => localStorage.getItem('rv_token') || sessionStorage.getItem('rv_token');
@@ -146,10 +146,10 @@ export const CustomerDashboard = () => {
         if (statsRes.data?.user) {
           setUser(statsRes.data.user);
           localStorage.setItem('rv_user', JSON.stringify(statsRes.data.user));
-          setProfileData({ 
-            name: statsRes.data.user.name || '', 
-            email: statsRes.data.user.email || '', 
-            phone: statsRes.data.user.phone || '' 
+          setProfileData({
+            name: statsRes.data.user.name || '',
+            email: statsRes.data.user.email || '',
+            phone: statsRes.data.user.phone || ''
           });
         }
       }
@@ -292,8 +292,8 @@ export const CustomerDashboard = () => {
   const filteredOrders = orderTab === 'all' ? orders : orderTab === 'active' ? activeOrders : historyOrders;
   const notifications = extractNotifications(orders);
   const pendingQuoteCount = orders.filter((o) => (o.quotationStatus === 'Awaiting Customer Approval' && (o.quotationAmount || 0) > 0)).length;
-  const pendingFeedbackOrders = orders.filter(o => 
-    ['Completed', 'Delivered', 'Repair Completed', 'Closed', 'Job Closed', 'Ready for Delivery'].includes(o.status) && 
+  const pendingFeedbackOrders = orders.filter(o =>
+    ['Completed', 'Delivered', 'Repair Completed', 'Closed', 'Job Closed', 'Ready for Delivery'].includes(o.status) &&
     o.customerFeedbackStatus !== 'Feedback Submitted'
   );
 
@@ -349,18 +349,17 @@ export const CustomerDashboard = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                  activeTab === item.id 
-                    ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20 shadow-lg shadow-blue-500/5' 
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === item.id
+                    ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20 shadow-lg shadow-blue-500/5'
                     : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
-                }`}
+                  }`}
               >
                 <item.icon size={18} />
                 <span className="font-semibold text-sm">{item.label}</span>
               </button>
             ))}
           </nav>
-          
+
           <div className="mt-8 pt-8 border-t border-white/5">
             <Link
               to="/book"
@@ -373,18 +372,17 @@ export const CustomerDashboard = () => {
 
         {/* Mobile Nav */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0d1422] border-t border-white/10 p-3 flex justify-around z-40">
-           {NAV_ITEMS.map(item => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-                  activeTab === item.id ? 'text-blue-400' : 'text-gray-500'
+          {NAV_ITEMS.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${activeTab === item.id ? 'text-blue-400' : 'text-gray-500'
                 }`}
-              >
-                <item.icon size={20} />
-                <span className="text-[10px] font-bold">{item.label}</span>
-              </button>
-            ))}
+            >
+              <item.icon size={20} />
+              <span className="text-[10px] font-bold">{item.label}</span>
+            </button>
+          ))}
         </div>
 
         {/* Main Content Area */}
@@ -451,7 +449,7 @@ export const CustomerDashboard = () => {
                     <h2 className="text-xl font-bold font-['Outfit']">Recent Active Repairs</h2>
                     <button onClick={() => setActiveTab('orders')} className="text-sm text-blue-400 font-semibold hover:underline">View All</button>
                   </div>
-                  
+
                   {activeOrders.length === 0 ? (
                     <div className="bg-[#0d1422] border border-white/5 rounded-2xl p-10 text-center">
                       <Smartphone size={40} className="text-gray-600 mx-auto mb-4" />
@@ -462,25 +460,25 @@ export const CustomerDashboard = () => {
                   ) : (
                     <div className="space-y-4">
                       {activeOrders.slice(0, 3).map(order => (
-                         <div key={order._id} className="bg-[#0d1422] border border-white/5 rounded-2xl p-5 flex items-center justify-between group hover:border-white/10 transition-colors cursor-pointer" onClick={() => openDetails(order)}>
-                            <div className="flex items-center gap-4">
-                               <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-gray-400">
-                                  <Smartphone size={24} />
-                               </div>
-                               <div>
-                                  <div className="font-bold">{order.deviceBrand} {order.deviceModel}</div>
-                                  <div className="text-xs text-gray-500 font-mono mt-1">Ref: {order.referenceNumber}</div>
-                               </div>
+                        <div key={order._id} className="bg-[#0d1422] border border-white/5 rounded-2xl p-5 flex items-center justify-between group hover:border-white/10 transition-colors cursor-pointer" onClick={() => openDetails(order)}>
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-gray-400">
+                              <Smartphone size={24} />
                             </div>
-                            <div className="text-right">
-                                <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full border mb-1 ${STATUS_COLOR[order.status] || 'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}>
-                                  {order.status}
-                                </span>
-                                <div className="text-xs text-gray-500 flex items-center justify-end gap-1">
-                                  {order.quotationStatus === 'Awaiting Customer Approval' ? <span className="text-blue-400 font-bold">Current Quote Amount</span> : 'View Status'} <ChevronRight size={14}/>
-                                </div>
+                            <div>
+                              <div className="font-bold">{order.deviceBrand} {order.deviceModel}</div>
+                              <div className="text-xs text-gray-500 font-mono mt-1">Ref: {order.referenceNumber}</div>
                             </div>
-                         </div>
+                          </div>
+                          <div className="text-right">
+                            <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full border mb-1 ${STATUS_COLOR[order.status] || 'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}>
+                              {order.status}
+                            </span>
+                            <div className="text-xs text-gray-500 flex items-center justify-end gap-1">
+                              {order.quotationStatus === 'Awaiting Customer Approval' ? <span className="text-blue-400 font-bold">Current Quote Amount</span> : 'View Status'} <ChevronRight size={14} />
+                            </div>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -502,9 +500,9 @@ export const CustomerDashboard = () => {
 
                   {/* Internal Order Tabs */}
                   <div className="flex gap-2 mb-6 border-b border-white/10 pb-4">
-                     <button onClick={() => setOrderTab('all')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${orderTab === 'all' ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>All Orders ({orders.length})</button>
-                     <button onClick={() => setOrderTab('active')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${orderTab === 'active' ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>Active ({activeOrders.length})</button>
-                     <button onClick={() => setOrderTab('history')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${orderTab === 'history' ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>History ({historyOrders.length})</button>
+                    <button onClick={() => setOrderTab('all')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${orderTab === 'all' ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>All Orders ({orders.length})</button>
+                    <button onClick={() => setOrderTab('active')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${orderTab === 'active' ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>Active ({activeOrders.length})</button>
+                    <button onClick={() => setOrderTab('history')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${orderTab === 'history' ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>History ({historyOrders.length})</button>
                   </div>
 
                   {filteredOrders.length === 0 ? (
@@ -538,33 +536,33 @@ export const CustomerDashboard = () => {
                           {/* Order Actions & Info Grid */}
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-t border-white/5 mt-4 text-sm">
                             <div>
-                               <div className="text-gray-500 text-xs mb-1">Service Type</div>
-                               <div className="font-semibold">{order.serviceType || 'Pickup'}</div>
+                              <div className="text-gray-500 text-xs mb-1">Service Type</div>
+                              <div className="font-semibold">{order.serviceType || 'Pickup'}</div>
                             </div>
                             <div>
-                               <div className="text-gray-500 text-xs mb-1">Date</div>
-                               <div className="font-semibold">{order.preferredDate ? new Date(order.preferredDate).toLocaleDateString('en-IN') : '-'}</div>
+                              <div className="text-gray-500 text-xs mb-1">Date</div>
+                              <div className="font-semibold">{order.preferredDate ? new Date(order.preferredDate).toLocaleDateString('en-IN') : '-'}</div>
                             </div>
                             <div>
-                               <div className="text-gray-500 text-xs mb-1">Quotation</div>
-                               <div className="font-semibold text-blue-400">
-                                 {order.quotationStatus === 'Approved by Customer' && order.quotationAmount
-                                   ? `₹${order.quotationAmount.toLocaleString('en-IN')}`
-                                   : order.quotationStatus === 'Awaiting Customer Approval'
-                                   ? 'Quote Ready - Action Required'
-                                   : 'Pending Admin Quote'}
-                               </div>
+                              <div className="text-gray-500 text-xs mb-1">Quotation</div>
+                              <div className="font-semibold text-blue-400">
+                                {order.quotationStatus === 'Approved by Customer' && order.quotationAmount
+                                  ? `₹${order.quotationAmount.toLocaleString('en-IN')}`
+                                  : order.quotationStatus === 'Awaiting Customer Approval'
+                                    ? 'Quote Ready - Action Required'
+                                    : 'Pending Admin Quote'}
+                              </div>
                             </div>
                             <div className="flex justify-end items-center">
-                               {order.quotationStatus === 'Awaiting Customer Approval' && (order.quotationAmount || 0) > 0 ? (
-                                 <button onClick={() => openDetails(order)} className="text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors w-full md:w-auto text-center flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20">
-                                   <Star size={16} /> Current Quote Amount
-                                 </button>
-                               ) : (
-                                 <button onClick={() => openDetails(order)} className="text-sm font-bold bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-lg transition-colors w-full md:w-auto text-center">
-                                   View Details
-                                 </button>
-                               )}
+                              {order.quotationStatus === 'Awaiting Customer Approval' && (order.quotationAmount || 0) > 0 ? (
+                                <button onClick={() => openDetails(order)} className="text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors w-full md:w-auto text-center flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20">
+                                  <Star size={16} /> Current Quote Amount
+                                </button>
+                              ) : (
+                                <button onClick={() => openDetails(order)} className="text-sm font-bold bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-lg transition-colors w-full md:w-auto text-center">
+                                  View Details
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -596,29 +594,29 @@ export const CustomerDashboard = () => {
                     <div className="space-y-4">
                       <div>
                         <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Full Name</label>
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={profileData.name}
-                          onChange={e => setProfileData({...profileData, name: e.target.value})}
+                          onChange={e => setProfileData({ ...profileData, name: e.target.value })}
                           className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 outline-none transition-colors"
                         />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Email Address</label>
-                          <input 
-                            type="email" 
+                          <input
+                            type="email"
                             value={profileData.email}
-                            onChange={e => setProfileData({...profileData, email: e.target.value})}
+                            onChange={e => setProfileData({ ...profileData, email: e.target.value })}
                             className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 outline-none transition-colors"
                           />
                         </div>
                         <div>
                           <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Mobile Number</label>
-                          <input 
-                            type="text" 
+                          <input
+                            type="text"
                             value={profileData.phone}
-                            onChange={e => setProfileData({...profileData, phone: e.target.value})}
+                            onChange={e => setProfileData({ ...profileData, phone: e.target.value })}
                             className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-blue-500 outline-none transition-colors"
                           />
                         </div>
@@ -626,8 +624,8 @@ export const CustomerDashboard = () => {
                     </div>
 
                     <div className="mt-6 pt-6 border-t border-white/5 flex justify-end">
-                      <button 
-                        type="submit" 
+                      <button
+                        type="submit"
                         disabled={savingProfile}
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl transition-colors flex items-center gap-2"
                       >
@@ -636,11 +634,11 @@ export const CustomerDashboard = () => {
                       </button>
                     </div>
                   </form>
-                  
+
                   <div className="bg-[#0d1422] border border-white/5 rounded-2xl p-6">
-                     <h3 className="text-lg font-bold mb-4">Saved Addresses</h3>
-                     <p className="text-sm text-gray-500 mb-4">Your addresses will be visible here when added during booking.</p>
-                     {/* Add specific address management here if needed later */}
+                    <h3 className="text-lg font-bold mb-4">Saved Addresses</h3>
+                    <p className="text-sm text-gray-500 mb-4">Your addresses will be visible here when added during booking.</p>
+                    {/* Add specific address management here if needed later */}
                   </div>
                 </div>
               )}
@@ -706,10 +704,10 @@ export const CustomerDashboard = () => {
                               <div className="flex items-center gap-1.5">
                                 <div className="flex gap-0.5">
                                   {[1, 2, 3, 4, 5].map(star => (
-                                    <Star 
-                                      key={star} 
-                                      size={12} 
-                                      className={fb.rating >= star ? 'text-amber-400 fill-amber-400' : 'text-gray-700'} 
+                                    <Star
+                                      key={star}
+                                      size={12}
+                                      className={fb.rating >= star ? 'text-amber-400 fill-amber-400' : 'text-gray-700'}
                                     />
                                   ))}
                                 </div>
@@ -738,7 +736,7 @@ export const CustomerDashboard = () => {
                                 </div>
                               ))}
                             </div>
-                            
+
                             <div className="text-[10px] text-gray-500 text-right">
                               Submitted: {new Date(fb.createdAt).toLocaleDateString()}
                             </div>
@@ -772,20 +770,20 @@ export const CustomerDashboard = () => {
                         <Star size={24} />
                       </div>
                       <h3 className="font-bold mb-1">Email Support</h3>
-                      <p className="text-sm text-gray-400 mb-3">support@repairvafe.com</p>
-                      <a href="mailto:support@repairvafe.com" className="text-xs font-bold bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg transition-colors inline-block">Send Email</a>
+                      <p className="text-sm text-gray-400 mb-3">support@erepaircafe.com</p>
+                      <a href="mailto:support@erepaircafe.com" className="text-xs font-bold bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg transition-colors inline-block">Send Email</a>
                     </div>
                   </div>
 
                   <div className="bg-[#0d1422] border border-white/5 rounded-2xl p-6">
                     <h3 className="font-bold text-lg mb-4">Frequently Asked Questions</h3>
                     <div className="space-y-3">
-                       {['How long does repair take?', 'Do you provide warranty?', 'What happens to my data?'].map((q, i) => (
-                         <div key={i} className="p-4 rounded-xl border border-white/5 bg-white/5 text-sm font-semibold hover:bg-white/10 transition-colors cursor-pointer flex justify-between items-center">
-                           <span>{q}</span>
-                           <ChevronRight size={16} className="text-gray-500" />
-                         </div>
-                       ))}
+                      {['How long does repair take?', 'Do you provide warranty?', 'What happens to my data?'].map((q, i) => (
+                        <div key={i} className="p-4 rounded-xl border border-white/5 bg-white/5 text-sm font-semibold hover:bg-white/10 transition-colors cursor-pointer flex justify-between items-center">
+                          <span>{q}</span>
+                          <ChevronRight size={16} className="text-gray-500" />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -853,11 +851,11 @@ export const CustomerDashboard = () => {
                   {activeOrder.finalAmount ? 'Final Amount Paid/Due' : 'Official Quotation'}
                 </div>
                 <div className="text-xl font-black text-white">
-                  {activeOrder.finalAmount 
+                  {activeOrder.finalAmount
                     ? `₹${activeOrder.finalAmount.toLocaleString('en-IN')}`
                     : (activeOrder.quotationAmount || 0) > 0
-                    ? `₹${activeOrder.quotationAmount.toLocaleString('en-IN')}`
-                    : 'Awaiting Assessment from Admin'}
+                      ? `₹${activeOrder.quotationAmount.toLocaleString('en-IN')}`
+                      : 'Awaiting Assessment from Admin'}
                 </div>
               </div>
 
@@ -866,7 +864,7 @@ export const CustomerDashboard = () => {
                 <div className="p-3 rounded-xl bg-[#080c14] border border-white/10 col-span-2 sm:col-span-1">
                   <div className="text-[11px] text-indigo-400 uppercase tracking-wider mb-1">Pickup Schedule</div>
                   <div className="text-sm font-bold text-white">
-                    {new Date(activeOrder.pickupScheduleDate).toLocaleDateString()} 
+                    {new Date(activeOrder.pickupScheduleDate).toLocaleDateString()}
                     {activeOrder.pickupScheduleTimeSlot && ` • ${activeOrder.pickupScheduleTimeSlot}`}
                   </div>
                 </div>
@@ -877,7 +875,7 @@ export const CustomerDashboard = () => {
                 <div className="p-3 rounded-xl bg-[#080c14] border border-white/10 col-span-2 sm:col-span-1">
                   <div className="text-[11px] text-emerald-400 uppercase tracking-wider mb-1">Delivery Schedule</div>
                   <div className="text-sm font-bold text-white">
-                    {new Date(activeOrder.deliveryScheduleDate).toLocaleDateString()} 
+                    {new Date(activeOrder.deliveryScheduleDate).toLocaleDateString()}
                     {activeOrder.deliveryScheduleTimeSlot && ` • ${activeOrder.deliveryScheduleTimeSlot}`}
                   </div>
                 </div>
@@ -951,7 +949,7 @@ export const CustomerDashboard = () => {
                 ) : (
                   <form onSubmit={handleFeedbackSubmit} className="space-y-4 bg-white/[0.02] border border-white/5 p-5 rounded-2xl">
                     <div className="text-xs text-gray-400 mb-2">We value your opinion. Please rate your experience:</div>
-                    
+
                     {[
                       { key: 'rating', label: 'Overall Rating' },
                       { key: 'serviceQuality', label: 'Service Quality' },
@@ -1006,13 +1004,12 @@ export const CustomerDashboard = () => {
 
       {toast && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50">
-          <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} className={`px-6 py-3 rounded-full border text-sm font-bold shadow-xl ${
-            toast.type === 'success'
+          <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} className={`px-6 py-3 rounded-full border text-sm font-bold shadow-xl ${toast.type === 'success'
               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
               : toast.type === 'error'
                 ? 'bg-red-500/10 border-red-500/30 text-red-400'
                 : 'bg-[#111111] border-white/10 text-white'
-          }`}>
+            }`}>
             {toast.message}
           </motion.div>
         </div>
