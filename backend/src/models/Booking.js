@@ -4,6 +4,8 @@ const bookingSchema = new mongoose.Schema({
   referenceNumber: { type: String, unique: true },
   // Customer Link
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null },
+  convertedToOrderAt: { type: Date, default: null },
   // Device Info
   deviceCategory: { type: String, required: true, enum: ['smartphone', 'laptop', 'tablet', 'smartwatch'] },
   deviceBrand:    { type: String, required: true },
@@ -21,6 +23,10 @@ const bookingSchema = new mongoose.Schema({
   pincode:        { type: String, required: true },
   preferredDate:  { type: Date, required: true },
   preferredTimeSlot: { type: String, required: true },
+  pickupScheduleDate: { type: Date, default: null },
+  pickupScheduleTimeSlot: { type: String, default: null },
+  deliveryScheduleDate: { type: Date, default: null },
+  deliveryScheduleTimeSlot: { type: String, default: null },
   // Repair Status
   status: {
     type: String,
@@ -67,6 +73,8 @@ const bookingSchema = new mongoose.Schema({
   assignmentLockReason: { type: String, default: '' },
   quotationStatus: { type: String, enum: ['Pending', 'Quote Prepared', 'Offer Sent', 'Awaiting Customer Approval', 'Approved by Customer', 'Rejected by Customer', 'Not Issued', 'Approved', 'Rejected'], default: 'Not Issued' },
   discount:        { type: Number, default: 0 },
+  appliedOfferCode: { type: String, default: '' },
+  appliedOfferId: { type: mongoose.Schema.Types.ObjectId, ref: 'Offer', default: null },
   estimatedTime:   { type: String, default: '' },
   warrantyPeriod:  { type: String, default: '3 Months' },
   technicianNote:  { type: String, default: '' },
@@ -113,6 +121,7 @@ const bookingSchema = new mongoose.Schema({
   locationSource: { type: String, enum: ['gps', 'ip', 'manual', null], default: null },
   // Step 7: Feedback Status Control
   customerFeedbackStatus: { type: String, enum: ['Feedback Pending', 'Feedback Submitted'], default: 'Feedback Pending' },
+  showInCustomerFeedbackSection: { type: Boolean, default: true },
   partnerFeedbackStatus:  { type: String, enum: ['Feedback Pending', 'Feedback Submitted'], default: 'Feedback Pending' },
   convertedFromLead:      { type: Boolean, default: false },
 }, { timestamps: true });

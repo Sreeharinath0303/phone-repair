@@ -361,7 +361,6 @@ async function renderRepairTypes() {
         <div class="rtc-icon">🛠️</div>
         <div class="rtc-info">
           <div class="rtc-name">${repair.name}</div>
-          <div class="rtc-price">Est. ${repair.basePrice > 0 ? '₹' + repair.basePrice : 'TBD'}</div>
         </div>
         <div class="rtc-check">✓</div>
       </div>`

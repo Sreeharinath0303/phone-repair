@@ -4,6 +4,23 @@ const AuditLog = require('../models/AuditLog');
 const sendEmail = require('../utils/sendEmail');
 const { getEnquiryTemplate } = require('../utils/enquiryTemplates');
 
+// Helper to check for common spam patterns
+const containsSpam = (text) => {
+  if (!text) return false;
+  // Basic check for multiple URLs
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const urls = text.match(urlRegex) || [];
+  if (urls.length > 2) return true; // Flag if more than 2 URLs
+  
+  // Basic keyword check
+  const spamKeywords = ['crypto', 'bitcoin', 'seo services', 'viagra', 'casino', 'investment', 'guaranteed return', 'marketing services'];
+  const lowerText = text.toLowerCase();
+  for (let word of spamKeywords) {
+    if (lowerText.includes(word)) return true;
+  }
+  return false;
+};
+
 // @desc    Submit a new enquiry (Public)
 // @route   POST /api/enquiries
 exports.createEnquiry = async (req, res) => {
@@ -12,8 +29,24 @@ exports.createEnquiry = async (req, res) => {
       name, email, phone, type, 
       company, requirementDetails, message,
       issueType, description, orderReference,
-      interest, campaignSource 
+      interest, campaignSource, _honey 
     } = req.body;
+
+    // Honeypot check for bots
+    if (_honey) {
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Enquiry submitted successfully. We will get back to you soon.' 
+      });
+    }
+
+    // Spam content check
+    if (containsSpam(message) || containsSpam(requirementDetails) || containsSpam(description)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Your message was flagged as spam. Please remove links or restricted keywords.' 
+      });
+    }
 
     if (!name || !email || !phone || !type) {
       return res.status(400).json({ success: false, message: 'Name, email, phone, and type are required' });
@@ -36,7 +69,7 @@ exports.createEnquiry = async (req, res) => {
     // Step 17: Notify Admin of new enquiry
     try {
       await sendEmail({
-        email: process.env.ADMIN_EMAIL || 'admin@repairvafe.com',
+        email: process.env.ADMIN_EMAIL || 'erepaircafe2010@gmail.com',
         subject: `NEW ENQUIRY: ${type.toUpperCase()} from ${name}`,
         message: `A new ${type} enquiry has been submitted.\n\nName: ${name}\nEmail: ${email}\nPhone: ${phone}\n\nPlease check the admin dashboard for details.`
       });
@@ -46,7 +79,7 @@ exports.createEnquiry = async (req, res) => {
     try {
       await sendEmail({
         email: enquiry.email,
-        subject: `Enquiry Received: ${type.toUpperCase()} | RepairVafe`,
+        subject: `Enquiry Received: ${type.toUpperCase()} | erepaircafe`,
         html: getEnquiryTemplate(type, enquiry)
       });
     } catch (err) {
@@ -128,7 +161,7 @@ exports.updateEnquiry = async (req, res) => {
       try {
         await sendEmail({
           email: enquiry.email,
-          subject: `Reply to your ${enquiry.type} enquiry | RepairVafe`,
+          subject: `Reply to your ${enquiry.type} enquiry | erepaircafe`,
           html: getEnquiryTemplate('admin_response', {
             name: enquiry.name,
             type: enquiry.type,

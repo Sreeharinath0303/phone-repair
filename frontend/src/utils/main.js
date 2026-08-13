@@ -1,5 +1,5 @@
 /* ============================================
-   RepairVafe – Main JS (shared across pages)
+   erepaircafe – Main JS (shared across pages)
    ============================================ */
 
 const AUTH_TOKEN_KEY = 'rv_token';
@@ -212,7 +212,7 @@ function initDynamicHomeExperience() {
   ];
 
   const testimonialsData = [
-    { stars: '★★★★★', text: 'My iPhone screen was shattered. RepairVafe fixed it in under 4 hours and tracking was super clear.', name: 'Arjun Kumar', device: 'iPhone 14 Pro – Screen Repair', featured: false },
+    { stars: '★★★★★', text: 'My iPhone screen was shattered. erepaircafe fixed it in under 4 hours and tracking was super clear.', name: 'Arjun Kumar', device: 'iPhone 14 Pro – Screen Repair', featured: false },
     { stars: '★★★★★', text: 'Booked online, got quote quickly, approved in one tap, and repair completed next day. Smooth flow.', name: 'Priya Rajan', device: 'Samsung S23 – Battery Replacement', featured: true },
     { stars: '★★★★★', text: 'Real-time status updates were excellent. I always knew what stage my laptop was in.', name: 'Meera Sharma', device: 'Dell XPS 15 – SSD Upgrade', featured: false }
   ];
@@ -434,3 +434,4 @@ dateInputs.forEach(input => {
   const today = new Date().toISOString().split('T')[0];
   input.min = today;
 });
+

@@ -15,6 +15,7 @@ import { ContactUs } from './pages/ContactUs.jsx';
 import { Services } from './pages/Services.jsx';
 import { FAQ } from './pages/FAQ.jsx';
 import { BecomePartner } from './pages/BecomePartner.jsx';
+import { NotFound } from './pages/NotFound.jsx';
 import { PublicLayout } from './components/PublicLayout.jsx';
 
 // Import New Custom Admin Module Components
@@ -31,7 +32,7 @@ import { SettingsManagement } from './pages/SettingsManagement.jsx';
 
 // Auth Check Helper
 const isAuthenticated = () => !!(localStorage.getItem('rv_token') || sessionStorage.getItem('rv_token'));
-const getUserRole = () => localStorage.getItem('rv_role');
+const getUserRole = () => localStorage.getItem('rv_role') || sessionStorage.getItem('rv_role');
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   if (!isAuthenticated()) return <Navigate to="/login" />;
@@ -57,7 +58,9 @@ function App() {
           
           <Route path="/login" element={<Login />} />
           <Route path="/customer-login" element={<CustomerLogin />} />
-          <Route path="/book" element={<BookingFlow />} />
+          <Route path="/book" element={<PublicLayout><BookingFlow /></PublicLayout>} />
+          <Route path="/:brandCategorySlug/:modelSlug" element={<PublicLayout><BookingFlow /></PublicLayout>} />
+          <Route path="/:brandCategorySlug" element={<PublicLayout><BookingFlow /></PublicLayout>} />
           
           {/* Customer Dashboard */}
           <Route path="/dashboard" element={
@@ -94,7 +97,7 @@ function App() {
           } />
           
           {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<PublicLayout><NotFound /></PublicLayout>} />
         </Routes>
       </div>
     </Router>

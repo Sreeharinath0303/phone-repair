@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogIn, Shield, AlertCircle, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getApiBaseUrl } from '../utils/apiBase';
+import { Seo } from '../components/Seo';
 
 export const Login = () => {
   const [portalMode, setPortalMode] = useState('admin');
@@ -83,6 +84,12 @@ export const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#080c14] p-4 font-['Outfit'] relative overflow-hidden">
+      <Seo
+        title="Admin and Partner Login"
+        description="Secure login for erepaircafe administrators and service partners."
+        path="/login"
+        noIndex
+      />
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none opacity-30" />
@@ -101,7 +108,7 @@ export const Login = () => {
           </div>
 
           <h1 className="text-3xl font-black text-center text-white mb-1">
-            Repair<span className="text-blue-400">Vafe</span>
+            e<span className="text-blue-400">repaircafe</span>
           </h1>
           <p className="text-gray-500 text-center text-sm mb-6">Secure Access Control Panel</p>
 
@@ -183,7 +190,7 @@ export const Login = () => {
                 : 'Use your issued administrator credentials.'}
             </div>
             <p className="text-[10px] text-gray-600">
-              &copy; 2026 RepairVafe Systems. All rights reserved.
+              &copy; 2026 erepaircafe Systems. All rights reserved.
             </p>
           </div>
         </div>
@@ -191,3 +198,4 @@ export const Login = () => {
     </div>
   );
 };
+

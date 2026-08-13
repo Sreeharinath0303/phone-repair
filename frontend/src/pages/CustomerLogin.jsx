@@ -1,17 +1,25 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LogIn, Smartphone, Mail, Lock, Eye, EyeOff,
   AlertCircle, CheckCircle2, ArrowLeft, User, Phone, Loader2, KeyRound
 } from 'lucide-react';
 import { getApiBaseUrl } from '../utils/apiBase';
+import { Seo } from '../components/Seo';
 
 const TABS = ['Email Login', 'Mobile OTP', 'Register'];
 
 export const CustomerLogin = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const API = getApiBaseUrl();
+  const returnTo = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const fromQuery = params.get('returnTo');
+    const fromState = location.state?.returnTo;
+    return fromQuery || fromState || '/dashboard';
+  }, [location.search, location.state]);
 
   const [tab, setTab] = useState('Email Login');
   const [emailAuthView, setEmailAuthView] = useState('login');
@@ -31,6 +39,10 @@ export const CustomerLogin = () => {
   const [forgotEmail, setForgotEmail] = useState('');
   const [resetOtp, setResetOtp] = useState('');
   const [resetNewPassword, setResetNewPassword] = useState('');
+  const emailAccessToken = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('emailAccessToken') || '';
+  }, [location.search]);
 
   const resetTransientState = () => {
     setError('');
@@ -48,8 +60,61 @@ export const CustomerLogin = () => {
     localStorage.setItem('rv_token', token);
     localStorage.setItem('rv_role', 'customer');
     localStorage.setItem('rv_user', JSON.stringify(data));
-    navigate('/dashboard');
+    navigate(returnTo, { replace: true });
   };
+
+  useEffect(() => {
+    const token = localStorage.getItem('rv_token') || sessionStorage.getItem('rv_token');
+    const role = localStorage.getItem('rv_role') || sessionStorage.getItem('rv_role');
+    if (token && role === 'customer' && !emailAccessToken) {
+      navigate(returnTo, { replace: true });
+    }
+  }, [emailAccessToken, navigate, returnTo]);
+
+  useEffect(() => {
+    if (!emailAccessToken) return;
+
+    let cancelled = false;
+
+    const restoreSession = async () => {
+      setLoading(true);
+      setError('');
+      setSuccess('Restoring your customer session...');
+
+      try {
+        const res = await fetch(`${API}/customer-auth/email-access`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: emailAccessToken })
+        });
+        const data = await res.json();
+
+        if (!cancelled) {
+          if (data.success) {
+            persistSession(data.data, data.token);
+            return;
+          }
+          setSuccess('');
+          setError(data.message || 'This email access link is no longer valid.');
+        }
+      } catch {
+        if (!cancelled) {
+          setSuccess('');
+          setError('Unable to restore your session from the email link.');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [API, emailAccessToken, returnTo]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -251,70 +316,84 @@ export const CustomerLogin = () => {
 
   if (otpStep) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#080c14] px-4 font-['Inter']">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
-          <div className="bg-[#0d1422] border border-white/5 rounded-3xl p-8 shadow-2xl">
-            <div className="text-center mb-8">
-              <div className="w-14 h-14 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <KeyRound size={28} className="text-blue-400" />
+      <>
+        <Seo
+          title="Customer Login"
+          description="Secure customer access for erepaircafe order tracking, booking history and repair updates."
+          path="/customer-login"
+          noIndex
+        />
+        <div className="min-h-screen flex items-center justify-center bg-[#080c14] px-4 font-['Inter']">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
+            <div className="bg-[#0d1422] border border-white/5 rounded-3xl p-8 shadow-2xl">
+              <div className="text-center mb-8">
+                <div className="w-14 h-14 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <KeyRound size={28} className="text-blue-400" />
+                </div>
+                <h2 className="text-2xl font-black text-white font-['Outfit']">Enter OTP</h2>
+                <p className="text-gray-400 text-sm mt-2">
+                  We sent a 6-digit code to <span className="text-white font-semibold">{otpStepMobile ? mobile : regEmail}</span>
+                </p>
               </div>
-              <h2 className="text-2xl font-black text-white font-['Outfit']">Enter OTP</h2>
-              <p className="text-gray-400 text-sm mt-2">
-                We sent a 6-digit code to <span className="text-white font-semibold">{otpStepMobile ? mobile : regEmail}</span>
-              </p>
-            </div>
 
-            {success && (
-              <div className="flex items-center gap-2 text-emerald-400 bg-emerald-400/10 border border-emerald-500/20 p-3 rounded-xl text-sm mb-5">
-                <CheckCircle2 size={15} /> {success}
-              </div>
-            )}
-            {error && (
-              <div className="flex items-center gap-2 text-red-400 bg-red-400/10 border border-red-500/20 p-3 rounded-xl text-sm mb-5">
-                <AlertCircle size={15} /> {error}
-              </div>
-            )}
+              {success && (
+                <div className="flex items-center gap-2 text-emerald-400 bg-emerald-400/10 border border-emerald-500/20 p-3 rounded-xl text-sm mb-5">
+                  <CheckCircle2 size={15} /> {success}
+                </div>
+              )}
+              {error && (
+                <div className="flex items-center gap-2 text-red-400 bg-red-400/10 border border-red-500/20 p-3 rounded-xl text-sm mb-5">
+                  <AlertCircle size={15} /> {error}
+                </div>
+              )}
 
-            <form onSubmit={otpStepMobile ? handleVerifyMobileOtp : handleVerifyOtp} className="space-y-4">
-              <input
-                type="text"
-                required
-                maxLength={6}
-                placeholder="123456"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-center text-2xl tracking-[0.4em] font-bold focus:outline-none focus:border-blue-500 transition-colors placeholder:text-sm placeholder:tracking-normal"
-              />
+              <form onSubmit={otpStepMobile ? handleVerifyMobileOtp : handleVerifyOtp} className="space-y-4">
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  placeholder="123456"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-center text-2xl tracking-[0.4em] font-bold focus:outline-none focus:border-blue-500 transition-colors placeholder:text-sm placeholder:tracking-normal"
+                />
+                <button
+                  type="submit"
+                  disabled={loading || otp.length < 6}
+                  className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold py-3 rounded-xl hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] disabled:opacity-40 transition-all flex items-center justify-center gap-2"
+                >
+                  {loading ? <><Loader2 size={18} className="animate-spin" /> Verifying...</> : <><CheckCircle2 size={18} /> Verify and Login</>}
+                </button>
+              </form>
+
               <button
-                type="submit"
-                disabled={loading || otp.length < 6}
-                className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold py-3 rounded-xl hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] disabled:opacity-40 transition-all flex items-center justify-center gap-2"
+                type="button"
+                onClick={() => {
+                  setOtpStep(false);
+                  setOtpStepMobile(false);
+                  setOtp('');
+                  setError('');
+                  setSuccess('');
+                }}
+                className="mt-5 text-sm text-gray-500 hover:text-white transition-colors flex items-center gap-1.5 mx-auto"
               >
-                {loading ? <><Loader2 size={18} className="animate-spin" /> Verifying...</> : <><CheckCircle2 size={18} /> Verify and Login</>}
+                <ArrowLeft size={14} /> Back to login
               </button>
-            </form>
-
-            <button
-              type="button"
-              onClick={() => {
-                setOtpStep(false);
-                setOtpStepMobile(false);
-                setOtp('');
-                setError('');
-                setSuccess('');
-              }}
-              className="mt-5 text-sm text-gray-500 hover:text-white transition-colors flex items-center gap-1.5 mx-auto"
-            >
-              <ArrowLeft size={14} /> Back to login
-            </button>
-          </div>
-        </motion.div>
-      </div>
+            </div>
+          </motion.div>
+        </div>
+      </>
     );
   }
 
   return (
     <div className="min-h-screen bg-[#080c14] flex items-start justify-center pt-10 pb-16 px-4 font-['Inter']">
+      <Seo
+        title="Customer Login"
+        description="Secure customer access for erepaircafe order tracking, booking history and repair updates."
+        path="/customer-login"
+        noIndex
+      />
       <div className="w-full max-w-4xl">
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-white transition-colors mb-8">
           <ArrowLeft size={14} /> Back to Home
@@ -325,7 +404,7 @@ export const CustomerLogin = () => {
             <div className="mb-5">
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center text-xs font-bold">RV</div>
-                <span className="font-black text-lg font-['Outfit'] text-white">Repair<span className="text-blue-400">Vafe</span></span>
+                <span className="font-black text-lg font-['Outfit'] text-white">e<span className="text-blue-400">repaircafe</span></span>
               </div>
               <h1 className="text-2xl font-black text-white font-['Outfit'] mt-3">Customer Portal</h1>
               <p className="text-gray-500 text-sm mt-1">Sign in to track repairs, view quotes, and manage your bookings.</p>
@@ -698,7 +777,7 @@ export const CustomerLogin = () => {
                   <Smartphone size={12} />
                   <span>Mobile OTP login active</span>
                 </div>
-                <Link to="/book" className="text-blue-400 hover:underline">Book without login</Link>
+                <Link to="/book" className="text-blue-400 hover:underline">Continue to booking after login</Link>
               </div>
             </div>
           </motion.div>
@@ -707,3 +786,4 @@ export const CustomerLogin = () => {
     </div>
   );
 };
+

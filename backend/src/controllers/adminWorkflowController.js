@@ -4,6 +4,7 @@ const PartnerQuote = require('../models/PartnerQuote');
 const PartnerIncident = require('../models/PartnerIncident');
 const { computeCommercials, recalculatePartnerRisk, addTimelineEntry } = require('../utils/workflow');
 const { logActivity } = require('../utils/logger');
+const { syncOrderForBooking } = require('../utils/orderSync');
 
 exports.requestPartnerQuotes = async (req, res) => {
   try {
@@ -162,6 +163,7 @@ exports.reviewPartnerIncident = async (req, res) => {
       booking.status = booking.serviceType === 'pickup' ? 'Pickup Scheduled' : 'Store Visit Scheduled';
       addTimelineEntry(booking, 'Handoff Started', `Confirmed handoff failure: ${incident.incidentType}. ${adminNote || ''}`.trim());
       await booking.save();
+      await syncOrderForBooking(booking);
     }
 
     const risk = await recalculatePartnerRisk(incident.partnerId);
@@ -201,6 +203,7 @@ exports.overrideAssignment = async (req, res) => {
     booking.status = 'Partner Locked';
     addTimelineEntry(booking, 'Partner Locked', `Admin override assignment to ${tech.name}. Reason: ${reason}`);
     await booking.save();
+    await syncOrderForBooking(booking);
 
     await logActivity({
       action: 'ASSIGNMENT_OVERRIDE',

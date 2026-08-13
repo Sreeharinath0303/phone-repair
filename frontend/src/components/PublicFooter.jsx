@@ -64,10 +64,80 @@ const DEFAULT_LINKS = {
   whatsapp: 'https://wa.me/message/N6IZQBNEIYG7O1'
 };
 
+const SOCIAL_ITEMS = [
+  {
+    key: 'twitter',
+    hrefKey: 'twitter',
+    title: 'Twitter/X',
+    icon: XIcon,
+    hoverClass: 'hover:border-white/30 hover:text-white hover:bg-white/5'
+  },
+  {
+    key: 'linkedin',
+    hrefKey: 'linkedin',
+    title: 'LinkedIn',
+    icon: LinkedInIcon,
+    hoverClass: 'hover:border-[#0A66C2]/40 hover:text-[#0A66C2] hover:bg-[#0A66C2]/10'
+  },
+  {
+    key: 'instagram',
+    hrefKey: 'instagram',
+    title: 'Instagram',
+    icon: InstagramIcon,
+    hoverClass: 'hover:border-[#E1306C]/40 hover:text-[#E1306C] hover:bg-[#E1306C]/10'
+  },
+  {
+    key: 'facebook',
+    hrefKey: 'facebook',
+    title: 'Facebook',
+    icon: FacebookIcon,
+    hoverClass: 'hover:border-[#1877F2]/40 hover:text-[#1877F2] hover:bg-[#1877F2]/10'
+  },
+  {
+    key: 'youtube',
+    hrefKey: 'youtube',
+    title: 'YouTube',
+    icon: YouTubeIcon,
+    hoverClass: 'hover:border-[#FF0033]/40 hover:text-[#FF0033] hover:bg-[#FF0033]/10'
+  },
+  {
+    key: 'whatsapp',
+    hrefKey: 'whatsapp',
+    title: 'WhatsApp Chat',
+    icon: WhatsAppIcon,
+    hoverClass: 'hover:border-[#25D366]/40 hover:bg-[#25D366]/10'
+  },
+  {
+    key: 'trustpilot',
+    hrefKey: 'trustpilot',
+    title: 'Trustpilot Reviews',
+    icon: TrustpilotIcon,
+    hoverClass: 'hover:border-[#00b67a]/40 hover:bg-[#00b67a]/10'
+  },
+  {
+    key: 'google',
+    hrefKey: 'google',
+    title: 'Google Business Profile',
+    icon: GoogleIcon,
+    hoverClass: 'hover:border-[#4285F4]/40 hover:bg-[#4285F4]/10'
+  }
+];
+
 export const PublicFooter = () => {
   const [links, setLinks] = useState(DEFAULT_LINKS);
+  const [customerPortalTarget, setCustomerPortalTarget] = useState('/customer-login');
 
   useEffect(() => {
+    const syncPortalTarget = () => {
+      const token = localStorage.getItem('rv_token') || sessionStorage.getItem('rv_token');
+      const role = localStorage.getItem('rv_role') || sessionStorage.getItem('rv_role') || '';
+      setCustomerPortalTarget(token && role === 'customer' ? '/dashboard' : '/customer-login');
+    };
+
+    syncPortalTarget();
+    window.addEventListener('storage', syncPortalTarget);
+    window.addEventListener('focus', syncPortalTarget);
+
     const fetchLinks = async () => {
       try {
         const res = await fetch(`${getApiBaseUrl()}/settings/public`);
@@ -89,6 +159,11 @@ export const PublicFooter = () => {
       }
     };
     fetchLinks();
+
+    return () => {
+      window.removeEventListener('storage', syncPortalTarget);
+      window.removeEventListener('focus', syncPortalTarget);
+    };
   }, []);
 
   const handleBackToTop = () => {
@@ -118,7 +193,7 @@ export const PublicFooter = () => {
               ⚡
             </div>
             <span className="text-xl font-bold font-['Outfit'] tracking-wide">
-              Repair<span className="text-cyan-400">Vafe</span>
+              e<span className="text-cyan-400">repaircafe</span>
             </span>
           </div>
 
@@ -127,31 +202,23 @@ export const PublicFooter = () => {
           </p>
 
           {/* Social Links */}
-          <div className="flex flex-wrap items-center gap-4 text-gray-400">
-            <a href={links.twitter} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="Twitter/X">
-              <XIcon />
-            </a>
-            <a href={links.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="LinkedIn">
-              <LinkedInIcon />
-            </a>
-            <a href={links.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="Instagram">
-              <InstagramIcon />
-            </a>
-            <a href={links.facebook} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="Facebook">
-              <FacebookIcon />
-            </a>
-            <a href={links.youtube} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="YouTube">
-              <YouTubeIcon />
-            </a>
-            <a href={links.whatsapp} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="WhatsApp Chat">
-              <WhatsAppIcon />
-            </a>
-            <a href={links.trustpilot} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="Trustpilot Reviews">
-              <TrustpilotIcon />
-            </a>
-            <a href={links.google} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors" title="Google Business Profile">
-              <GoogleIcon />
-            </a>
+          <div className="flex flex-wrap items-center gap-3 text-gray-300">
+            {SOCIAL_ITEMS.map((item) => {
+              const Icon = item.icon;
+              return (
+                <a
+                  key={item.key}
+                  href={links[item.hrefKey]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={item.title}
+                  aria-label={item.title}
+                  className={`flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-0.5 ${item.hoverClass}`}
+                >
+                  <Icon />
+                </a>
+              );
+            })}
           </div>
 
           {/* Back to Top Button */}
@@ -189,7 +256,7 @@ export const PublicFooter = () => {
               <Link to="/become-partner" className="text-gray-300 hover:text-white hover:underline transition-all">Partner Program</Link>
             </li>
             <li>
-              <Link to="/customer-login" className="text-gray-300 hover:text-white hover:underline transition-all">Customer Portal</Link>
+              <Link to={customerPortalTarget} className="text-gray-300 hover:text-white hover:underline transition-all">Customer Portal</Link>
             </li>
           </ul>
         </div>
@@ -214,9 +281,10 @@ export const PublicFooter = () => {
 
       {/* ── BOTTOM ACCENT BANNER ── */}
       <div className="bg-[#d97706] text-[#071317] py-3 text-center text-[10px] sm:text-xs font-bold tracking-wider relative z-10 border-t border-white/5">
-        Copyright © {new Date().getFullYear()}, repairvafe.com, All Rights Reserved.
+        Copyright © {new Date().getFullYear()}, erepaircafe.com, All Rights Reserved.
       </div>
 
     </footer>
   );
 };
+

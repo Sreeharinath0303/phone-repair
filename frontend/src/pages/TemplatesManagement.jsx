@@ -15,6 +15,7 @@ export const TemplatesManagement = () => {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [previewHtml, setPreviewHtml] = useState('');
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [testMessage, setTestMessage] = useState({ type: '', text: '' });
 
   // Forms state
   const [templateForm, setTemplateForm] = useState({
@@ -59,8 +60,7 @@ export const TemplatesManagement = () => {
         },
         body: JSON.stringify({
           templateId: template._id,
-          // optional dummy data for rendering preview
-          dummyData: {
+          mockData: {
             customerName: 'Sreehari Nath',
             referenceNumber: 'RV-2026-00392',
             deviceBrand: 'Apple',
@@ -159,6 +159,7 @@ export const TemplatesManagement = () => {
     e.preventDefault();
     if (!selectedTemplate || !testEmailAddress) return;
     setSendingTest(true);
+    setTestMessage({ type: '', text: '' });
     try {
       const token = localStorage.getItem('rv_token');
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/send-test-email`, {
@@ -174,14 +175,13 @@ export const TemplatesManagement = () => {
       });
       const data = await res.json();
       if (data.success) {
-        setShowTestModal(false);
-        setTestEmailAddress('');
-        alert('Test email queued and sent successfully!');
+        setTestMessage({ type: 'success', text: `Test email sent to ${testEmailAddress.trim()}` });
       } else {
-        alert(data.message || 'Failed to send test email');
+        setTestMessage({ type: 'error', text: data.message || 'Failed to send test email' });
       }
     } catch (err) {
       console.error('Error sending test email:', err);
+      setTestMessage({ type: 'error', text: 'Failed to send test email' });
     } finally {
       setSendingTest(false);
     }
@@ -308,6 +308,8 @@ export const TemplatesManagement = () => {
                           <button
                             onClick={() => {
                               setSelectedTemplate(t);
+                              setTestEmailAddress('');
+                              setTestMessage({ type: '', text: '' });
                               setShowTestModal(true);
                             }}
                             className="p-1.5 text-gray-400 hover:text-emerald-400 bg-white/5 hover:bg-emerald-500/10 rounded-lg transition-colors"
@@ -344,7 +346,11 @@ export const TemplatesManagement = () => {
             </div>
             {selectedTemplate && (
               <button
-                onClick={() => setShowTestModal(true)}
+                onClick={() => {
+                  setTestEmailAddress('');
+                  setTestMessage({ type: '', text: '' });
+                  setShowTestModal(true);
+                }}
                 className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600/10 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg text-[10px] font-bold transition-all border border-blue-500/20"
               >
                 <Send size={10} /> Test Send
@@ -571,10 +577,25 @@ export const TemplatesManagement = () => {
                 />
               </div>
 
+              {testMessage.text && (
+                <div
+                  className={`rounded-xl border px-3 py-2 text-xs ${
+                    testMessage.type === 'success'
+                      ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                      : 'border-red-500/20 bg-red-500/10 text-red-300'
+                  }`}
+                >
+                  {testMessage.text}
+                </div>
+              )}
+
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowTestModal(false)}
+                  onClick={() => {
+                    setShowTestModal(false);
+                    setTestMessage({ type: '', text: '' });
+                  }}
                   className="flex-1 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-bold py-3 rounded-xl transition-all"
                 >
                   Cancel

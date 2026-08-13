@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="RepairVafe Customer Access - Manage your repairs" />
-  <title>Customer Login - RepairVafe</title>
+  <meta name="description" content="erepaircafe Customer Access - Manage your repairs" />
+  <title>Customer Login - erepaircafe</title>
   <link rel="stylesheet" href="../styles/global.css" />
   <link rel="stylesheet" href="../styles/login.css" />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -30,7 +30,7 @@
     <div class="login-card" id="authCard">
       <div class="login-logo">
         <div class="logo-icon" style="background: var(--clr-customer)">🛠️</div>
-        <span>Repair<strong>Vafe</strong></span>
+        <span>e<strong>repaircafe</strong></span>
       </div>
 
       <div class="auth-switch" id="authSwitch">
@@ -174,10 +174,10 @@
       document.getElementById('tabLogin').classList.toggle('active', mode === 'login' || mode === 'forgot');
       document.getElementById('tabSignup').classList.toggle('active', mode === 'signup');
       
-      const titles = { login: 'Welcome Back', signup: 'Join RepairVafe', forgot: 'Reset Access' };
+      const titles = { login: 'Welcome Back', signup: 'Join erepaircafe', forgot: 'Reset Access' };
       const subs = { login: 'Log in to track your repairs', signup: 'Create an account for faster booking', forgot: 'Regain access to your account' };
       
-      document.getElementById('authTitle').textContent = titles[mode] || 'RepairVafe';
+      document.getElementById('authTitle').textContent = titles[mode] || 'erepaircafe';
       document.getElementById('authSubtitle').textContent = subs[mode] || '';
       renderForms();
     }
@@ -369,3 +369,4 @@
   </script>
 </body>
 </html>
+

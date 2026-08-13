@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Minus } from 'lucide-react';
+import { Seo } from '../components/Seo';
+import { buildBreadcrumbSchema, buildFaqSchema } from '../utils/seo';
 
 const FAQS = [
   {
@@ -34,6 +36,19 @@ export const FAQ = () => {
 
   return (
     <div className="py-20 px-6 max-w-4xl mx-auto">
+      <Seo
+        title="Frequently Asked Questions"
+        description="Find answers about erepaircafe repair timelines, warranty coverage, original parts, payment, data safety and live repair tracking."
+        path="/faq"
+        keywords="repair FAQ, phone repair warranty, screen replacement time, data safety during repair"
+        structuredData={[
+          buildFaqSchema(FAQS),
+          buildBreadcrumbSchema([
+            { name: 'Home', path: '/' },
+            { name: 'FAQ', path: '/faq' }
+          ])
+        ]}
+      />
       <div className="text-center mb-16">
         <div className="inline-block bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 rounded-full text-xs font-bold text-emerald-400 uppercase tracking-widest mb-4">FAQ</div>
         <h1 className="text-4xl md:text-5xl font-black font-['Outfit'] mb-6">

@@ -33,20 +33,20 @@ exports.createTechnician = async (req, res) => {
     
     // Step 6: Add Partner Assignment Events (New Partner Creation Triggers)
     if (req.body.password && req.body.email) {
-      const message = `Welcome to the RepairVafe Partner Network, ${tech.name}!\n\nAn administrator has explicitly provisioned your service account.\n\nYour secure login credentials are:\nEmail: ${tech.email}\nPassword: ${req.body.password}\n\nPlease log in immediately at your Partner Portal to begin accepting assignments.`;
+      const message = `Welcome to the erepaircafe Partner Network, ${tech.name}!\n\nAn administrator has explicitly provisioned your service account.\n\nYour secure login credentials are:\nEmail: ${tech.email}\nPassword: ${req.body.password}\n\nPlease log in immediately at your Partner Portal to begin accepting assignments.`;
       
       try {
         // 1. Partner Onboarding Alert (Email + Mocks)
-        console.log(`[SMS WEBHOOK DISPATCH] -> Texting +91${tech.phone || '999999999'}: "Welcome to RepairVafe! Your Service Partner account is active. Check your email for login keys."`);
-        console.log(`[WHATSAPP API DISPATCH] -> Messaging +91${tech.phone || '999999999'}: "RepairVafe Network Alert: Partner Profile '${tech.name}' initialized. 🔧🚀"`);
+        console.log(`[SMS WEBHOOK DISPATCH] -> Texting +91${tech.phone || '999999999'}: "Welcome to erepaircafe! Your Service Partner account is active. Check your email for login keys."`);
+        console.log(`[WHATSAPP API DISPATCH] -> Messaging +91${tech.phone || '999999999'}: "erepaircafe Network Alert: Partner Profile '${tech.name}' initialized. 🔧🚀"`);
         await sendEmail({
           email: tech.email,
-          subject: 'RepairVafe - Your Partner Credentials',
+          subject: 'erepaircafe - Your Partner Credentials',
           message: message
         });
         
         // 2. Admin Alert Logic
-        const adminEmail = process.env.ADMIN_EMAIL || 'admin@repairvafe.com';
+        const adminEmail = process.env.ADMIN_EMAIL || 'erepaircafe2010@gmail.com';
         await sendEmail({
           email: adminEmail,
           subject: `[EVENT] New Partner Onboarded: ${tech.name}`,
@@ -174,3 +174,4 @@ exports.updateMyOrderStatus = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
